@@ -1,1 +1,9 @@
-/Users/kse/Documents/졸업프로젝트/졸업프로젝트 제안서_김성은, 서교빈.hwp
+# 제안서 원본(HWP) — 리포에 올리지 않음
+졸업프로젝트 제안서_김성은, 서교빈.hwp
+
+# OS / 환경
+.DS_Store
+.env
+*.log
+
+# 빌드 산출물은 각 모듈(.gitignore)에서 관리

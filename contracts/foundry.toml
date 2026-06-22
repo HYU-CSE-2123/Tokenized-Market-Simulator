@@ -1,0 +1,17 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.24"
+optimizer = true
+optimizer_runs = 200
+remappings = [
+    "@openzeppelin/=lib/openzeppelin-contracts/",
+    "forge-std/=lib/forge-std/src/",
+]
+
+# 로컬체인(Anvil) / Sepolia 테스트넷용 RPC는 .env 로 주입
+# 예: SEPOLIA_RPC_URL, PRIVATE_KEY
+[rpc_endpoints]
+local = "http://127.0.0.1:8545"
+sepolia = "${SEPOLIA_RPC_URL}"

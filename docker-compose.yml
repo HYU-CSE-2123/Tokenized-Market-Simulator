@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: exchange-postgres
+    environment:
+      POSTGRES_DB: exchange
+      POSTGRES_USER: exchange
+      POSTGRES_PASSWORD: exchange
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exchange"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 로컬 Ethereum 체인 (Foundry Anvil). 컨트랙트 배포/테스트용.
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    container_name: exchange-anvil
+    entrypoint: ["anvil", "--host", "0.0.0.0"]
+    ports:
+      - "8545:8545"
+
+volumes:
+  postgres-data:

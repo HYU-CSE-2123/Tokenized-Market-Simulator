@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose 가 실제 테마를 적용하므로 베이스만 Material3 로 둔다. -->
+    <style name="Theme.PriceTrackExchange" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

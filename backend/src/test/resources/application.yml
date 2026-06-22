@@ -1,0 +1,28 @@
+# 테스트 전용 설정 — 인메모리 H2 사용, schema.sql/web3j 비활성화
+spring:
+  datasource:
+    url: jdbc:h2:mem:exchange;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop   # 엔티티 기반 스키마 자동 생성
+    database-platform: org.hibernate.dialect.H2Dialect
+  sql:
+    init:
+      mode: never             # 테스트에서는 postgres 전용 schema.sql 미실행
+
+app:
+  jwt:
+    secret: test-secret-test-secret-test-secret-32bytes
+    validity-ms: 3600000
+  price:
+    update-interval-ms: 60000
+  blockchain:
+    rpc-url: http://127.0.0.1:8545
+    mock-krw-address: ""
+    m-sec-address: ""
+    price-oracle-address: ""
+    exchange-vault-address: ""
+    operator-private-key: ""

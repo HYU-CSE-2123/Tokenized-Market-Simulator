@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: price-tracking-exchange
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/exchange}
+    username: ${DB_USERNAME:exchange}
+    password: ${DB_PASSWORD:exchange}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none          # 스키마는 schema.sql 로 관리 (기획서 §11)
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  sql:
+    init:
+      mode: always            # schema.sql 자동 실행
+      continue-on-error: true # 이미 존재하는 테이블 무시
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# 애플리케이션 커스텀 설정
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-please-change-me-please-32bytes-minimum}
+    validity-ms: ${JWT_VALIDITY_MS:3600000}   # 1시간
+  price:
+    update-interval-ms: ${PRICE_INTERVAL_MS:1000}  # 기획서 §8.1 가격 시뮬레이터 주기
+  blockchain:
+    rpc-url: ${RPC_URL:http://127.0.0.1:8545}      # 로컬 Anvil / Sepolia
+    mock-krw-address: ${MOCK_KRW_ADDRESS:}
+    m-sec-address: ${MSEC_ADDRESS:}
+    price-oracle-address: ${PRICE_ORACLE_ADDRESS:}
+    exchange-vault-address: ${EXCHANGE_VAULT_ADDRESS:}
+    operator-private-key: ${OPERATOR_PRIVATE_KEY:}
