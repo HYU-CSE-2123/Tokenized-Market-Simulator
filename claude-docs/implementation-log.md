@@ -116,7 +116,33 @@ compose-bom 2024.10.00, material3 + icons-extended, navigation-compose, lifecycl
 - OZ v5.1.0 / solc 0.8.24 / Spring Boot 3.3.4 / AGP 8.7.2·Kotlin 2.0.21·compileSdk 35
 
 ## 7. 미검증 항목
-- **Docker 데몬 미실행**으로 `docker compose up` + 백엔드 `bootRun`(실 Postgres) + 컨트랙트 로컬 배포는 미검증. `./gradlew build`의 H2 컨텍스트 테스트로 앱 wiring은 검증됨.
+- **Docker 데몬 미실행**으로 `docker compose up` + 백엔드 `bootRun`(실 Postgres)은 미검증. `./gradlew build`의 H2 컨텍스트 테스트로 앱 wiring은 검증됨.
+
+---
+
+# Phase 0.5: 최소 동작 검증 (온체인) — 완료
+
+> 작성: 2026-06-22. 기획서 §0.5 검증 시나리오를 **실제 로컬체인(Anvil)에서** 실행하여 가격 추종 매수/매도 구조의 기술적 타당성을 입증.
+
+## 추가된 것
+- `contracts/script/Scenario.s.sol` — 배포 + Vault 유동성 시드 + 사용자 매수 → 오라클 75k→80k → 매도 → 잔고 검증을 한 번에 broadcast. `require()`로 §0.5 성공 기준 강제. Anvil 기본 계정 #0(owner)/#1(user) 사용(env override 가능).
+
+## 실행 방법
+```bash
+cd contracts
+anvil &                                              # 로컬체인(31337)
+forge script script/Scenario.s.sol --rpc-url local --broadcast
+```
+
+## 검증 결과 (온체인 실행 + cast 독립 조회)
+- 배포: MockKRW / mSEC / PriceOracle / ExchangeVault 4개 — `ONCHAIN EXECUTION COMPLETE & SUCCESSFUL`
+- 매수(750,000 mKRW @75k): user mSEC = **9.99**(~10 ✓), mKRW 1,000,000→250,000
+- 가격 75k→80k 변경 후 매도: user mSEC = **0**, 수령 mKRW = **798,400.8**(~800k ✓)
+- user 최종 mKRW = **1,048,400.8** — 매수 직전(1,000,000) 대비 **+48,400**(가격 상승분 반영 ✓)
+- cast 독립 조회: Vault 코드 2569바이트 배포, oracle priceE8 = 8e12(=80,000e8), feeBps 10, user mSEC 0
+- **성공 기준 충족**: buy 시 mKRW↓·mSEC↑, sell 시 mSEC↓·mKRW↑, 가격 변경이 정산에 반영, 전체 require 통과
+
+> 명제 입증: "오라클 기준 가격에 따라 ERC-20 price-tracking token을 매수·매도할 수 있다" → 이후 백엔드/DB/WebSocket/Android 연동의 토대 확보.
 
 ## 다음 단계 (기획서 §16)
-Phase 0.5 컨트랙트 로컬 배포·시나리오 실행 → Phase 1 컨트랙트 마감 → Phase 2 백엔드 API(mock) → Phase 3 web3j 연동 → Phase 4 WebSocket → Phase 5 Android → Phase 6 시연/문서화.
+Phase 1 컨트랙트 마감 → Phase 2 백엔드 API(mock) → Phase 3 web3j 연동 → Phase 4 WebSocket → Phase 5 Android → Phase 6 시연/문서화.

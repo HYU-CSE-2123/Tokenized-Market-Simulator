@@ -62,4 +62,10 @@ cd android && ./gradlew :app:assembleDebug   # 또는 Android Studio 로 실행
 ## 구현 단계 (기획서 §16)
 Phase 0 세팅 → 0.5 컨트랙트 최소검증 → 1 컨트랙트 → 2 백엔드 API → 3 web3j 연동 → 4 WebSocket → 5 Android → 6 시연/문서화
 
-현재: **Phase 0 (모노레포 뼈대) 완료** — 세 모듈 모두 빌드/테스트 통과.
+현재: **Phase 0.5 완료** — 모노레포 뼈대(세 모듈 빌드/테스트 통과) + 컨트랙트를 로컬체인(Anvil)에 배포해 매수→가격변경→매도 흐름 온체인 검증 완료.
+
+```bash
+# Phase 0.5 재현
+cd contracts && anvil &
+forge script script/Scenario.s.sol --rpc-url local --broadcast
+```
