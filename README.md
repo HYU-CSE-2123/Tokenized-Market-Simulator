@@ -29,29 +29,42 @@ Ethereum ERC-20 기반으로 **삼성전자 기준 가격을 추종하는 모의
 
 ## 빠른 시작
 
-### 1. 스마트 컨트랙트
-```bash
-cd contracts
-forge build && forge test          # 매수→가격변경→매도 시나리오 검증
-anvil &                            # 로컬체인
-forge script script/Deploy.s.sol --rpc-url local --broadcast --private-key <KEY>
-```
+세부 설정은 각 모듈 README 를 따른다.
 
-### 2. 인프라 (PostgreSQL · Anvil)
+- 컨트랙트: [`contracts/README.md`](contracts/README.md)
+- 백엔드: [`backend/README.md`](backend/README.md)
+- 안드로이드: [`android/README.md`](android/README.md)
+
+### 1. 인프라 (PostgreSQL · Anvil)
 ```bash
 docker compose -p exchange up -d   # 한글 경로 → 프로젝트명 -p exchange 명시 필요
 ```
 
+### 2. 컨트랙트
+```bash
+cd contracts
+forge build
+forge test -vv
+forge script script/Deploy.s.sol --rpc-url local --broadcast --private-key <ANVIL_PRIVATE_KEY>
+```
+
 ### 3. 백엔드
 ```bash
-cd backend && ./gradlew bootRun
+cd backend
+./gradlew bootRun
+```
+
+```bash
 curl http://localhost:8080/api/health
 ```
 
 ### 4. 안드로이드
 ```bash
-cd android && ./gradlew :app:assembleDebug   # 또는 Android Studio 로 실행
+cd android
+./gradlew :app:assembleDebug
 ```
+
+또는 Android Studio 로 `android/` 모듈을 열어 실행한다.
 
 ## 사전 요구 도구
 - **Foundry** (`brew install foundry`) — 이 환경에서는 `foundry.paradigm.sh` DNS 차단으로 brew 설치 사용
@@ -63,9 +76,3 @@ cd android && ./gradlew :app:assembleDebug   # 또는 Android Studio 로 실행
 Phase 0 세팅 → 0.5 컨트랙트 최소검증 → 1 컨트랙트 → 2 백엔드 API → 3 web3j 연동 → 4 WebSocket → 5 Android → 6 시연/문서화
 
 현재: **Phase 0.5 완료** — 모노레포 뼈대(세 모듈 빌드/테스트 통과) + 컨트랙트를 로컬체인(Anvil)에 배포해 매수→가격변경→매도 흐름 온체인 검증 완료.
-
-```bash
-# Phase 0.5 재현
-cd contracts && anvil &
-forge script script/Scenario.s.sol --rpc-url local --broadcast
-```

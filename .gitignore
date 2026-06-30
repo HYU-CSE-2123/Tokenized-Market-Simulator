@@ -6,4 +6,7 @@
 .env
 *.log
 
+# IDE
+.idea/
+
 # 빌드 산출물은 각 모듈(.gitignore)에서 관리

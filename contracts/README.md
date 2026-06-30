@@ -42,6 +42,16 @@ forge script script/Deploy.s.sol \
 ```
 
 배포 시 초기 가격 75,000원으로 설정되고 `ExchangeVault` 가 mSEC minter 로 등록된다.
+배포 로그에 출력된 컨트랙트 주소는 백엔드의 `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS` 환경 변수로 연결한다.
+
+## 로컬 시나리오 검증
+
+```bash
+anvil                       # 별도 터미널, 로컬체인 실행
+forge script script/Scenario.s.sol --rpc-url local --broadcast
+```
+
+`Deploy.s.sol` 은 컨트랙트 배포와 주소 출력만 수행한다. `Scenario.s.sol` 은 기획서 §0.5 검증용으로, Anvil 기본 테스트 계정을 사용해 배포→매수→가격변경→매도 흐름을 한 번에 실행한다.
 
 ## 면책
 

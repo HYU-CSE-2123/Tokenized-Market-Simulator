@@ -3,6 +3,7 @@ out/
 cache/
 broadcast/
 lib/
+.home/
 
 # Env
 .env
