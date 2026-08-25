@@ -43,10 +43,14 @@ contract ExchangeVault is Ownable, ReentrancyGuard {
     event FeeBpsUpdated(uint256 previousFeeBps, uint256 newFeeBps);
 
     error ZeroAmount();
+    error InvalidAddress();
     error InsufficientLiquidity();
     error FeeTooHigh();
 
     constructor(address krw_, address token_, address oracle_) Ownable(msg.sender) {
+        if (krw_ == address(0) || token_ == address(0) || oracle_ == address(0)) {
+            revert InvalidAddress();
+        }
         krw = IERC20(krw_);
         token = SamsungPriceTrackingToken(token_);
         oracle = PriceOracle(oracle_);

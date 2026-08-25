@@ -146,3 +146,49 @@ forge script script/Scenario.s.sol --rpc-url local --broadcast
 
 ## 다음 단계 (기획서 §16)
 Phase 1 컨트랙트 마감 → Phase 2 백엔드 API(mock) → Phase 3 web3j 연동 → Phase 4 WebSocket → Phase 5 Android → Phase 6 시연/문서화.
+
+---
+
+# Phase 1: 스마트 컨트랙트 마감 — 완료
+
+> 작성 및 검증: 2026-08-21
+
+## 구현
+- `ExchangeVault` 생성자에서 mKRW, mSEC, PriceOracle의 0 주소를 거부하도록 `InvalidAddress` 오류를 추가했다.
+- `SamsungPriceTrackingToken.setMinter`에서 0 주소를 거부하도록 `InvalidMinter` 오류를 추가했다.
+- 기존 핵심 거래 테스트 6개를 유지하고 접근 제어, 0 입력, 수수료 상한, 이벤트, 잘못된 배포 주소 테스트를 추가했다.
+- 매수·매도 견적 계산식에 대해 각각 256회 입력을 생성하는 fuzz 테스트를 추가했다.
+
+## 테스트 범위
+- 핵심 흐름: faucet, 오라클 가격, 매수 mint, 가격 상승 후 전량 매도, 가격별 수량 변화, Vault 유동성 부족
+- 접근 제어: 오라클 owner, mSEC minter/owner, Vault owner 수수료 설정
+- 입력 경계: 0 가격, 0 매수·매도, 0 주소 의존성/minter, 최대 수수료 10%와 초과 거부
+- 이벤트: `FaucetClaimed`, `PriceUpdated`, `MinterUpdated`, `FeeBpsUpdated`, `Bought`, `Sold`
+- fuzz: `quoteBuy`, `quoteSell` 수수료 및 결과 수량 계산식
+
+## 검증 환경
+- Windows 11
+- Foundry **1.5.1-stable**
+- solc **0.8.24**
+- OpenZeppelin Contracts **v5.1.0**
+- Anvil chain ID **31337**
+
+## 검증 결과
+```text
+forge test -vv
+20 passed, 0 failed, 0 skipped
+fuzz: quoteBuy 256 runs, quoteSell 256 runs
+```
+
+- `Deploy.s.sol` 독립 broadcast: 컨트랙트 4종 배포 및 mSEC minter 연결 성공
+- `Scenario.s.sol` broadcast: `ONCHAIN EXECUTION COMPLETE & SUCCESSFUL`
+- 750,000 mKRW @75,000 매수 → 9.99 mSEC
+- 오라클 80,000으로 갱신 후 전량 매도 → 798,400.8 mKRW 수령
+- 사용자 최종 잔고 1,048,400.8 mKRW, mSEC 0
+
+## 참고
+- `forge fmt --check`는 기존 Solidity 파일의 CRLF 줄바꿈을 모두 LF로 바꾸는 차이를 보고했다. 기능과 무관한 전면 줄바꿈 변경을 피하기 위해 이번 작업에서는 적용하지 않았다.
+- Foundry와 테스트 의존성은 `contracts/lib/`에 설치되며 해당 디렉터리는 Git에서 제외된다.
+
+## 다음 단계
+- Phase 2 백엔드 기본 API: 인증/JWT → JPA 도메인 → 가격·견적 → DB 기반 mock 주문·체결·포트폴리오 순서로 진행한다.

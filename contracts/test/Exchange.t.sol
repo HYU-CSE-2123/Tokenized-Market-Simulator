@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MockKRW} from "../src/MockKRW.sol";
 import {SamsungPriceTrackingToken} from "../src/SamsungPriceTrackingToken.sol";
 import {PriceOracle} from "../src/PriceOracle.sol";
@@ -19,6 +20,13 @@ contract ExchangeTest is Test {
     uint256 internal constant PRICE_75K = 75_000 * 1e8;
     uint256 internal constant PRICE_80K = 80_000 * 1e8;
 
+    event FaucetClaimed(address indexed account, uint256 amount);
+    event PriceUpdated(uint256 priceE8, uint256 updatedAt);
+    event MinterUpdated(address indexed previousMinter, address indexed newMinter);
+    event FeeBpsUpdated(uint256 previousFeeBps, uint256 newFeeBps);
+    event Bought(address indexed user, uint256 krwIn, uint256 tokenOut, uint256 fee, uint256 priceE8);
+    event Sold(address indexed user, uint256 tokenIn, uint256 krwOut, uint256 fee, uint256 priceE8);
+
     function setUp() public {
         krw = new MockKRW();
         token = new SamsungPriceTrackingToken();
@@ -34,6 +42,8 @@ contract ExchangeTest is Test {
 
     /// faucet 동작
     function test_Faucet() public {
+        vm.expectEmit(true, false, false, true, address(krw));
+        emit FaucetClaimed(user, krw.faucetAmount());
         vm.prank(user);
         krw.faucet();
         assertEq(krw.balanceOf(user), 10_000_000 ether + krw.faucetAmount());
@@ -42,25 +52,146 @@ contract ExchangeTest is Test {
     /// 초기 가격 / 가격 업데이트
     function test_OraclePrice() public {
         assertEq(oracle.priceE8(), PRICE_75K);
+        vm.expectEmit(false, false, false, true, address(oracle));
+        emit PriceUpdated(PRICE_80K, block.timestamp);
         oracle.updatePrice(PRICE_80K);
         assertEq(oracle.priceE8(), PRICE_80K);
+    }
+
+    function test_OracleRejectsZeroPrice() public {
+        vm.expectRevert(PriceOracle.InvalidPrice.selector);
+        oracle.updatePrice(0);
+    }
+
+    function test_NonOwnerCannotUpdateOracle() public {
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user));
+        oracle.updatePrice(PRICE_80K);
+    }
+
+    function test_SetMinterRejectsZeroAddress() public {
+        vm.expectRevert(SamsungPriceTrackingToken.InvalidMinter.selector);
+        token.setMinter(address(0));
+    }
+
+    function test_NonOwnerCannotSetMinter() public {
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user));
+        token.setMinter(user);
+    }
+
+    function test_OnlyMinterCanMintAndBurn() public {
+        vm.startPrank(user);
+        vm.expectRevert(SamsungPriceTrackingToken.NotMinter.selector);
+        token.mint(user, 1 ether);
+        vm.expectRevert(SamsungPriceTrackingToken.NotMinter.selector);
+        token.burn(user, 1 ether);
+        vm.stopPrank();
+    }
+
+    function test_SetMinterEmitsEvent() public {
+        SamsungPriceTrackingToken fresh = new SamsungPriceTrackingToken();
+        vm.expectEmit(true, true, false, true, address(fresh));
+        emit MinterUpdated(address(0), address(vault));
+        fresh.setMinter(address(vault));
+    }
+
+    function test_VaultConstructorRejectsZeroAddresses() public {
+        vm.expectRevert(ExchangeVault.InvalidAddress.selector);
+        new ExchangeVault(address(0), address(token), address(oracle));
+
+        vm.expectRevert(ExchangeVault.InvalidAddress.selector);
+        new ExchangeVault(address(krw), address(0), address(oracle));
+
+        vm.expectRevert(ExchangeVault.InvalidAddress.selector);
+        new ExchangeVault(address(krw), address(token), address(0));
+    }
+
+    function test_BuyAndSellRejectZeroAmount() public {
+        vm.startPrank(user);
+        vm.expectRevert(ExchangeVault.ZeroAmount.selector);
+        vault.buy(0);
+        vm.expectRevert(ExchangeVault.ZeroAmount.selector);
+        vault.sell(0);
+        vm.stopPrank();
     }
 
     /// approve 후 buy → mSEC 증가, fee=0 가정 단순 수량 검증
     function test_BuyMintsTokens() public {
         uint256 feeBps = vault.feeBps();
         uint256 krwIn = 750_000 ether;
+        uint256 fee = (krwIn * feeBps) / 10_000;
+        uint256 net = krwIn - fee;
+        uint256 expected = (net * 1e8) / PRICE_75K; // ~10 mSEC
 
         vm.startPrank(user);
         krw.approve(address(vault), krwIn);
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit Bought(user, krwIn, expected, fee, PRICE_75K);
         uint256 tokenOut = vault.buy(krwIn);
         vm.stopPrank();
 
-        uint256 net = krwIn - (krwIn * feeBps) / 10_000;
-        uint256 expected = (net * 1e8) / PRICE_75K; // ~10 mSEC
         assertEq(tokenOut, expected);
         assertEq(token.balanceOf(user), expected);
         assertApproxEqAbs(tokenOut, 10 ether, 0.01 ether);
+    }
+
+    function test_SellEmitsEvent() public {
+        vm.startPrank(user);
+        krw.approve(address(vault), 750_000 ether);
+        uint256 tokenOut = vault.buy(750_000 ether);
+        (uint256 expectedKrwOut, uint256 expectedFee) = vault.quoteSell(tokenOut);
+
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit Sold(user, tokenOut, expectedKrwOut, expectedFee, PRICE_75K);
+        uint256 krwOut = vault.sell(tokenOut);
+        vm.stopPrank();
+
+        assertEq(krwOut, expectedKrwOut);
+    }
+
+    function test_OwnerCanSetFeeAtMaximum() public {
+        vm.expectEmit(false, false, false, true, address(vault));
+        emit FeeBpsUpdated(10, 1_000);
+        vault.setFeeBps(1_000);
+        assertEq(vault.feeBps(), 1_000);
+    }
+
+    function test_SetFeeRejectsAboveMaximum() public {
+        vm.expectRevert(ExchangeVault.FeeTooHigh.selector);
+        vault.setFeeBps(1_001);
+    }
+
+    function test_NonOwnerCannotSetFee() public {
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user));
+        vault.setFeeBps(20);
+    }
+
+    function testFuzz_QuoteBuyMatchesFormula(uint96 rawKrwAmount, uint16 rawFeeBps) public {
+        uint256 krwAmount = bound(uint256(rawKrwAmount), 1 ether, 10_000_000 ether);
+        uint256 feeBps = bound(uint256(rawFeeBps), 0, 1_000);
+        vault.setFeeBps(feeBps);
+
+        (uint256 tokenOut, uint256 fee) = vault.quoteBuy(krwAmount);
+        uint256 expectedFee = (krwAmount * feeBps) / 10_000;
+        uint256 expectedOut = ((krwAmount - expectedFee) * 1e8) / PRICE_75K;
+
+        assertEq(fee, expectedFee);
+        assertEq(tokenOut, expectedOut);
+    }
+
+    function testFuzz_QuoteSellMatchesFormula(uint96 rawTokenAmount, uint16 rawFeeBps) public {
+        uint256 tokenAmount = bound(uint256(rawTokenAmount), 1, 1_000 ether);
+        uint256 feeBps = bound(uint256(rawFeeBps), 0, 1_000);
+        vault.setFeeBps(feeBps);
+
+        (uint256 krwOut, uint256 fee) = vault.quoteSell(tokenAmount);
+        uint256 gross = (tokenAmount * PRICE_75K) / 1e8;
+        uint256 expectedFee = (gross * feeBps) / 10_000;
+
+        assertEq(fee, expectedFee);
+        assertEq(krwOut, gross - expectedFee);
     }
 
     /// 전체 시나리오: 매수 → 가격 상승 → 매도 → mKRW 증가 (기획서 §0.5)

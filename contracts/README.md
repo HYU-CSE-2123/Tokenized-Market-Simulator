@@ -29,7 +29,7 @@ git clone --depth 1 https://github.com/foundry-rs/forge-std lib/forge-std
 
 ```bash
 forge build
-forge test -vv   # 기획서 §0.5 매수→가격변경→매도→잔고 시나리오 포함 6개 통과
+forge test -vv   # 핵심 거래, 권한, 입력 경계, 이벤트, 수수료, 유동성, fuzz 포함 20개 통과
 ```
 
 ## 로컬 배포

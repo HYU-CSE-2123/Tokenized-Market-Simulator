@@ -14,6 +14,7 @@ contract SamsungPriceTrackingToken is ERC20, Ownable {
     event MinterUpdated(address indexed previousMinter, address indexed newMinter);
 
     error NotMinter();
+    error InvalidMinter();
 
     modifier onlyMinter() {
         if (msg.sender != minter) revert NotMinter();
@@ -27,6 +28,7 @@ contract SamsungPriceTrackingToken is ERC20, Ownable {
 
     /// @notice minter(ExchangeVault) 설정.
     function setMinter(address newMinter) external onlyOwner {
+        if (newMinter == address(0)) revert InvalidMinter();
         emit MinterUpdated(minter, newMinter);
         minter = newMinter;
     }
