@@ -24,11 +24,20 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "login_id", unique = true, length = 50)
+    private String loginId;
+
+    @Column(unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
+    @Column(name = "google_sub", unique = true)
+    private String googleSub;
 
     @Column(nullable = false)
     private String nickname;
@@ -38,4 +47,12 @@ public class User {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
+
+    public boolean supportsLocalLogin() {
+        return loginId != null && passwordHash != null;
+    }
+
+    public boolean supportsGoogleLogin() {
+        return googleSub != null;
+    }
 }

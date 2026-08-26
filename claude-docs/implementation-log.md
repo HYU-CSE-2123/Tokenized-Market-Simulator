@@ -192,3 +192,41 @@ fuzz: quoteBuy 256 runs, quoteSell 256 runs
 
 ## 다음 단계
 - Phase 2 백엔드 기본 API: 인증/JWT → JPA 도메인 → 가격·견적 → DB 기반 mock 주문·체결·포트폴리오 순서로 진행한다.
+
+---
+
+# Phase 2.1-A: 자체 로그인과 JWT 인증 — 완료
+
+> 구현 및 검증: 2026-08-25
+
+## 구현
+
+- 자체 회원가입 입력을 `loginId`, `password`, `nickname`으로 확정했다.
+- 로그인 아이디는 trim 및 소문자 정규화하며, BCrypt로 비밀번호를 해시해 저장한다.
+- 회원가입과 로그인 성공 시 1시간 유효한 JWT 액세스 토큰을 발급한다.
+- Bearer JWT 인증 필터를 Spring Security 체인에 연결하고 `GET /api/me`를 보호한다.
+- 중복 아이디, 잘못된 자격 증명, 잘못된 토큰, 입력 검증 오류를 일관된 JSON 형식으로 응답한다.
+- `users`에 향후 기능용 nullable `email`, `email_verified`, `google_sub`를 준비했다.
+
+## 결정
+
+- 이번 범위에서는 이메일을 받지 않으며 자체 계정과 Google 계정을 자동 연결하지 않는다.
+- Google OAuth 및 이메일 검증이 구현되기 전에는 이메일 동일성만으로 계정을 연결하지 않는다.
+- 리프레시 토큰은 이번 범위에서 제외하고 액세스 토큰만 사용한다.
+
+## 검증
+
+```text
+cd backend
+.\gradlew.bat test --no-daemon
+13 passed, 0 failed
+```
+
+- 단위 테스트: 회원가입 정규화·BCrypt 저장, 중복 아이디, 로그인 성공·실패, JWT 생성·검증·만료·서명 오류
+- 통합 테스트: 회원가입 → 인증된 내 정보 조회 → 로그인, 입력 검증, 중복 아이디, 잘못된 비밀번호와 토큰, 무인증 접근 차단
+
+## 남은 작업
+
+- Phase 2 mock 주문·체결·포트폴리오
+- Google OAuth 및 검증된 이메일 기반의 명시적 계정 연결
+- 이메일 인증과 리프레시 토큰 정책

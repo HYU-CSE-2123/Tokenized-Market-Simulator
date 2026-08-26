@@ -2,12 +2,28 @@
 
 CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    login_id VARCHAR(50) UNIQUE,
+    email VARCHAR(255) UNIQUE,
+    password_hash VARCHAR(255),
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    google_sub VARCHAR(255) UNIQUE,
     nickname VARCHAR(100) NOT NULL,
     wallet_address VARCHAR(255),
-    created_at TIMESTAMP NOT NULL
+    created_at TIMESTAMP NOT NULL,
+    CONSTRAINT chk_users_login_method CHECK (
+        (login_id IS NOT NULL AND password_hash IS NOT NULL)
+        OR google_sub IS NOT NULL
+    )
 );
+
+-- 기존 Phase 0 스키마로 생성된 로컬 DB 호환. 신규 DB에서는 위 CREATE 정의가 적용된다.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS login_id VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255);
+ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_users_login_id ON users (login_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_users_google_sub ON users (google_sub);
 
 CREATE TABLE IF NOT EXISTS assets (
     id BIGSERIAL PRIMARY KEY,

@@ -1,40 +1,69 @@
 package com.pricetrack.exchange.auth;
 
+import java.time.Instant;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
 /**
- * 인증 API (기획서 §12.1).
- * TODO(Phase 2): 실제 회원가입/로그인 로직과 UserService 연동.
+ * 자체 로그인 인증 API (기획서 §12.1, Phase 2.1-A).
  */
 @RestController
 @RequestMapping("/api")
 public class AuthController {
 
-    public record SignupRequest(String email, String password, String nickname) {}
+    private final AuthService authService;
 
-    public record LoginRequest(String email, String password) {}
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
-    public record TokenResponse(String accessToken) {}
+    public record SignupRequest(
+            @NotBlank
+            @Pattern(regexp = "^[a-zA-Z0-9_-]{4,30}$", message = "아이디는 영문, 숫자, _, - 조합의 4~30자여야 합니다.")
+            String loginId,
+            @NotBlank @Size(min = 8, max = 72) String password,
+            @NotBlank @Size(min = 2, max = 30) String nickname) {}
+
+    public record LoginRequest(
+            @NotBlank String loginId,
+            @NotBlank String password) {}
+
+    public record TokenResponse(String accessToken, String tokenType, long expiresIn) {}
+
+    public record MeResponse(
+            Long id,
+            String loginId,
+            String nickname,
+            String email,
+            boolean emailVerified,
+            String walletAddress,
+            Instant createdAt) {}
 
     @PostMapping("/auth/signup")
-    public TokenResponse signup(@RequestBody SignupRequest request) {
-        // TODO: User 생성, 비밀번호 해시, 지갑 주소 발급
-        throw new UnsupportedOperationException("not implemented (Phase 2)");
+    @ResponseStatus(HttpStatus.CREATED)
+    public TokenResponse signup(@Valid @RequestBody SignupRequest request) {
+        return authService.signup(request);
     }
 
     @PostMapping("/auth/login")
-    public TokenResponse login(@RequestBody LoginRequest request) {
-        // TODO: 자격 검증 후 JwtTokenProvider.createToken
-        throw new UnsupportedOperationException("not implemented (Phase 2)");
+    public TokenResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 
     @GetMapping("/me")
-    public Object me() {
-        // TODO: SecurityContext 의 사용자 반환
-        throw new UnsupportedOperationException("not implemented (Phase 2)");
+    public MeResponse me(@AuthenticationPrincipal AuthenticatedUser principal) {
+        return authService.me(principal.userId());
     }
 }

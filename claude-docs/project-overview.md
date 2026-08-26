@@ -1,45 +1,35 @@
 # 프로젝트 개요 — 삼성전자 가격 추종 토큰 거래소
 
-> 단일 출처: 리포 루트 `구현 계획.md`. 본 문서는 요약/미러본이다.
+> 상세 목표와 Phase 기준의 원본은 루트의 `구현 계획.md`이며, 이 문서는 사람과 모든 개발 에이전트가 빠르게 현재 상태를 이해하기 위한 요약입니다.
 
-## 한 줄 정의
-Ethereum ERC-20 기반으로 **삼성전자 기준 가격을 추종하는 모의 토큰(mSEC)**을 모의 원화(mKRW)로 매수·매도하는 **현물 모의 거래소**. 실제 주식·배당·의결권·상환권과 무관한 **학습/포트폴리오용** 프로젝트.
+## 프로젝트 목표
 
-졸업프로젝트 — 한양대 컴퓨터소프트웨어학부 (서교빈: 백엔드/컨트랙트, 김성은: Android). 지도교수 유민수.
+Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추종하는 모의 토큰(mSEC)을 사고파는 학습·포트폴리오용 거래소입니다. 실제 주식, 원화, 배당, 의결권과는 관계가 없습니다.
 
-## MVP 범위 (현물 즉시 매수·매도)
-- 오라클 가격 기반 시장가 매수/매도 (주문장·지정가 없음)
-- 회원가입/로그인(JWT), 모의 원화 faucet, 현재가·견적·주문·체결·포트폴리오
-- WebSocket 실시간 가격/체결 스트림
-- **제외(향후 확장 §17)**: 선물, 레버리지, 증거금, 강제청산, 실물 연동, 실제 시세 API
+## 모듈
 
-## 모듈 구조 (모노레포)
-```
-contracts/  Foundry — MockKRW, SamsungPriceTrackingToken, PriceOracle, ExchangeVault
-backend/    Spring Boot (Java 21) — com.pricetrack.exchange.*
-android/    Kotlin + Jetpack Compose — data/domain/presentation
-claude-docs/  Claude 컨텍스트 미러
-docker-compose.yml, README.md
-```
+- `contracts/`: Solidity 컨트랙트, Foundry 테스트, 배포·시나리오 스크립트
+- `backend/`: Java 21 / Spring Boot REST API, DB, 인증, 향후 블록체인 연동
+- `android/`: Kotlin / Jetpack Compose 클라이언트 스캐폴딩
+- `claude-docs/`: 이름과 무관하게 Claude, Codex 등 모든 개발 에이전트와 사람이 공유하는 프로젝트 문서
 
-## 기술 스택
-- **컨트랙트**: Solidity, Foundry(forge), OpenZeppelin. 가격은 1e8 정밀도.
-- **백엔드**: Java 21, Spring Boot 3.x, Spring Web/Security/Data JPA, PostgreSQL, WebSocket/STOMP, web3j, JWT. 패키지: auth/user/wallet/market/quote/order/trade/portfolio/blockchain/websocket/common.
-- **Android**: Kotlin, Jetpack Compose, Navigation, ViewModel/StateFlow, Retrofit/OkHttp, kotlinx.serialization, DataStore. 클린 아키텍처.
+## Phase
 
-## 컨트랙트 요약 (§9)
-- `MockKRW` — ERC-20 + `faucet()`
-- `SamsungPriceTrackingToken` (mSEC) — ERC-20 + `mint`/`burn` (Vault만 minter)
-- `PriceOracle` — `priceE8`, `updatedAt`, `updatePrice()`, `getPrice()`
-- `ExchangeVault` — `buy(krwAmount)`, `sell(tokenAmount)`, 수수료, `Bought`/`Sold` 이벤트
+0 초기 설정 → 0.5 최소 온체인 시나리오 → 1 컨트랙트 → 2 백엔드 mock API → 3 web3j 연동 → 4 WebSocket → 5 Android → 6 시연·문서화
 
-## 핵심 난점 (§18)
-- 온체인 트랜잭션 비동기성 → 주문 상태 분리(REQUESTED→PENDING_ONCHAIN→FILLED/FAILED)
-- DB ↔ 온체인 일관성 → `blockchain_transactions` + reconciliation job
-- 견적 시점 vs 체결 시점 가격 차이 → MVP는 견적 참고용, 체결은 실행 시점 오라클 가격
+## 현재 상태 (2026-08-25)
 
-## Phase (§16)
-0 초기세팅 → 0.5 컨트랙트 최소검증(매수→가격변경→매도→잔고확인) → 1 컨트랙트 → 2 백엔드 API(mock) → 3 web3j 연동 → 4 WebSocket → 5 Android → 6 시연/문서화
+- Phase 1 완료: 컨트랙트 4종, 배포·거래 시나리오, Foundry 테스트 20개 통과
+- Phase 2.1-A 완료: 자체 계정 회원가입·로그인, BCrypt, JWT 인증 필터, `/api/me`, 공통 오류 응답 구현
+- 백엔드 테스트 13개 통과: 서비스/JWT 단위 테스트와 Spring MockMvc 통합 테스트 포함
+- 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
-## 현재 상태 (2026-08-21)
-**Phase 1 스마트 컨트랙트 완료.** 컨트랙트 4종과 배포/시나리오 스크립트를 구현했고, Foundry 테스트 20개(단위·통합·fuzz) 및 Anvil 독립 배포와 매수→가격변경→매도 온체인 시나리오를 재검증했다. 다음 단계는 Phase 2 백엔드 기본 API다.
+## 다음 개발 후보
+
+Phase 2의 나머지인 JPA 도메인 정비, DB 기반 mock 주문·체결·포트폴리오 구현이 우선입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
+
+## 핵심 설계 원칙
+
+- 컨트랙트 트랜잭션은 비동기이므로 주문 상태를 `REQUESTED → PENDING_ONCHAIN → FILLED/FAILED`로 분리합니다.
+- DB 기록과 온체인 결과의 불일치는 `blockchain_transactions` 및 reconciliation 작업으로 다룹니다.
+- MVP 체결 가격은 견적 요청 시점이 아니라 실제 실행 시점의 오라클 가격을 따릅니다.

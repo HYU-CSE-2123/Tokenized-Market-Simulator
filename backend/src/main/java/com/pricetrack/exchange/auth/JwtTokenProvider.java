@@ -28,12 +28,12 @@ public class JwtTokenProvider {
         this.validityMs = validityMs;
     }
 
-    public String createToken(Long userId, String email) {
+    public String createToken(Long userId, String loginId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + validityMs);
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim("email", email)
+                .claim("loginId", loginId)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)
@@ -48,5 +48,9 @@ public class JwtTokenProvider {
                 .getPayload()
                 .getSubject();
         return Long.valueOf(subject);
+    }
+
+    public long getValiditySeconds() {
+        return validityMs / 1_000;
     }
 }
