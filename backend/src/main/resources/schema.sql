@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     google_sub VARCHAR(255) UNIQUE,
     nickname VARCHAR(100) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'USER',
     wallet_address VARCHAR(255),
     created_at TIMESTAMP NOT NULL,
     CONSTRAINT chk_users_login_method CHECK (
@@ -20,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS login_id VARCHAR(50);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'USER';
 ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
 ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_users_login_id ON users (login_id);
@@ -32,6 +34,24 @@ CREATE TABLE IF NOT EXISTS assets (
     contract_address VARCHAR(255),
     decimals INT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS user_balances (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    amount DECIMAL(30, 18) NOT NULL DEFAULT 0,
+    average_buy_price DECIMAL(30, 8) NOT NULL DEFAULT 0,
+    CONSTRAINT uk_user_balances_user_symbol UNIQUE (user_id, symbol)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_balances_user_id ON user_balances (user_id);
+
+-- Phase 2.1 이전에 만들어진 사용자도 모의 거래를 시작할 수 있도록 잔고 행을 보완한다.
+INSERT INTO user_balances (user_id, symbol, amount, average_buy_price)
+SELECT u.id, symbols.symbol, 0, 0
+FROM users u
+CROSS JOIN (VALUES ('mKRW'), ('mSEC')) AS symbols(symbol)
+ON CONFLICT (user_id, symbol) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS price_ticks (
     id BIGSERIAL PRIMARY KEY,
@@ -55,6 +75,8 @@ CREATE TABLE IF NOT EXISTS orders (
     updated_at TIMESTAMP NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_orders_user_created_at ON orders (user_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS trades (
     id BIGSERIAL PRIMARY KEY,
     order_id BIGINT NOT NULL,
@@ -68,6 +90,8 @@ CREATE TABLE IF NOT EXISTS trades (
     tx_hash VARCHAR(255),
     created_at TIMESTAMP NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_trades_user_created_at ON trades (user_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS blockchain_transactions (
     id BIGSERIAL PRIMARY KEY,

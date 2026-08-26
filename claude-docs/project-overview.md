@@ -17,16 +17,20 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 
 0 초기 설정 → 0.5 최소 온체인 시나리오 → 1 컨트랙트 → 2 백엔드 mock API → 3 web3j 연동 → 4 WebSocket → 5 Android → 6 시연·문서화
 
-## 현재 상태 (2026-08-25)
+## 현재 상태 (2026-08-26)
 
 - Phase 1 완료: 컨트랙트 4종, 배포·거래 시나리오, Foundry 테스트 20개 통과
 - Phase 2.1-A 완료: 자체 계정 회원가입·로그인, BCrypt, JWT 인증 필터, `/api/me`, 공통 오류 응답 구현
-- 백엔드 테스트 13개 통과: 서비스/JWT 단위 테스트와 Spring MockMvc 통합 테스트 포함
+- Phase 2.2 완료: 사용자별 DB 잔고, faucet, 즉시 매수·매도, 주문·체결 내역과 포트폴리오 구현
+- Phase 2 마감 점검 완료: PostgreSQL 16 실제 연결, 스키마 최초·반복 적용, 핵심 HTTP 거래 흐름 검증
+- DB 보존·관리자 기반 완료: 외부 Docker 볼륨, `USER`/`ADMIN` 역할, 환경 변수 기반 초기 관리자 생성
+- 로컬 설정 표준화: Git 제외 `backend/.env`, 팀 공유용 `backend/.env.example`, Spring 선택적 로딩
+- 백엔드 테스트 19개 통과: 서비스/JWT·거래 계산 단위 테스트와 Spring MockMvc 통합 테스트 포함
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
 ## 다음 개발 후보
 
-Phase 2의 나머지인 JPA 도메인 정비, DB 기반 mock 주문·체결·포트폴리오 구현이 우선입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
+Phase 2 mock 거래 백엔드와 PostgreSQL 검증까지 완료되었으므로 다음은 Phase 3 web3j 연동 설계입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
 
 ## 핵심 설계 원칙
 

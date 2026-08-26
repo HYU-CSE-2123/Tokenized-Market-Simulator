@@ -10,9 +10,11 @@
 - JWT 인증 필터와 보호 API `GET /api/me`
 - 통일된 JSON 오류 응답 및 입력값 검증
 - 공개 시장 조회와 모의 가격·견적 계산
+- 사용자별 mKRW·mSEC DB 잔고와 mKRW faucet
+- DB 기반 즉시 매수·매도, 주문·체결 내역 및 포트폴리오
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
-Google OAuth, 이메일 인증, 리프레시 토큰, 지갑, 주문·체결·포트폴리오 및 web3j 연동은 아직 구현하지 않았습니다.
+Google OAuth, 이메일 인증, 리프레시 토큰, 실제 블록체인 지갑 및 web3j 연동은 아직 구현하지 않았습니다.
 
 ## 인증 API
 
@@ -24,6 +26,20 @@ Google OAuth, 이메일 인증, 리프레시 토큰, 지갑, 주문·체결·포
 
 `loginId`는 영문자·숫자·`_`·`-`로 구성된 4~30자이며 대소문자를 구분하지 않습니다. 비밀번호는 8~72자입니다.
 
+## 모의 거래 API
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| POST | `/api/wallet/faucet` | 1,000,000 mKRW 지급 |
+| POST | `/api/orders/buy` | 현재 가격으로 mSEC 즉시 매수 |
+| POST | `/api/orders/sell` | 현재 가격으로 mSEC 즉시 매도 |
+| GET | `/api/orders` | 내 주문 목록 |
+| GET | `/api/orders/{orderId}` | 내 주문 단건 조회 |
+| GET | `/api/trades` | 내 체결 목록 |
+| GET | `/api/portfolio` | 잔고·평균매수가·평가금액·미실현손익 조회 |
+
+모든 모의 거래 API에는 Bearer JWT가 필요합니다. 수수료는 컨트랙트와 동일한 0.1%이며, 잔고 부족 주문은 `FAILED`, 성공 주문은 `FILLED`로 저장됩니다. Phase 3 전까지는 온체인 트랜잭션 없이 DB에서 즉시 체결됩니다.
+
 ## 패키지 구조
 
 | 패키지 | 책임 |
@@ -32,7 +48,7 @@ Google OAuth, 이메일 인증, 리프레시 토큰, 지갑, 주문·체결·포
 | `user` | 사용자 엔티티와 리포지토리 |
 | `market` | 현재가와 가격 시뮬레이션 |
 | `quote` | 매수·매도 견적 계산 |
-| `wallet`, `order`, `trade`, `portfolio` | 후속 Phase 구현 영역 |
+| `wallet`, `order`, `trade`, `portfolio` | 모의 잔고·주문·체결·포트폴리오 |
 | `blockchain` | Phase 3 web3j 연동 영역 |
 | `websocket` | STOMP 설정과 가격 스트림 |
 | `common` | 보안 설정, 헬스 체크, 공통 오류 처리 |
@@ -44,9 +60,21 @@ cd backend
 .\gradlew.bat test --no-daemon
 ```
 
-테스트는 H2 인메모리 DB를 사용하며 PostgreSQL 없이 실행할 수 있습니다. 인증 서비스 단위 테스트, JWT 단위 테스트, MockMvc 기반 회원가입→로그인→내 정보 통합 흐름을 포함합니다.
+테스트는 H2 인메모리 DB를 사용하며 PostgreSQL 없이 실행할 수 있습니다. 인증/JWT·거래 계산 단위 테스트와 MockMvc 기반 회원가입→faucet→매수→매도→포트폴리오 통합 흐름을 포함합니다.
 
 ## 로컬 실행
+
+### 환경 설정 파일
+
+```powershell
+Copy-Item .env.example .env
+```
+
+- `backend/.env`: 실제 로컬 값과 비밀정보를 저장하며 Git에서 제외됩니다.
+- `backend/.env.example`: 팀원이 공유하는 변수 목록이며 실제 비밀번호·개인키는 넣지 않습니다.
+- OS 환경 변수가 같은 이름으로 설정돼 있으면 `.env`보다 OS 환경 변수가 우선합니다.
+- `JWT_SECRET`, `ADMIN_PASSWORD`, `OPERATOR_PRIVATE_KEY`는 `.env`에서 직접 입력하고 주석을 해제합니다.
+- `.env`가 없어도 기본값으로 기동할 수 있지만 관리자는 생성되지 않습니다.
 
 ```powershell
 docker compose up -d postgres
@@ -55,3 +83,36 @@ cd backend
 ```
 
 주요 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `RPC_URL`, `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS`, `OPERATOR_PRIVATE_KEY`.
+
+### 초기 관리자 계정
+
+관리자 비밀번호가 설정된 경우에만 서버 시작 시 관리자 계정을 생성합니다. 일반적으로 `backend/.env`에 설정합니다.
+
+```properties
+ADMIN_LOGIN_ID=admin
+ADMIN_PASSWORD=직접-지정한-8자-이상-비밀번호
+ADMIN_NICKNAME=Admin
+```
+
+환경 변수를 현재 PowerShell 세션에서 직접 지정하는 방식도 사용할 수 있습니다.
+
+```powershell
+$env:ADMIN_PASSWORD = "직접-지정한-8자-이상-비밀번호"
+.\gradlew.bat bootRun
+```
+
+- 계정이 이미 존재하면 다시 만들거나 비밀번호를 덮어쓰지 않습니다.
+- 비밀번호는 BCrypt 해시로만 저장됩니다.
+- 생성된 계정의 역할은 `ADMIN`이며 일반 가입 계정은 `USER`입니다.
+- `ADMIN_PASSWORD`가 없으면 관리자 계정 초기화를 건너뜁니다.
+- 운영 환경에서는 환경 변수 대신 배포 환경의 Secret 관리 기능을 사용하는 것을 권장합니다.
+
+PostgreSQL만 종료하거나 다시 시작할 때는 루트에서 다음 명령을 사용합니다.
+
+```powershell
+docker compose -p exchange stop postgres
+docker compose -p exchange up -d postgres
+docker compose -p exchange ps
+```
+
+데이터는 외부 Docker 볼륨 `exchange_postgres-data`에 유지됩니다. Compose 외부 볼륨이므로 `docker compose down -v`도 이 볼륨을 삭제하지 않습니다. 단, Docker Desktop이나 `docker volume rm exchange_postgres-data`로 직접 삭제하면 복구할 수 없으므로 주의합니다.

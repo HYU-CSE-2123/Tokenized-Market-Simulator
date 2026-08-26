@@ -15,6 +15,7 @@ import com.pricetrack.exchange.common.exception.InvalidCredentialsException;
 import com.pricetrack.exchange.common.exception.UserNotFoundException;
 import com.pricetrack.exchange.user.User;
 import com.pricetrack.exchange.user.UserRepository;
+import com.pricetrack.exchange.wallet.WalletService;
 
 @Service
 @Transactional(readOnly = true)
@@ -23,14 +24,17 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final WalletService walletService;
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            JwtTokenProvider jwtTokenProvider) {
+            JwtTokenProvider jwtTokenProvider,
+            WalletService walletService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.walletService = walletService;
     }
 
     @Transactional
@@ -45,6 +49,7 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setNickname(request.nickname().trim());
         user = userRepository.save(user);
+        walletService.initializeBalances(user.getId());
 
         return token(user);
     }
@@ -72,6 +77,7 @@ public class AuthService {
                 user.getEmail(),
                 user.isEmailVerified(),
                 user.getWalletAddress(),
+                user.getRole(),
                 user.getCreatedAt());
     }
 

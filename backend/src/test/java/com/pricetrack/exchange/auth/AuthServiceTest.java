@@ -22,6 +22,7 @@ import com.pricetrack.exchange.common.exception.DuplicateLoginIdException;
 import com.pricetrack.exchange.common.exception.InvalidCredentialsException;
 import com.pricetrack.exchange.user.User;
 import com.pricetrack.exchange.user.UserRepository;
+import com.pricetrack.exchange.wallet.WalletService;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -32,12 +33,14 @@ class AuthServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+    @Mock
+    private WalletService walletService;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider);
+        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider, walletService);
     }
 
     @Test
@@ -62,6 +65,7 @@ class AuthServiceTest {
         assertThat(saved.getNickname()).isEqualTo("교빈");
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.tokenType()).isEqualTo("Bearer");
+        verify(walletService).initializeBalances(1L);
     }
 
     @Test

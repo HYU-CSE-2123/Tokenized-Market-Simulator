@@ -1,5 +1,7 @@
 package com.pricetrack.exchange.trade;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 /**
@@ -8,5 +10,13 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class TradeService {
-    // Phase 3 에서 Trade 엔티티/리포지토리와 함께 구현.
+    private final TradeRepository tradeRepository;
+
+    public TradeService(TradeRepository tradeRepository) {
+        this.tradeRepository = tradeRepository;
+    }
+
+    public List<Trade> findAll(Long userId) {
+        return tradeRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    }
 }

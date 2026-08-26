@@ -32,7 +32,9 @@ public class PriceSimulator {
         return currentPrice.get();
     }
 
-    @Scheduled(fixedRateString = "${app.price.update-interval-ms:1000}")
+    @Scheduled(
+            fixedRateString = "${app.price.update-interval-ms:1000}",
+            initialDelayString = "${app.price.initial-delay-ms:1000}")
     public void tick() {
         BigDecimal previous = currentPrice.get();
         double deltaPct = ThreadLocalRandom.current().nextDouble(-0.003, 0.003);

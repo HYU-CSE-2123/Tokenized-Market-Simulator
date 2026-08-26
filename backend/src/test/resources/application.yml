@@ -19,6 +19,7 @@ app:
     validity-ms: 3600000
   price:
     update-interval-ms: 60000
+    initial-delay-ms: 60000
   blockchain:
     rpc-url: http://127.0.0.1:8545
     mock-krw-address: ""

@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.pricetrack.exchange.user.UserRole;
 
 /**
  * 자체 로그인 인증 API (기획서 §12.1, Phase 2.1-A).
@@ -49,6 +50,7 @@ public class AuthController {
             String email,
             boolean emailVerified,
             String walletAddress,
+            UserRole role,
             Instant createdAt) {}
 
     @PostMapping("/auth/signup")

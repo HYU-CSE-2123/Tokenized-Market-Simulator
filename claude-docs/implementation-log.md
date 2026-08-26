@@ -230,3 +230,161 @@ cd backend
 - Phase 2 mock 주문·체결·포트폴리오
 - Google OAuth 및 검증된 이메일 기반의 명시적 계정 연결
 - 이메일 인증과 리프레시 토큰 정책
+
+---
+
+# Phase 2.2: DB 기반 모의 거래 — 완료
+
+> 구현 및 검증: 2026-08-26
+
+## 구현
+
+- 가입 시 사용자별 `mKRW`, `mSEC` 잔고 행을 생성하며, 기존 사용자는 `schema.sql` 기동 시 누락 잔고를 보완한다.
+- `POST /api/wallet/faucet`으로 호출당 1,000,000 mKRW를 지급한다.
+- 현재 `PriceSimulator` 가격과 컨트랙트와 동일한 0.1% 수수료를 사용해 DB에서 매수·매도를 즉시 체결한다.
+- 주문, 체결, 잔고 변경을 하나의 트랜잭션으로 처리하고 잔고 행에 비관적 쓰기 잠금을 적용한다.
+- 성공 주문은 `FILLED`, 잔고 부족 주문은 잔고·체결 변경 없이 `FAILED`로 기록한다.
+- 주문·체결 내역과 mKRW/mSEC 잔고, 평균매수가, 평가금액, 미실현손익을 조회한다.
+- 다른 사용자의 주문은 존재 여부가 노출되지 않도록 404로 응답한다.
+
+## API
+
+- `POST /api/wallet/faucet`
+- `POST /api/orders/buy`, `POST /api/orders/sell`
+- `GET /api/orders`, `GET /api/orders/{orderId}`
+- `GET /api/trades`
+- `GET /api/portfolio`
+
+모든 API는 JWT 인증이 필요하다.
+
+## 검증
+
+```text
+cd backend
+.\gradlew.bat test --no-daemon
+19 passed, 0 failed
+```
+
+- 계산 단위 테스트: 0.1% 수수료가 적용된 매수·매도 수량
+- 통합 테스트: 회원가입 → faucet → 매수 → 포트폴리오 → 전량 매도 → 주문·체결 조회
+- 예외 테스트: 잔고 부족의 `FAILED` 기록과 체결 미생성, 0 수량, 미지원 심볼, 다른 사용자 주문 차단
+
+## 다음 작업
+
+- Phase 2 마감 점검 및 PostgreSQL 실제 기동 검증
+- Phase 3 web3j를 통한 주문의 온체인 비동기 처리
+- Google OAuth·이메일 인증·리프레시 토큰은 별도 승인 후 구현
+
+---
+
+# Phase 2 마감 점검: PostgreSQL 실환경 검증 — 완료
+
+> 검증: 2026-08-26
+
+## 환경
+
+- Docker Desktop
+- PostgreSQL `postgres:16` 컨테이너 `exchange-postgres`
+- DB/사용자: `exchange` / `exchange`
+- 포트: `localhost:5432`
+- 영속 볼륨: `exchange_postgres-data`
+
+## 검증 결과
+
+- PostgreSQL healthcheck `healthy`, `pg_isready` 연결 성공
+- Spring Boot가 PostgreSQL JDBC/Hikari로 연결되고 `schema.sql`을 적용해 7개 테이블 생성
+- `continue-on-error: false` 상태에서 기존 DB에 재기동 성공: 스키마 반복 적용 가능
+- HTTP 실검증: 회원가입 → faucet → 매수 → 포트폴리오 → 주문·체결 조회 성공
+- DB 직접 조회: 사용자 1, 잔고 2, 주문 1, 체결 1 및 금액·수수료 저장 확인
+- 검증용 `pgtest...` 사용자와 연관 데이터는 삭제했으며 PostgreSQL 컨테이너만 실행 상태로 유지
+- 미사용 Spring 기본 `UserDetailsService` 자동 설정을 제외해 임시 비밀번호 경고 제거
+- 전체 H2 자동 테스트: `19 passed, 0 failed`
+
+## 실행 명령
+
+```powershell
+docker compose -p exchange up -d postgres
+docker compose -p exchange ps
+cd backend
+.\gradlew.bat bootRun
+```
+
+PostgreSQL 데이터는 볼륨에 유지되며 `docker compose -p exchange stop postgres`로 안전하게 중지할 수 있다.
+
+---
+
+# Phase 2 운영 기반 보강: DB 보존과 초기 관리자 — 완료
+
+> 구현 및 검증: 2026-08-26
+
+## 구현
+
+- 기존 데이터가 들어 있는 `exchange_postgres-data` 볼륨을 새 볼륨으로 교체하지 않고 Compose 외부 볼륨으로 선언했다.
+- 외부 볼륨은 `docker compose down -v`의 삭제 대상이 아니며 컨테이너 재생성 후에도 같은 데이터를 사용한다.
+- `users.role`에 `USER`, `ADMIN` 역할을 추가하고 기존 사용자 기본값을 `USER`로 설정했다.
+- JWT 인증 시 DB의 역할을 `ROLE_USER`, `ROLE_ADMIN` Spring Security 권한으로 변환한다.
+- `ADMIN_PASSWORD`가 설정된 경우 애플리케이션 시작 시 초기 관리자와 mKRW/mSEC 잔고를 생성한다.
+- 관리자 로그인 아이디는 소문자로 정규화하고 비밀번호는 BCrypt로 저장한다.
+- 동일 아이디가 이미 있으면 계정, 역할, 비밀번호, 잔고를 덮어쓰지 않는다.
+- 설정한 관리자 아이디가 기존 `USER` 계정과 충돌하면 잘못된 권한 상태를 숨기지 않고 서버 기동을 실패시킨다.
+
+## 관리자 설정
+
+```powershell
+$env:ADMIN_LOGIN_ID = "admin"
+$env:ADMIN_PASSWORD = "8자 이상의 직접 지정한 비밀번호"
+$env:ADMIN_NICKNAME = "Admin"
+cd backend
+.\gradlew.bat bootRun
+```
+
+`ADMIN_PASSWORD`가 비어 있으면 초기화를 수행하지 않는다. 비밀번호는 문서, 코드, 로그에 기록하지 않으며 운영 환경에서는 Secret 저장소를 사용한다.
+
+## 검증
+
+- H2 전체 자동 테스트: `21 passed, 0 failed`
+- 일반 회원가입 결과 `role=USER`
+- 관리자 초기화 결과 `role=ADMIN`, 평문과 다른 BCrypt 해시, 초기 잔고 2개 확인
+- 초기화 로직 재실행 및 실제 PostgreSQL 재기동 후 관리자 1명·잔고 2개 유지
+- 기존 외부 볼륨 재적용 후 기존 스키마 7개 유지 및 PostgreSQL healthcheck `healthy`
+- 실제 검증용 `postgres_admin_test` 계정과 잔고는 검증 후 삭제
+
+## 팀원 참고 위치
+
+- 실행·관리자 설정: `backend/README.md`
+- 현재 Phase 상태: `claude-docs/project-overview.md`
+- 상세 작업·결정·검증 이력: `claude-docs/implementation-log.md`의 현재 섹션
+- 프로젝트 문서 운영 규칙: `claude-docs/README.md`
+
+---
+
+# Phase 2 운영 기반 보강: 로컬 `.env` 설정 — 완료
+
+> 구현 및 검증: 2026-08-26
+
+## 구현
+
+- `backend/.env`를 로컬 실행 설정 파일로 만들고 기존 `.gitignore` 제외 상태를 확인했다.
+- 실제 비밀번호·JWT secret·개인키는 기본 파일에서 활성화하지 않고 사용자가 직접 입력하도록 주석 처리했다.
+- `backend/.env.example`을 Git에 포함되는 팀 공유 템플릿으로 추가했다.
+- Spring Boot `application.yml`에서 `optional:file:.env[.properties]`로 `.env`를 선택적으로 불러온다.
+- OS 환경 변수는 Spring 설정 우선순위에 따라 `.env` 값보다 우선한다.
+- 테스트는 `src/test/resources/application.yml`의 H2·테스트 JWT 설정을 사용해 로컬 `.env`와 분리한다.
+
+## 파일 위치
+
+- 실제 로컬 설정: `backend/.env` — Git 제외
+- 공유 템플릿: `backend/.env.example` — Git 포함
+- 로딩 설정: `backend/src/main/resources/application.yml`
+- 사용 방법: `backend/README.md`
+
+## 검증
+
+- `git check-ignore`: `backend/.env` 제외 확인
+- `backend/.env.example`: Git 추적 가능 확인
+- H2 전체 자동 테스트: `21 passed, 0 failed`
+- 실제 `.env`로 Spring Boot 및 PostgreSQL 연결, `/api/health=UP` 확인
+- `ADMIN_PASSWORD`가 주석된 상태에서 관리자 미생성 확인
+- 검증용 백엔드는 종료하고 PostgreSQL 컨테이너만 `healthy` 상태로 유지
+- 로컬 관리자 실제 생성 확인: `admin`, `role=ADMIN`, 초기 잔고 2개, 로그인 및 JWT 발급 성공
+- `.env` properties 로딩에서 한글 닉네임 인코딩 문제를 확인해 공유 기본값을 ASCII `Admin`으로 변경하고 DB 값도 보정

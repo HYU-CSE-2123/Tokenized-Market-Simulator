@@ -59,7 +59,8 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.loginId", is("kyobin21")))
                 .andExpect(jsonPath("$.nickname", is("Kyobin")))
                 .andExpect(jsonPath("$.email").isEmpty())
-                .andExpect(jsonPath("$.emailVerified", is(false)));
+                .andExpect(jsonPath("$.emailVerified", is(false)))
+                .andExpect(jsonPath("$.role", is("USER")));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

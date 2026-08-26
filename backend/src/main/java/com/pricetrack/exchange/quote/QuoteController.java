@@ -1,7 +1,6 @@
 package com.pricetrack.exchange.quote;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,13 +16,12 @@ import com.pricetrack.exchange.market.PriceSimulator;
 @RequestMapping("/api/quotes")
 public class QuoteController {
 
-    // 수수료율 0.1% (= 컨트랙트 ExchangeVault.feeBps 10 과 일치)
-    private static final BigDecimal FEE_RATE = new BigDecimal("0.001");
-
     private final PriceSimulator priceSimulator;
+    private final TradeCalculator tradeCalculator;
 
-    public QuoteController(PriceSimulator priceSimulator) {
+    public QuoteController(PriceSimulator priceSimulator, TradeCalculator tradeCalculator) {
         this.priceSimulator = priceSimulator;
+        this.tradeCalculator = tradeCalculator;
     }
 
     public record BuyQuoteRequest(String symbol, BigDecimal krwAmount) {}
@@ -41,20 +39,16 @@ public class QuoteController {
     @PostMapping("/buy")
     public BuyQuoteResponse buy(@RequestBody BuyQuoteRequest request) {
         BigDecimal price = priceSimulator.getCurrentPrice();
-        BigDecimal fee = request.krwAmount().multiply(FEE_RATE).setScale(8, RoundingMode.HALF_UP);
-        BigDecimal net = request.krwAmount().subtract(fee);
-        BigDecimal tokens = net.divide(price, 8, RoundingMode.HALF_UP);
+        TradeCalculator.BuyCalculation calculation = tradeCalculator.buy(request.krwAmount(), price);
         return new BuyQuoteResponse(request.symbol(), "BUY", price,
-                request.krwAmount(), fee, tokens);
+                request.krwAmount(), calculation.fee(), calculation.tokenAmount());
     }
 
     @PostMapping("/sell")
     public SellQuoteResponse sell(@RequestBody SellQuoteRequest request) {
         BigDecimal price = priceSimulator.getCurrentPrice();
-        BigDecimal gross = request.tokenAmount().multiply(price).setScale(8, RoundingMode.HALF_UP);
-        BigDecimal fee = gross.multiply(FEE_RATE).setScale(8, RoundingMode.HALF_UP);
-        BigDecimal net = gross.subtract(fee);
+        TradeCalculator.SellCalculation calculation = tradeCalculator.sell(request.tokenAmount(), price);
         return new SellQuoteResponse(request.symbol(), "SELL", price,
-                request.tokenAmount(), fee, net);
+                request.tokenAmount(), calculation.fee(), calculation.netKrw());
     }
 }

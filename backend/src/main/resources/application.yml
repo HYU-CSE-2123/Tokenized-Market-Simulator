@@ -1,6 +1,10 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: price-tracking-exchange
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/exchange}
     username: ${DB_USERNAME:exchange}
@@ -16,13 +20,17 @@ spring:
   sql:
     init:
       mode: always            # schema.sql 자동 실행
-      continue-on-error: true # 이미 존재하는 테이블 무시
+      continue-on-error: false # 스키마 오류를 숨기지 않고 기동 실패로 처리
 
 server:
   port: ${SERVER_PORT:8080}
 
 # 애플리케이션 커스텀 설정
 app:
+  admin:
+    login-id: ${ADMIN_LOGIN_ID:admin}
+    password: ${ADMIN_PASSWORD:}
+    nickname: ${ADMIN_NICKNAME:관리자}
   jwt:
     secret: ${JWT_SECRET:change-me-please-change-me-please-32bytes-minimum}
     validity-ms: ${JWT_VALIDITY_MS:3600000}   # 1시간

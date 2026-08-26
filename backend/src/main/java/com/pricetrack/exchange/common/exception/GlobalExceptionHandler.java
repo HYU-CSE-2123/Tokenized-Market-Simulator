@@ -39,6 +39,30 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", exception.getMessage(), request);
     }
 
+    @ExceptionHandler(InsufficientBalanceException.class)
+    public ResponseEntity<ApiErrorResponse> insufficientBalance(
+            InsufficientBalanceException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "INSUFFICIENT_BALANCE", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(BalanceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> balanceNotFound(
+            BalanceNotFoundException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "BALANCE_NOT_INITIALIZED", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> orderNotFound(
+            OrderNotFoundException exception, HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(UnsupportedSymbolException.class)
+    public ResponseEntity<ApiErrorResponse> unsupportedSymbol(
+            UnsupportedSymbolException exception, HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "UNSUPPORTED_SYMBOL", exception.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> validation(
             MethodArgumentNotValidException exception, HttpServletRequest request) {
