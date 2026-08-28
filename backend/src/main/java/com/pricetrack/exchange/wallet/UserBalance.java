@@ -34,11 +34,26 @@ public class UserBalance {
     @Column(nullable = false, precision = 30, scale = 18)
     private BigDecimal amount = BigDecimal.ZERO;
 
+    @Column(name = "locked_amount", nullable = false, precision = 30, scale = 18)
+    private BigDecimal lockedAmount = BigDecimal.ZERO;
+
     @Column(name = "average_buy_price", nullable = false, precision = 30, scale = 8)
     private BigDecimal averageBuyPrice = BigDecimal.ZERO;
 
     public UserBalance(Long userId, String symbol) {
         this.userId = userId;
         this.symbol = symbol;
+    }
+
+    public BigDecimal getAvailableAmount() {
+        return amount.subtract(lockedAmount);
+    }
+
+    public void lock(BigDecimal value) {
+        lockedAmount = lockedAmount.add(value);
+    }
+
+    public void unlock(BigDecimal value) {
+        lockedAmount = lockedAmount.subtract(value);
     }
 }

@@ -11,11 +11,12 @@
 - 통일된 JSON 오류 응답 및 입력값 검증
 - 공개 시장 조회와 모의 가격·견적 계산
 - 사용자별 mKRW·mSEC DB 잔고와 mKRW faucet
-- DB 기반 즉시 매수·매도, 주문·체결 내역 및 포트폴리오
+- 블록체인 비활성화 시 DB 기반 즉시 매수·매도, 주문·체결 내역 및 포트폴리오
 - 선택적으로 활성화하는 web3j RPC 연결과 읽기 전용 컨트랙트 조회
+- 블록체인 활성화 시 운영자 지갑의 buy/sell 서명·전송과 비동기 주문 생성
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
-Google OAuth, 이메일 인증, 리프레시 토큰과 온체인 주문 전송은 아직 구현하지 않았습니다. Phase 3.1은 RPC·컨트랙트 읽기까지만 지원하며 기존 주문은 여전히 DB에서 즉시 체결됩니다.
+Google OAuth, 이메일 인증, 리프레시 토큰과 receipt 기반 최종 체결 처리는 아직 구현하지 않았습니다. Phase 3.2는 온체인 트랜잭션을 전송하고 주문을 `PENDING_ONCHAIN`으로 만드는 데까지 지원합니다.
 
 ## 인증 API
 
@@ -39,7 +40,12 @@ Google OAuth, 이메일 인증, 리프레시 토큰과 온체인 주문 전송�
 | GET | `/api/trades` | 내 체결 목록 |
 | GET | `/api/portfolio` | 잔고·평균매수가·평가금액·미실현손익 조회 |
 
-모든 모의 거래 API에는 Bearer JWT가 필요합니다. 수수료는 컨트랙트와 동일한 0.1%이며, 잔고 부족 주문은 `FAILED`, 성공 주문은 `FILLED`로 저장됩니다. Phase 3 전까지는 온체인 트랜잭션 없이 DB에서 즉시 체결됩니다.
+모든 거래 API에는 Bearer JWT가 필요합니다. 수수료는 컨트랙트와 동일한 0.1%입니다.
+
+- `BLOCKCHAIN_ENABLED=false`: DB에서 즉시 체결하며 성공 주문은 `FILLED`
+- `BLOCKCHAIN_ENABLED=true`: 입력 잔고를 잠그고 실제 트랜잭션을 전송한 뒤 HTTP 202와 `PENDING_ONCHAIN` 반환
+
+Phase 3.3 전에는 receipt가 성공해도 잠긴 잔고와 주문을 자동으로 `FILLED` 처리하지 않습니다.
 
 ## 패키지 구조
 
@@ -50,7 +56,7 @@ Google OAuth, 이메일 인증, 리프레시 토큰과 온체인 주문 전송�
 | `market` | 현재가와 가격 시뮬레이션 |
 | `quote` | 매수·매도 견적 계산 |
 | `wallet`, `order`, `trade`, `portfolio` | 모의 잔고·주문·체결·포트폴리오 |
-| `blockchain` | web3j 설정, 연결·배포 검증, 컨트랙트 읽기 gateway |
+| `blockchain` | web3j 설정, 컨트랙트 읽기, 운영자 트랜잭션 서명·저장·전송 |
 | `websocket` | STOMP 설정과 가격 스트림 |
 | `common` | 보안 설정, 헬스 체크, 공통 오류 처리 |
 
@@ -78,7 +84,21 @@ $env:OPERATOR_PRIVATE_KEY = "Anvil 운영자 개인키"
 .\gradlew.bat test --no-daemon --tests '*BlockchainAnvilIntegrationTest'
 ```
 
-이 테스트는 chain ID와 배포 코드, 운영자 주소, 오라클 가격, 수수료, 잔고·allowance와 매수 견적을 실제 RPC로 조회합니다.
+이 테스트는 chain ID와 배포 코드, 운영자 주소, 오라클 가격, 수수료, 잔고·allowance와 매수 견적을 실제 RPC로 조회하고 소액 buy를 실제 서명·전송합니다.
+
+### 운영자 지갑 준비
+
+온체인 주문 전에 운영자 지갑에 테스트 mKRW와 Vault allowance가 필요합니다. 컨트랙트 배포 주소와 운영자 키를 환경 변수로 설정한 후 실행합니다.
+
+```powershell
+cd contracts
+$env:MOCK_KRW_ADDRESS = "배포 결과 주소"
+$env:EXCHANGE_VAULT_ADDRESS = "배포 결과 주소"
+$env:OPERATOR_PRIVATE_KEY = "Anvil 운영자 개인키"
+forge script script/PrepareOperator.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+```
+
+스크립트는 운영자에게 1,000,000 mKRW를 faucet으로 지급하고 Vault에 최대 allowance를 설정합니다. 실제 자산이나 운영 네트워크용 스크립트가 아닙니다.
 
 ## 로컬 실행
 
@@ -103,6 +123,8 @@ cd backend
 주요 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `BLOCKCHAIN_ENABLED`, `RPC_URL`, `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS`, `OPERATOR_PRIVATE_KEY`.
 
 `BLOCKCHAIN_ENABLED`의 기본값은 `false`입니다. 기존 DB 모의 거래만 사용할 때는 그대로 두며, Phase 3 web3j 기능을 사용할 때 `true`로 바꿉니다. 활성화 후 연결 검증을 호출하면 RPC, 개인키, 네 컨트랙트 주소와 실제 배포 코드를 엄격히 검사합니다.
+
+온체인 주문에서는 `user_balances.locked_amount`가 처리 중인 입력 자산을 나타냅니다. 사용 가능 잔고는 `amount - locked_amount`이며 receipt 처리 전까지 전체 `amount`는 바뀌지 않습니다. 서명 원문, nonce와 txHash는 `blockchain_transactions`에 저장되어 Phase 3.3 재처리 기반으로 사용됩니다.
 
 ### 초기 관리자 계정
 

@@ -437,3 +437,47 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 주문을 즉시 `FILLED`하지 않고 `REQUESTED → PENDING_ONCHAIN`으로 전환
 - Phase 3.3 receipt polling, 이벤트 파싱, 멱등 체결·잔고 반영과 reconciliation
 - Phase 3.4 가격 시뮬레이터와 `PriceOracle.updatePrice` 동기화
+
+---
+
+# Phase 3.2: 운영자 지갑 온체인 주문 전송 — 완료
+
+> 구현 및 검증: 2026-08-29
+
+## 구현
+
+- `user_balances.locked_amount`를 추가해 pending 주문의 입력 자산과 사용 가능 잔고를 분리했다.
+- `blockchain_transactions`에 `order_id`, sender, nonce, signed raw transaction, 제출 시각을 추가했다.
+- 블록체인 활성화 시 매수·매도 견적과 운영자 온체인 잔고·allowance를 확인한다.
+- 입력 잔고를 잠그고 주문을 `REQUESTED`로 커밋한 후 운영자 트랜잭션을 생성한다.
+- pending nonce, 현재 gas price와 estimate gas 20% buffer를 사용해 legacy transaction을 서명한다.
+- 서명 원문과 사전 계산한 txHash를 별도 트랜잭션으로 먼저 저장한 뒤 RPC에 전송한다.
+- RPC가 같은 txHash를 반환하면 blockchain transaction을 `SUBMITTED`, 주문을 `PENDING_ONCHAIN`으로 변경하고 HTTP 202를 반환한다.
+- 프로세스 내부 전송을 직렬화하고 `(sender_address, nonce)` unique 제약으로 nonce 중복을 방어한다.
+- `PrepareOperator.s.sol`로 개발 운영자에게 1,000,000 mKRW 지급과 Vault 최대 allowance 설정을 자동화했다.
+- 블록체인 비활성화 시 기존 Phase 2 DB 즉시 체결 동작을 유지한다.
+
+## 장애 안전성
+
+- 주문·잔고 잠금은 온체인 전송 전에 독립 커밋된다.
+- 서명된 원문·nonce·txHash도 broadcast 전에 독립 커밋된다.
+- RPC 연결이 끊겨도 서명 기록과 잠긴 잔고가 남아 Phase 3.3 reconciliation에서 같은 트랜잭션을 재전송할 수 있다.
+- Phase 3.2에서는 receipt 성공·실패를 최종 반영하지 않으므로 주문과 잔고는 의도적으로 pending/locked 상태에 머문다.
+
+## 검증
+
+- 백엔드 기본 단위·통합 테스트 `31 passed, 0 failed`(Anvil 선택 테스트 2개 skipped): 잔고 잠금, HTTP 202, txHash 및 `SUBMITTED` 저장, 18 decimals 변환, ABI selector 검증 포함
+- 선택 Anvil 테스트 `2 passed, 0 failed`: 읽기 연동 및 실제 서명·buy 전송
+- 실제 PostgreSQL 스키마 반복 적용: 기존 관리자와 잔고 보존, 신규 컬럼·인덱스 생성 확인
+- 실제 HTTP 매수 100,000 mKRW: `202 PENDING_ONCHAIN`, 1.332 mSEC 견적, nonce 7, receipt block 6 `status=1`
+- 실제 HTTP 매도 1 mSEC: `202 PENDING_ONCHAIN`, 74,925 mKRW 견적, nonce 8, receipt `status=1`
+- 검증용 사용자·주문·트랜잭션·잔고 DB 기록은 삭제했으며 온체인 로컬 테스트 거래만 Anvil에 남았다.
+- Foundry: `20 passed, 0 failed`
+
+## 남은 작업
+
+- Phase 3.3 receipt polling과 `Bought/Sold` 이벤트 파싱
+- 성공 시 잠긴 입력 차감, 출력 잔고·평균매수가·trade 생성 및 `FILLED` 전환
+- 실패 시 잔고 잠금 해제와 주문·트랜잭션 `FAILED` 전환
+- 서버 재시작 후 `SIGNED`/`SUBMITTED` 재처리와 멱등성 검증
+- Phase 3.4 온체인 오라클 가격 갱신

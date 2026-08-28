@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.pricetrack.exchange.common.exception.InsufficientBalanceException;
 import com.pricetrack.exchange.common.exception.OrderNotFoundException;
 import com.pricetrack.exchange.common.exception.UnsupportedSymbolException;
+import com.pricetrack.exchange.blockchain.BlockchainProperties;
 import com.pricetrack.exchange.market.PriceSimulator;
 import com.pricetrack.exchange.quote.TradeCalculator;
 import com.pricetrack.exchange.trade.Trade;
@@ -26,19 +27,25 @@ public class OrderService {
     private final WalletService walletService;
     private final PriceSimulator priceSimulator;
     private final TradeCalculator tradeCalculator;
+    private final BlockchainProperties blockchainProperties;
+    private final OnchainOrderService onchainOrderService;
 
     public OrderService(OrderRepository orderRepository, TradeRepository tradeRepository,
-            WalletService walletService, PriceSimulator priceSimulator, TradeCalculator tradeCalculator) {
+            WalletService walletService, PriceSimulator priceSimulator, TradeCalculator tradeCalculator,
+            BlockchainProperties blockchainProperties, OnchainOrderService onchainOrderService) {
         this.orderRepository = orderRepository;
         this.tradeRepository = tradeRepository;
         this.walletService = walletService;
         this.priceSimulator = priceSimulator;
         this.tradeCalculator = tradeCalculator;
+        this.blockchainProperties = blockchainProperties;
+        this.onchainOrderService = onchainOrderService;
     }
 
     @Transactional(noRollbackFor = InsufficientBalanceException.class)
     public Order buy(Long userId, String symbol, BigDecimal krwAmount) {
         validateSymbol(symbol);
+        if (blockchainProperties.enabled()) return onchainOrderService.buy(userId, krwAmount);
         BigDecimal price = priceSimulator.getCurrentPrice();
         TradeCalculator.BuyCalculation calculation = tradeCalculator.buy(krwAmount, price);
         UserBalance krw = walletService.getForUpdate(userId, WalletService.KRW_SYMBOL);
@@ -55,6 +62,7 @@ public class OrderService {
     @Transactional(noRollbackFor = InsufficientBalanceException.class)
     public Order sell(Long userId, String symbol, BigDecimal tokenAmount) {
         validateSymbol(symbol);
+        if (blockchainProperties.enabled()) return onchainOrderService.sell(userId, tokenAmount);
         BigDecimal price = priceSimulator.getCurrentPrice();
         TradeCalculator.SellCalculation calculation = tradeCalculator.sell(tokenAmount, price);
         UserBalance krw = walletService.getForUpdate(userId, WalletService.KRW_SYMBOL);

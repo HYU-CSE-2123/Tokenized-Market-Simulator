@@ -21,10 +21,10 @@ app:
     update-interval-ms: 60000
     initial-delay-ms: 60000
   blockchain:
-    enabled: false
-    rpc-url: http://127.0.0.1:8545
-    mock-krw-address: ""
-    m-sec-address: ""
-    price-oracle-address: ""
-    exchange-vault-address: ""
-    operator-private-key: ""
+    enabled: ${BLOCKCHAIN_ENABLED:false}
+    rpc-url: ${RPC_URL:http://127.0.0.1:8545}
+    mock-krw-address: ${MOCK_KRW_ADDRESS:}
+    m-sec-address: ${MSEC_ADDRESS:}
+    price-oracle-address: ${PRICE_ORACLE_ADDRESS:}
+    exchange-vault-address: ${EXCHANGE_VAULT_ADDRESS:}
+    operator-private-key: ${OPERATOR_PRIVATE_KEY:}

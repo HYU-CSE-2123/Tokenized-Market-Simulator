@@ -40,9 +40,12 @@ CREATE TABLE IF NOT EXISTS user_balances (
     user_id BIGINT NOT NULL,
     symbol VARCHAR(20) NOT NULL,
     amount DECIMAL(30, 18) NOT NULL DEFAULT 0,
+    locked_amount DECIMAL(30, 18) NOT NULL DEFAULT 0,
     average_buy_price DECIMAL(30, 8) NOT NULL DEFAULT 0,
     CONSTRAINT uk_user_balances_user_symbol UNIQUE (user_id, symbol)
 );
+
+ALTER TABLE user_balances ADD COLUMN IF NOT EXISTS locked_amount DECIMAL(30, 18) NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_user_balances_user_id ON user_balances (user_id);
 
@@ -95,14 +98,29 @@ CREATE INDEX IF NOT EXISTS idx_trades_user_created_at ON trades (user_id, create
 
 CREATE TABLE IF NOT EXISTS blockchain_transactions (
     id BIGSERIAL PRIMARY KEY,
-    tx_hash VARCHAR(255) UNIQUE NOT NULL,
+    order_id BIGINT,
+    tx_hash VARCHAR(255) UNIQUE,
     type VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL,
+    sender_address VARCHAR(255),
+    nonce BIGINT,
+    raw_transaction TEXT,
     block_number BIGINT,
     error_message TEXT,
     created_at TIMESTAMP NOT NULL,
+    submitted_at TIMESTAMP,
     confirmed_at TIMESTAMP
 );
+
+ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS order_id BIGINT;
+ALTER TABLE blockchain_transactions ALTER COLUMN tx_hash DROP NOT NULL;
+ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS sender_address VARCHAR(255);
+ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS nonce BIGINT;
+ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS raw_transaction TEXT;
+ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_blockchain_transactions_order_id ON blockchain_transactions (order_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_blockchain_transactions_sender_nonce
+    ON blockchain_transactions (sender_address, nonce);
 
 -- 초기 자산 데이터 (기획서 §11.2)
 INSERT INTO assets (symbol, name, contract_address, decimals)

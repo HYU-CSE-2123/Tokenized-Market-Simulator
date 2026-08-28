@@ -26,12 +26,13 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - DB 보존·관리자 기반 완료: 외부 Docker 볼륨, `USER`/`ADMIN` 역할, 환경 변수 기반 초기 관리자 생성
 - 로컬 설정 표준화: Git 제외 `backend/.env`, 팀 공유용 `backend/.env.example`, Spring 선택적 로딩
 - Phase 3.1 완료: 선택적 web3j 연결, 운영자 주소 파생, 컨트랙트 주소·배포 코드 검증, 오라클·수수료·잔고·allowance·견적 읽기
-- 백엔드 기본 테스트 27개 통과 및 Anvil 실제 연동 테스트 1개 별도 통과
+- Phase 3.2 완료: 운영자 통합 지갑 buy/sell 서명·전송, nonce·서명 원문·txHash 저장, 입력 잔고 잠금, `PENDING_ONCHAIN` 응답
+- 백엔드 기본 테스트 31개 통과, Anvil 읽기·실제 전송 선택 테스트 2개 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
 ## 다음 개발 후보
 
-Phase 3.1 읽기 기반까지 완료되었습니다. 다음은 Phase 3.2 운영자 통합 지갑을 통한 buy/sell 전송과 `REQUESTED → PENDING_ONCHAIN` 주문 처리입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
+Phase 3.2 트랜잭션 전송까지 완료되었습니다. 다음은 Phase 3.3 receipt polling, `Bought/Sold` 이벤트 파싱, 멱등 체결·잔고 반영과 실패 복구입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
 
 ## 핵심 설계 원칙
 

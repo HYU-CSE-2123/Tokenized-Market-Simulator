@@ -50,6 +50,22 @@ public class ContractGateway {
     public Quote quoteBuy(String vault, BigInteger krwAmount) { return quote(vault, "quoteBuy", krwAmount); }
     public Quote quoteSell(String vault, BigInteger tokenAmount) { return quote(vault, "quoteSell", tokenAmount); }
 
+    public String encodeBuy(BigInteger krwAmount) {
+        return FunctionEncoder.encode(new Function("buy", List.of(new Uint256(krwAmount)),
+                List.of(new TypeReference<Uint256>() {})));
+    }
+
+    public String encodeSell(BigInteger tokenAmount) {
+        return FunctionEncoder.encode(new Function("sell", List.of(new Uint256(tokenAmount)),
+                List.of(new TypeReference<Uint256>() {})));
+    }
+
+    public String encodeApprove(String spender, BigInteger amount) {
+        return FunctionEncoder.encode(new Function("approve",
+                List.of(new Address(spender), new Uint256(amount)),
+                List.of(new TypeReference<org.web3j.abi.datatypes.Bool>() {})));
+    }
+
     private Quote quote(String vault, String method, BigInteger amount) {
         List<Type> values = call(vault, new Function(method, List.of(new Uint256(amount)), List.of(
                 new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {})));

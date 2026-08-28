@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.response.EthCall;
+import org.web3j.crypto.Hash;
 
 class ContractGatewayTest {
     private Web3j web3j;
@@ -46,6 +47,17 @@ class ContractGatewayTest {
 
         assertThat(result.outputAmount()).isEqualTo("999");
         assertThat(result.fee()).isEqualTo("1");
+    }
+
+    @Test
+    void encodesWriteFunctionSelectors() {
+        assertThat(gateway.encodeBuy(BigInteger.ONE)).startsWith(selector("buy(uint256)"));
+        assertThat(gateway.encodeSell(BigInteger.ONE)).startsWith(selector("sell(uint256)"));
+        assertThat(gateway.encodeApprove(address(), BigInteger.TEN)).startsWith(selector("approve(address,uint256)"));
+    }
+
+    private String selector(String signature) {
+        return Hash.sha3String(signature).substring(0, 10);
     }
 
     private void respond(String value) throws Exception {

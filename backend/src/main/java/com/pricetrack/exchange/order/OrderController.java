@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
 
 import com.pricetrack.exchange.auth.AuthenticatedUser;
 
@@ -43,15 +44,21 @@ public class OrderController {
     }
 
     @PostMapping("/buy")
-    public OrderResponse buy(@AuthenticationPrincipal AuthenticatedUser user,
+    public ResponseEntity<OrderResponse> buy(@AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody BuyRequest request) {
-        return OrderResponse.from(orderService.buy(user.userId(), request.symbol(), request.krwAmount()));
+        OrderResponse response = OrderResponse.from(
+                orderService.buy(user.userId(), request.symbol(), request.krwAmount()));
+        return response.status() == OrderStatus.PENDING_ONCHAIN
+                ? ResponseEntity.accepted().body(response) : ResponseEntity.ok(response);
     }
 
     @PostMapping("/sell")
-    public OrderResponse sell(@AuthenticationPrincipal AuthenticatedUser user,
+    public ResponseEntity<OrderResponse> sell(@AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody SellRequest request) {
-        return OrderResponse.from(orderService.sell(user.userId(), request.symbol(), request.tokenAmount()));
+        OrderResponse response = OrderResponse.from(
+                orderService.sell(user.userId(), request.symbol(), request.tokenAmount()));
+        return response.status() == OrderStatus.PENDING_ONCHAIN
+                ? ResponseEntity.accepted().body(response) : ResponseEntity.ok(response);
     }
 
     @GetMapping

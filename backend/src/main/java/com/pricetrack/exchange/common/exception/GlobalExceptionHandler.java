@@ -10,6 +10,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.pricetrack.exchange.blockchain.BlockchainConfigurationException;
+import com.pricetrack.exchange.blockchain.OperatorNotReadyException;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
@@ -61,6 +64,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> unsupportedSymbol(
             UnsupportedSymbolException exception, HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "UNSUPPORTED_SYMBOL", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(OperatorNotReadyException.class)
+    public ResponseEntity<ApiErrorResponse> operatorNotReady(
+            OperatorNotReadyException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "OPERATOR_NOT_READY", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(BlockchainConfigurationException.class)
+    public ResponseEntity<ApiErrorResponse> blockchainUnavailable(
+            BlockchainConfigurationException exception, HttpServletRequest request) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "BLOCKCHAIN_UNAVAILABLE", exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
