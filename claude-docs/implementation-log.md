@@ -388,3 +388,52 @@ cd backend
 - 검증용 백엔드는 종료하고 PostgreSQL 컨테이너만 `healthy` 상태로 유지
 - 로컬 관리자 실제 생성 확인: `admin`, `role=ADMIN`, 초기 잔고 2개, 로그인 및 JWT 발급 성공
 - `.env` properties 로딩에서 한글 닉네임 인코딩 문제를 확인해 공유 기본값을 ASCII `Admin`으로 변경하고 DB 값도 보정
+
+---
+
+# Phase 3.1: web3j 읽기 연동 기반 — 완료
+
+> 구현 및 검증: 2026-08-28
+
+## 구현
+
+- `BLOCKCHAIN_ENABLED`를 추가해 기존 DB 모의 거래는 Anvil 없이 계속 실행되도록 했다.
+- Spring이 관리하고 종료하는 단일 `Web3j` Bean과 읽기 전용 `ContractGateway`를 추가했다.
+- chain ID, 최신 블록, 운영자 주소와 네 컨트랙트 주소의 실제 배포 코드 존재 여부를 검증한다.
+- `PriceOracle.getPrice`, `ExchangeVault.feeBps`, `quoteBuy`, `quoteSell`, ERC-20 `balanceOf`, `allowance`를 ABI로 호출한다.
+- 누락·잘못된 주소, 개인키, RPC 및 빈 ABI 응답을 구체적인 설정 오류로 변환한다.
+- `.env.example`, 테스트 설정과 백엔드 실행 문서를 새 활성화 플래그에 맞게 갱신했다.
+
+## 결정
+
+- Phase 3.1은 읽기 전용 기반으로 한정하고 기존 `OrderService`의 DB 즉시 체결은 변경하지 않았다.
+- 블록체인 설정 기본값은 비활성화다. Phase 3 기능을 명시적으로 사용할 때만 설정과 연결을 검증한다.
+- Java wrapper 생성물을 저장하는 대신 현재 필요한 ABI 읽기 함수만 작은 gateway로 캡슐화했다. Phase 3.2 쓰기 함수와 이벤트 정의도 같은 경계에 추가한다.
+- 개인키로부터 공개 운영자 주소만 파생하며 개인키를 API 응답이나 로그에 노출하지 않는다.
+
+## 검증
+
+```text
+.\gradlew.bat test --no-daemon
+27 passed, 0 failed (Anvil 선택 테스트 제외)
+
+forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast ...
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
+
+.\gradlew.bat test --no-daemon --tests '*BlockchainAnvilIntegrationTest'
+1 passed, 0 failed
+```
+
+- 실제 Anvil chain ID 31337 및 배포된 컨트랙트 4개의 bytecode 존재 확인
+- 오라클 `75,000 × 1e8`, 수수료 `10 bps` 조회
+- 750,000 mKRW 매수 견적 `9.99 mSEC`, 수수료 `750 mKRW` 조회
+- PostgreSQL 컨테이너를 기존 외부 볼륨으로 재기동해 healthcheck `healthy`와 데이터 보존을 확인
+- 실제 PostgreSQL 설정으로 Spring Boot 기동 및 `/api/health=UP` 확인
+- 기존 관리자 `admin` 1명과 관리자 잔고 2행이 재기동 후에도 유지됨을 확인
+
+## 남은 작업
+
+- Phase 3.2 운영자 통합 지갑의 approve 및 `ExchangeVault.buy/sell` 전송
+- 주문을 즉시 `FILLED`하지 않고 `REQUESTED → PENDING_ONCHAIN`으로 전환
+- Phase 3.3 receipt polling, 이벤트 파싱, 멱등 체결·잔고 반영과 reconciliation
+- Phase 3.4 가격 시뮬레이터와 `PriceOracle.updatePrice` 동기화

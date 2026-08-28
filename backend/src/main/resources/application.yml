@@ -37,6 +37,7 @@ app:
   price:
     update-interval-ms: ${PRICE_INTERVAL_MS:1000}  # 기획서 §8.1 가격 시뮬레이터 주기
   blockchain:
+    enabled: ${BLOCKCHAIN_ENABLED:false}
     rpc-url: ${RPC_URL:http://127.0.0.1:8545}      # 로컬 Anvil / Sepolia
     mock-krw-address: ${MOCK_KRW_ADDRESS:}
     m-sec-address: ${MSEC_ADDRESS:}

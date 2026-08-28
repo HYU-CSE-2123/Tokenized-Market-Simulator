@@ -1,30 +1,130 @@
 package com.pricetrack.exchange.blockchain;
 
-import org.springframework.stereotype.Service;
-import org.web3j.protocol.Web3j;
-import org.web3j.protocol.http.HttpService;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-/**
- * web3j 기반 온체인 연동 (기획서 §16 Phase 3).
- * TODO: ExchangeVault.buy/sell 트랜잭션 전송, receipt polling, 이벤트 파싱, 주문 상태 갱신.
- */
+import org.springframework.stereotype.Service;
+import org.web3j.crypto.Credentials;
+import org.web3j.crypto.WalletUtils;
+import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameterName;
+
+/** web3j 연결 검증과 컨트랙트 읽기 작업을 제공한다. */
 @Service
 public class BlockchainService {
-
     private final BlockchainProperties properties;
     private final Web3j web3j;
+    private final ContractGateway contracts;
 
-    public BlockchainService(BlockchainProperties properties) {
+    public BlockchainService(BlockchainProperties properties, Web3j web3j, ContractGateway contracts) {
         this.properties = properties;
-        this.web3j = Web3j.build(new HttpService(properties.rpcUrl()));
+        this.web3j = web3j;
+        this.contracts = contracts;
     }
 
-    /** 연결 확인용 — 최신 블록 번호. (Phase 3 에서 실제 거래 메서드로 확장) */
-    public java.math.BigInteger latestBlockNumber() throws Exception {
-        return web3j.ethBlockNumber().send().getBlockNumber();
+    public ConnectionStatus connectionStatus() {
+        requireEnabled();
+        Map<String, String> addresses = configuredContracts();
+        String operatorAddress = operatorAddress();
+        try {
+            BigInteger chainId = web3j.ethChainId().send().getChainId();
+            BigInteger latestBlock = web3j.ethBlockNumber().send().getBlockNumber();
+            for (Map.Entry<String, String> contract : addresses.entrySet()) {
+                String code = web3j.ethGetCode(contract.getValue(), DefaultBlockParameterName.LATEST)
+                        .send().getCode();
+                if (code == null || code.equals("0x") || code.equals("0x0")) {
+                    throw new BlockchainConfigurationException(
+                            contract.getKey() + " 주소에 배포된 컨트랙트 코드가 없습니다: " + contract.getValue());
+                }
+            }
+            return new ConnectionStatus(chainId, latestBlock, operatorAddress, addresses);
+        } catch (IOException exception) {
+            throw new BlockchainConfigurationException("블록체인 RPC 연결에 실패했습니다: " + properties.rpcUrl(), exception);
+        }
     }
 
-    public BlockchainProperties properties() {
-        return properties;
+    public BigInteger latestBlockNumber() {
+        requireEnabled();
+        try {
+            return web3j.ethBlockNumber().send().getBlockNumber();
+        } catch (IOException exception) {
+            throw new BlockchainConfigurationException("최신 블록 조회에 실패했습니다.", exception);
+        }
     }
+
+    public String operatorAddress() {
+        String privateKey = required("OPERATOR_PRIVATE_KEY", properties.operatorPrivateKey());
+        try {
+            return Credentials.create(privateKey).getAddress();
+        } catch (RuntimeException exception) {
+            throw new BlockchainConfigurationException("OPERATOR_PRIVATE_KEY 형식이 올바르지 않습니다.", exception);
+        }
+    }
+
+    public ContractSnapshot contractSnapshot() {
+        requireEnabled();
+        Map<String, String> addresses = configuredContracts();
+        String operator = operatorAddress();
+        ContractGateway.OraclePrice price = contracts.getPrice(addresses.get("PriceOracle"));
+        return new ContractSnapshot(price, contracts.feeBps(addresses.get("ExchangeVault")),
+                contracts.balanceOf(addresses.get("MockKRW"), operator),
+                contracts.balanceOf(addresses.get("mSEC"), operator),
+                contracts.allowance(addresses.get("MockKRW"), operator, addresses.get("ExchangeVault")));
+    }
+
+    public ContractGateway.Quote quoteBuy(BigInteger krwAmount) {
+        requirePositive(krwAmount);
+        return contracts.quoteBuy(configuredContracts().get("ExchangeVault"), krwAmount);
+    }
+
+    public ContractGateway.Quote quoteSell(BigInteger tokenAmount) {
+        requirePositive(tokenAmount);
+        return contracts.quoteSell(configuredContracts().get("ExchangeVault"), tokenAmount);
+    }
+
+    private Map<String, String> configuredContracts() {
+        Map<String, String> addresses = new LinkedHashMap<>();
+        addresses.put("MockKRW", requiredAddress("MOCK_KRW_ADDRESS", properties.mockKrwAddress()));
+        addresses.put("mSEC", requiredAddress("MSEC_ADDRESS", properties.mSecAddress()));
+        addresses.put("PriceOracle", requiredAddress("PRICE_ORACLE_ADDRESS", properties.priceOracleAddress()));
+        addresses.put("ExchangeVault", requiredAddress("EXCHANGE_VAULT_ADDRESS", properties.exchangeVaultAddress()));
+        return Map.copyOf(addresses);
+    }
+
+    private String requiredAddress(String name, String value) {
+        String address = required(name, value);
+        if (!WalletUtils.isValidAddress(address)) {
+            throw new BlockchainConfigurationException(name + " 형식이 올바르지 않습니다: " + address);
+        }
+        return address;
+    }
+
+    private String required(String name, String value) {
+        if (value == null || value.isBlank()) {
+            throw new BlockchainConfigurationException(name + " 환경 변수가 필요합니다.");
+        }
+        return value.trim();
+    }
+
+    private void requireEnabled() {
+        if (!properties.enabled()) {
+            throw new BlockchainConfigurationException(
+                    "블록체인 연동이 비활성화되어 있습니다. BLOCKCHAIN_ENABLED=true로 설정하세요.");
+        }
+    }
+
+    private void requirePositive(BigInteger amount) {
+        requireEnabled();
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("조회 수량은 0보다 커야 합니다.");
+        }
+    }
+
+    public record ConnectionStatus(BigInteger chainId, BigInteger latestBlock, String operatorAddress,
+            Map<String, String> contractAddresses) {}
+
+    public record ContractSnapshot(ContractGateway.OraclePrice oracle, BigInteger feeBps,
+            BigInteger operatorKrwBalance, BigInteger operatorMsecBalance, BigInteger vaultAllowance) {}
 }

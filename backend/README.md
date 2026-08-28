@@ -12,9 +12,10 @@
 - 공개 시장 조회와 모의 가격·견적 계산
 - 사용자별 mKRW·mSEC DB 잔고와 mKRW faucet
 - DB 기반 즉시 매수·매도, 주문·체결 내역 및 포트폴리오
+- 선택적으로 활성화하는 web3j RPC 연결과 읽기 전용 컨트랙트 조회
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
-Google OAuth, 이메일 인증, 리프레시 토큰, 실제 블록체인 지갑 및 web3j 연동은 아직 구현하지 않았습니다.
+Google OAuth, 이메일 인증, 리프레시 토큰과 온체인 주문 전송은 아직 구현하지 않았습니다. Phase 3.1은 RPC·컨트랙트 읽기까지만 지원하며 기존 주문은 여전히 DB에서 즉시 체결됩니다.
 
 ## 인증 API
 
@@ -49,7 +50,7 @@ Google OAuth, 이메일 인증, 리프레시 토큰, 실제 블록체인 지갑 
 | `market` | 현재가와 가격 시뮬레이션 |
 | `quote` | 매수·매도 견적 계산 |
 | `wallet`, `order`, `trade`, `portfolio` | 모의 잔고·주문·체결·포트폴리오 |
-| `blockchain` | Phase 3 web3j 연동 영역 |
+| `blockchain` | web3j 설정, 연결·배포 검증, 컨트랙트 읽기 gateway |
 | `websocket` | STOMP 설정과 가격 스트림 |
 | `common` | 보안 설정, 헬스 체크, 공통 오류 처리 |
 
@@ -61,6 +62,23 @@ cd backend
 ```
 
 테스트는 H2 인메모리 DB를 사용하며 PostgreSQL 없이 실행할 수 있습니다. 인증/JWT·거래 계산 단위 테스트와 MockMvc 기반 회원가입→faucet→매수→매도→포트폴리오 통합 흐름을 포함합니다.
+
+### Anvil 실제 연동 테스트
+
+기본 테스트에서는 Anvil 연동 테스트를 건너뜁니다. Anvil에 `Deploy.s.sol`을 배포한 후 다음 환경 변수를 설정하면 web3j가 실제 체인·컨트랙트를 읽는 테스트를 실행할 수 있습니다.
+
+```powershell
+$env:BLOCKCHAIN_INTEGRATION_TESTS = "true"
+$env:RPC_URL = "http://127.0.0.1:8545"
+$env:MOCK_KRW_ADDRESS = "배포 결과 주소"
+$env:MSEC_ADDRESS = "배포 결과 주소"
+$env:PRICE_ORACLE_ADDRESS = "배포 결과 주소"
+$env:EXCHANGE_VAULT_ADDRESS = "배포 결과 주소"
+$env:OPERATOR_PRIVATE_KEY = "Anvil 운영자 개인키"
+.\gradlew.bat test --no-daemon --tests '*BlockchainAnvilIntegrationTest'
+```
+
+이 테스트는 chain ID와 배포 코드, 운영자 주소, 오라클 가격, 수수료, 잔고·allowance와 매수 견적을 실제 RPC로 조회합니다.
 
 ## 로컬 실행
 
@@ -82,7 +100,9 @@ cd backend
 .\gradlew.bat bootRun
 ```
 
-주요 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `RPC_URL`, `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS`, `OPERATOR_PRIVATE_KEY`.
+주요 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `BLOCKCHAIN_ENABLED`, `RPC_URL`, `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS`, `OPERATOR_PRIVATE_KEY`.
+
+`BLOCKCHAIN_ENABLED`의 기본값은 `false`입니다. 기존 DB 모의 거래만 사용할 때는 그대로 두며, Phase 3 web3j 기능을 사용할 때 `true`로 바꿉니다. 활성화 후 연결 검증을 호출하면 RPC, 개인키, 네 컨트랙트 주소와 실제 배포 코드를 엄격히 검사합니다.
 
 ### 초기 관리자 계정
 
