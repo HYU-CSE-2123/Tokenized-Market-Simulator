@@ -44,3 +44,7 @@ app:
     price-oracle-address: ${PRICE_ORACLE_ADDRESS:}
     exchange-vault-address: ${EXCHANGE_VAULT_ADDRESS:}
     operator-private-key: ${OPERATOR_PRIVATE_KEY:}
+    reconciliation:
+      poll-interval-ms: ${BLOCKCHAIN_RECEIPT_POLL_INTERVAL_MS:1000}
+      initial-delay-ms: ${BLOCKCHAIN_RECEIPT_INITIAL_DELAY_MS:1000}
+      required-confirmations: ${BLOCKCHAIN_REQUIRED_CONFIRMATIONS:1}

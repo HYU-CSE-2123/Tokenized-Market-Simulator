@@ -28,3 +28,7 @@ app:
     price-oracle-address: ${PRICE_ORACLE_ADDRESS:}
     exchange-vault-address: ${EXCHANGE_VAULT_ADDRESS:}
     operator-private-key: ${OPERATOR_PRIVATE_KEY:}
+    reconciliation:
+      poll-interval-ms: 60000
+      initial-delay-ms: 60000
+      required-confirmations: 1

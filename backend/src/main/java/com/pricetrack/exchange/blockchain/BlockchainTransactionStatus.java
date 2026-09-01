@@ -5,5 +5,6 @@ public enum BlockchainTransactionStatus {
     SIGNED,
     SUBMITTED,
     CONFIRMED,
-    FAILED
+    FAILED,
+    REVIEW_REQUIRED
 }

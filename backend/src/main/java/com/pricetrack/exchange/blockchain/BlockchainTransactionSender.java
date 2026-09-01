@@ -68,6 +68,34 @@ public class BlockchainTransactionSender {
         }
     }
 
+    public synchronized void recoverSigned(BlockchainTransaction transaction) {
+        if (transaction.getStatus() != BlockchainTransactionStatus.SIGNED) return;
+        if (transaction.getTxHash() == null || transaction.getRawTransaction() == null) {
+            throw new BlockchainConfigurationException("SIGNED 트랜잭션에 txHash 또는 서명 원문이 없습니다.");
+        }
+        try {
+            var lookup = web3j.ethGetTransactionByHash(transaction.getTxHash()).send();
+            if (lookup.hasError()) {
+                throw new BlockchainConfigurationException(
+                        "트랜잭션 조회 실패: " + lookup.getError().getMessage());
+            }
+            if (lookup.getTransaction().isEmpty()) {
+                EthSendTransaction response = web3j.ethSendRawTransaction(transaction.getRawTransaction()).send();
+                if (response.hasError() && !isAlreadyKnown(response.getError().getMessage())) {
+                    throw new BlockchainConfigurationException(
+                            "서명 트랜잭션 재전송 실패: " + response.getError().getMessage());
+                }
+                if (!response.hasError()
+                        && !transaction.getTxHash().equalsIgnoreCase(response.getTransactionHash())) {
+                    throw new BlockchainConfigurationException("재전송 txHash가 저장값과 일치하지 않습니다.");
+                }
+            }
+            persistence.markSubmitted(transaction.getOrderId(), transaction.getTxHash());
+        } catch (IOException exception) {
+            throw new BlockchainConfigurationException("SIGNED 트랜잭션 복구 RPC 호출에 실패했습니다.", exception);
+        }
+    }
+
     private BigInteger estimateGas(String sender, BigInteger nonce, BigInteger gasPrice,
             String destination, String encodedFunction) throws IOException {
         Transaction call = Transaction.createFunctionCallTransaction(sender, nonce, gasPrice, null,
@@ -86,6 +114,10 @@ public class BlockchainTransactionSender {
         } catch (RuntimeException exception) {
             throw new BlockchainConfigurationException("OPERATOR_PRIVATE_KEY 형식이 올바르지 않습니다.", exception);
         }
+    }
+
+    private boolean isAlreadyKnown(String message) {
+        return message != null && message.toLowerCase().contains("already known");
     }
 
     public record Submission(String txHash, BigInteger nonce) {}

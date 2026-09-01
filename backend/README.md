@@ -13,10 +13,10 @@
 - 사용자별 mKRW·mSEC DB 잔고와 mKRW faucet
 - 블록체인 비활성화 시 DB 기반 즉시 매수·매도, 주문·체결 내역 및 포트폴리오
 - 선택적으로 활성화하는 web3j RPC 연결과 읽기 전용 컨트랙트 조회
-- 블록체인 활성화 시 운영자 지갑의 buy/sell 서명·전송과 비동기 주문 생성
+- 블록체인 활성화 시 운영자 지갑의 buy/sell 서명·전송, receipt polling과 자동 체결
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
-Google OAuth, 이메일 인증, 리프레시 토큰과 receipt 기반 최종 체결 처리는 아직 구현하지 않았습니다. Phase 3.2는 온체인 트랜잭션을 전송하고 주문을 `PENDING_ONCHAIN`으로 만드는 데까지 지원합니다.
+Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. Phase 3.3은 온체인 주문 전송 후 receipt와 `Bought`/`Sold` 이벤트를 확인해 주문·잔고·체결을 자동 확정합니다.
 
 ## 인증 API
 
@@ -43,9 +43,9 @@ Google OAuth, 이메일 인증, 리프레시 토큰과 receipt 기반 최종 체
 모든 거래 API에는 Bearer JWT가 필요합니다. 수수료는 컨트랙트와 동일한 0.1%입니다.
 
 - `BLOCKCHAIN_ENABLED=false`: DB에서 즉시 체결하며 성공 주문은 `FILLED`
-- `BLOCKCHAIN_ENABLED=true`: 입력 잔고를 잠그고 실제 트랜잭션을 전송한 뒤 HTTP 202와 `PENDING_ONCHAIN` 반환
+- `BLOCKCHAIN_ENABLED=true`: 입력 잔고를 잠그고 실제 트랜잭션을 전송한 뒤 HTTP 202와 `PENDING_ONCHAIN` 반환, scheduler가 이후 `FILLED/FAILED` 확정
 
-Phase 3.3 전에는 receipt가 성공해도 잠긴 잔고와 주문을 자동으로 `FILLED` 처리하지 않습니다.
+성공 receipt는 Vault의 이벤트, 운영자 주소와 주문 입력값까지 일치해야 `FILLED` 처리됩니다. receipt는 성공했지만 이벤트가 이상하면 자산 잠금을 유지하고 blockchain transaction을 `REVIEW_REQUIRED`로 격리합니다.
 
 ## 패키지 구조
 
@@ -56,7 +56,7 @@ Phase 3.3 전에는 receipt가 성공해도 잠긴 잔고와 주문을 자동으
 | `market` | 현재가와 가격 시뮬레이션 |
 | `quote` | 매수·매도 견적 계산 |
 | `wallet`, `order`, `trade`, `portfolio` | 모의 잔고·주문·체결·포트폴리오 |
-| `blockchain` | web3j 설정, 컨트랙트 읽기, 운영자 트랜잭션 서명·저장·전송 |
+| `blockchain` | web3j 읽기·전송, receipt polling, 이벤트 파싱, 멱등 정산·복구 |
 | `websocket` | STOMP 설정과 가격 스트림 |
 | `common` | 보안 설정, 헬스 체크, 공통 오류 처리 |
 
@@ -124,7 +124,9 @@ cd backend
 
 `BLOCKCHAIN_ENABLED`의 기본값은 `false`입니다. 기존 DB 모의 거래만 사용할 때는 그대로 두며, Phase 3 web3j 기능을 사용할 때 `true`로 바꿉니다. 활성화 후 연결 검증을 호출하면 RPC, 개인키, 네 컨트랙트 주소와 실제 배포 코드를 엄격히 검사합니다.
 
-온체인 주문에서는 `user_balances.locked_amount`가 처리 중인 입력 자산을 나타냅니다. 사용 가능 잔고는 `amount - locked_amount`이며 receipt 처리 전까지 전체 `amount`는 바뀌지 않습니다. 서명 원문, nonce와 txHash는 `blockchain_transactions`에 저장되어 Phase 3.3 재처리 기반으로 사용됩니다.
+온체인 주문에서는 `user_balances.locked_amount`가 처리 중인 입력 자산을 나타냅니다. 사용 가능 잔고는 `amount - locked_amount`입니다. 성공 이벤트 확정 시 입력 잔고 차감·출력 잔고 추가·Trade 생성이 하나의 DB transaction으로 처리되고, 실패 receipt는 잠금만 해제합니다.
+
+receipt 처리 설정은 `BLOCKCHAIN_RECEIPT_POLL_INTERVAL_MS`(기본 1000), `BLOCKCHAIN_RECEIPT_INITIAL_DELAY_MS`(기본 1000), `BLOCKCHAIN_REQUIRED_CONFIRMATIONS`(기본 1)입니다. 서버 재시작 후 `SIGNED` 기록은 체인 존재 여부를 확인하고, 필요하면 저장된 동일 raw transaction을 재전송합니다.
 
 ### 초기 관리자 계정
 

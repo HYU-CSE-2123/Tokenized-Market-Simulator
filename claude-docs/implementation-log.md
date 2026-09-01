@@ -481,3 +481,47 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 실패 시 잔고 잠금 해제와 주문·트랜잭션 `FAILED` 전환
 - 서버 재시작 후 `SIGNED`/`SUBMITTED` 재처리와 멱등성 검증
 - Phase 3.4 온체인 오라클 가격 갱신
+
+---
+
+# Phase 3.3: receipt 기반 온체인 정산과 복구 — 완료
+
+> 구현 및 검증: 2026-08-29
+
+## 구현
+
+- scheduler가 `SIGNED`, `SUBMITTED` blockchain transaction을 설정 가능한 주기로 조회한다.
+- `SUBMITTED` receipt가 요구 confirmation 수를 만족할 때 성공·실패를 처리한다.
+- 성공 receipt에서 Vault의 `Bought`/`Sold` 이벤트를 ABI로 파싱하고 Vault 주소, 운영자 주소, 주문 입력 수량을 검증한다.
+- 매수 성공 시 잠긴 mKRW를 차감하고 mSEC·평균매수가를 갱신하며, 매도 성공 시 mSEC를 차감하고 순 mKRW를 지급한다.
+- 주문·잔고·Trade·blockchain transaction을 하나의 DB transaction에서 `FILLED`/`CONFIRMED`로 반영한다.
+- 실패 receipt는 전체 잔고를 변경하지 않고 입력 자산 잠금만 해제한 뒤 `FAILED`로 전환한다.
+- receipt 성공과 이벤트가 일치하지 않으면 자산 잠금을 유지하고 `REVIEW_REQUIRED`로 격리한다.
+- `trades.order_id` unique 제약과 비관적 주문·트랜잭션 잠금으로 같은 receipt의 중복 체결을 방지한다.
+- 재기동 후 `SIGNED` txHash가 체인에 없으면 저장된 raw transaction을 재전송하고, 이미 있으면 `SUBMITTED`로 복구한다.
+
+## 설정
+
+- `BLOCKCHAIN_RECEIPT_POLL_INTERVAL_MS` 기본 1초
+- `BLOCKCHAIN_RECEIPT_INITIAL_DELAY_MS` 기본 1초
+- `BLOCKCHAIN_REQUIRED_CONFIRMATIONS` 기본 1
+- 로컬 `.env`와 공유 `.env.example`에 설정을 반영했다.
+
+## 검증
+
+- 기본 백엔드 테스트: `36 passed, 0 failed`, Anvil 선택 테스트 2개 skipped
+- Anvil 선택 테스트: `2 passed, 0 failed`; 실제 buy 서명·전송 후 receipt·이벤트 파싱, `FILLED`, 잔고·Trade 반영 확인
+- 이벤트 단위 테스트: `Bought` 파싱 및 주문 입력 불일치 거부
+- 정산 통합 테스트: 매수 성공 중복 호출 시 1회만 반영, 매도 실패 중복 호출 시 잠금만 1회 해제
+- 복구 단위 테스트: 체인에 없는 `SIGNED` raw transaction 재전송 및 `SUBMITTED` 복구
+- 실제 PostgreSQL·HTTP·Anvil 매수 100,000 mKRW: `PENDING_ONCHAIN → FILLED`, 1.332 mSEC, block 11
+- 이어서 1.332 mSEC 매도: `PENDING_ONCHAIN → FILLED`, 99,800.1 mKRW 수령, block 12
+- 왕복 후 Trade 2건, mSEC 0, 최종 mKRW 999,800.1로 양쪽 수수료 반영 확인
+- 검증용 사용자·잔고·주문·체결·blockchain transaction은 모두 삭제했다.
+- Solidity 회귀 테스트: `20 passed, 0 failed`
+
+## 다음 작업
+
+- Phase 3.4 백엔드 가격 시뮬레이터와 `PriceOracle.updatePrice` 온체인 동기화
+- Phase 4 WebSocket으로 주문 상태·체결 결과 사용자별 발행
+- 운영 환경에서는 다중 인스턴스용 분산 nonce lock과 `REVIEW_REQUIRED` 운영자 처리 API가 추가로 필요하다.
