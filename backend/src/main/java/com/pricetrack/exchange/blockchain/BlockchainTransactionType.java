@@ -3,5 +3,6 @@ package com.pricetrack.exchange.blockchain;
 public enum BlockchainTransactionType {
     APPROVE,
     BUY,
-    SELL
+    SELL,
+    UPDATE_PRICE
 }

@@ -525,3 +525,43 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - Phase 3.4 백엔드 가격 시뮬레이터와 `PriceOracle.updatePrice` 온체인 동기화
 - Phase 4 WebSocket으로 주문 상태·체결 결과 사용자별 발행
 - 운영 환경에서는 다중 인스턴스용 분산 nonce lock과 `REVIEW_REQUIRED` 운영자 처리 API가 추가로 필요하다.
+
+---
+
+# Phase 3.4: 오라클 가격 동기화 — 완료
+
+> 구현 및 검증: 2026-09-01
+
+## 구현
+
+- 가격 시뮬레이터의 최신 가격을 8자리 소수 정수로 변환해 `PriceOracle.updatePrice` 트랜잭션으로 전송한다.
+- 주문이 없는 시스템 트랜잭션도 기록할 수 있도록 `blockchain_transactions.order_id`의 nullable 구조를 활용하고 `UPDATE_PRICE` 타입과 목표 가격을 추가했다.
+- 가격 갱신도 주문과 같은 운영자 nonce·서명 원문·txHash 저장 및 `SIGNED` 복구 경로를 사용한다.
+- 처리 중인 `UPDATE_PRICE`가 있으면 중간 가격을 별도 전송하지 않고, 완료 후 당시 최신 시뮬레이터 가격 하나만 전송하는 coalescing 방식을 적용했다.
+- 트랜잭션 전송 전에 운영자 주소가 Oracle owner인지 확인하고, 현재 온체인 가격과 목표 가격이 같으면 갱신을 생략한다.
+- receipt의 `PriceUpdated` 이벤트에서 Oracle 주소와 가격을 검증한 뒤 트랜잭션을 `CONFIRMED`로 확정한다.
+- 확정 가격을 `price_ticks`에 `ONCHAIN_ORACLE` 출처로 멱등 저장하며 blockchain transaction과 unique 관계를 둔다.
+- 블록체인 활성화 시 견적 API가 로컬 계산 대신 Oracle 현재가와 Vault의 `quoteBuy`/`quoteSell` 결과를 반환한다.
+- `/api/market/ticks`는 저장된 최신 가격 이력 최대 100개를 반환한다.
+
+## 설정
+
+- `BLOCKCHAIN_PRICE_SYNC_ENABLED`: 가격 동기화 활성화 여부
+- `BLOCKCHAIN_PRICE_SYNC_INTERVAL_MS`: 반복 주기, 기본 3000ms
+- `BLOCKCHAIN_PRICE_SYNC_INITIAL_DELAY_MS`: 시작 지연, 기본 3000ms
+- 로컬 `.env`와 공유용 `.env.example`에 설정을 반영했다.
+
+## 검증
+
+- 백엔드 H2 전체 자동 테스트 통과: 가격 단위 변환, coalescing, 이벤트 파싱, 멱등 가격 이력 저장 포함
+- Anvil 선택 통합 테스트 통과: 실제 `updatePrice` 서명·전송, receipt reconciliation, Oracle 가격과 DB 가격 이력 일치
+- 실제 PostgreSQL·Spring Boot·Anvil 실행 검증: 주기적 `UPDATE_PRICE`가 순차 확정되고 동시에 처리 중인 갱신은 최대 1건임을 확인
+- 온체인 견적 API가 Oracle 현재 가격과 Vault 수수료·수량을 반환하고 최신 `ONCHAIN_ORACLE` tick과 가격이 일치함을 확인
+- 가격 동기화가 실행 중인 상태에서 실제 매수 주문이 `PENDING_ONCHAIN → FILLED`로 정산돼 공유 nonce 경로가 충돌하지 않음을 확인
+- Solidity 회귀 테스트: `20 passed, 0 failed`
+
+## 다음 작업
+
+- Phase 4 WebSocket 가격·주문 상태·체결 알림
+- 장기 운영 전 가격 갱신 주기와 트랜잭션 비용 정책 결정
+- 다중 백엔드 인스턴스 도입 시 분산 nonce lock 추가

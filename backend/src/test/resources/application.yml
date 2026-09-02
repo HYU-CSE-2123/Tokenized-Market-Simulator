@@ -32,3 +32,7 @@ app:
       poll-interval-ms: 60000
       initial-delay-ms: 60000
       required-confirmations: 1
+    price-sync:
+      enabled: false
+      interval-ms: 60000
+      initial-delay-ms: 60000

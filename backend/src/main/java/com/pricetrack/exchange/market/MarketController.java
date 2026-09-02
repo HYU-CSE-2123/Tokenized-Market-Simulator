@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class MarketController {
 
     private final PriceSimulator priceSimulator;
+    private final PriceTickRepository priceTickRepository;
 
-    public MarketController(PriceSimulator priceSimulator) {
+    public MarketController(PriceSimulator priceSimulator, PriceTickRepository priceTickRepository) {
         this.priceSimulator = priceSimulator;
+        this.priceTickRepository = priceTickRepository;
     }
 
     public record MarketResponse(String symbol, String name, BigDecimal price,
@@ -35,9 +37,9 @@ public class MarketController {
     }
 
     @GetMapping("/{symbol}/ticks")
-    public Object ticks(@PathVariable String symbol) {
-        // TODO(Phase 2): price_ticks 조회
-        throw new UnsupportedOperationException("not implemented (Phase 2)");
+    public List<PriceTickResponse> ticks(@PathVariable String symbol) {
+        return priceTickRepository.findTop100BySymbolOrderByCreatedAtDesc(symbol).stream()
+                .map(PriceTickResponse::from).toList();
     }
 
     private MarketResponse current() {
@@ -47,5 +49,11 @@ public class MarketController {
                 priceSimulator.getCurrentPrice(),
                 BigDecimal.ZERO,
                 Instant.now().toString());
+    }
+
+    public record PriceTickResponse(BigDecimal price, String source, Instant createdAt) {
+        static PriceTickResponse from(PriceTick tick) {
+            return new PriceTickResponse(tick.getPrice(), tick.getSource(), tick.getCreatedAt());
+        }
     }
 }

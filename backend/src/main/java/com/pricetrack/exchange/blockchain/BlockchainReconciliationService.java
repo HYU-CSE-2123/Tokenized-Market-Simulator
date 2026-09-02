@@ -27,6 +27,7 @@ public class BlockchainReconciliationService {
     private final OrderRepository orderRepository;
     private final ContractEventParser eventParser;
     private final OnchainSettlementService settlementService;
+    private final OraclePriceSettlementService oraclePriceSettlementService;
     private final Web3j web3j;
 
     public BlockchainReconciliationService(BlockchainProperties properties,
@@ -34,7 +35,8 @@ public class BlockchainReconciliationService {
             BlockchainTransactionRepository transactionRepository,
             BlockchainTransactionSender transactionSender, OrderRepository orderRepository,
             ContractEventParser eventParser,
-            OnchainSettlementService settlementService, Web3j web3j) {
+            OnchainSettlementService settlementService,
+            OraclePriceSettlementService oraclePriceSettlementService, Web3j web3j) {
         this.properties = properties;
         this.reconciliationProperties = reconciliationProperties;
         this.transactionRepository = transactionRepository;
@@ -42,6 +44,7 @@ public class BlockchainReconciliationService {
         this.orderRepository = orderRepository;
         this.eventParser = eventParser;
         this.settlementService = settlementService;
+        this.oraclePriceSettlementService = oraclePriceSettlementService;
         this.web3j = web3j;
     }
 
@@ -80,8 +83,19 @@ public class BlockchainReconciliationService {
 
             long blockNumber = receipt.getBlockNumber().longValueExact();
             if (!receipt.isStatusOK()) {
-                settlementService.settleFailure(transaction.getId(), blockNumber,
-                        "온체인 receipt status가 실패입니다: " + receipt.getStatus());
+                if (transaction.getType() == BlockchainTransactionType.UPDATE_PRICE) {
+                    oraclePriceSettlementService.fail(transaction.getId(), blockNumber,
+                            "온체인 receipt status가 실패입니다: " + receipt.getStatus());
+                } else {
+                    settlementService.settleFailure(transaction.getId(), blockNumber,
+                            "온체인 receipt status가 실패입니다: " + receipt.getStatus());
+                }
+                return;
+            }
+            if (transaction.getType() == BlockchainTransactionType.UPDATE_PRICE) {
+                var event = eventParser.parsePriceUpdated(receipt, properties.priceOracleAddress(),
+                        requiredTargetValue(transaction));
+                oraclePriceSettlementService.confirm(transaction.getId(), event, blockNumber);
                 return;
             }
             SettlementEvent event = eventParser.parse(receipt, transaction.getType(),
@@ -108,5 +122,12 @@ public class BlockchainReconciliationService {
         return orderRepository.findById(transaction.getOrderId())
                 .map(order -> TokenUnits.toWei(order.getInputAmount()))
                 .orElseThrow(() -> new SettlementConsistencyException("주문 입력 수량을 찾을 수 없습니다."));
+    }
+
+    private BigInteger requiredTargetValue(BlockchainTransaction transaction) {
+        if (transaction.getTargetValue() == null) {
+            throw new SettlementConsistencyException("UPDATE_PRICE 목표 가격이 없습니다.");
+        }
+        return transaction.getTargetValue();
     }
 }

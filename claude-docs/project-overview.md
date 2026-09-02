@@ -17,7 +17,7 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 
 0 초기 설정 → 0.5 최소 온체인 시나리오 → 1 컨트랙트 → 2 백엔드 mock API → 3 web3j 연동 → 4 WebSocket → 5 Android → 6 시연·문서화
 
-## 현재 상태 (2026-08-28)
+## 현재 상태 (2026-09-01)
 
 - Phase 1 완료: 컨트랙트 4종, 배포·거래 시나리오, Foundry 테스트 20개 통과
 - Phase 2.1-A 완료: 자체 계정 회원가입·로그인, BCrypt, JWT 인증 필터, `/api/me`, 공통 오류 응답 구현
@@ -28,12 +28,16 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - Phase 3.1 완료: 선택적 web3j 연결, 운영자 주소 파생, 컨트랙트 주소·배포 코드 검증, 오라클·수수료·잔고·allowance·견적 읽기
 - Phase 3.2 완료: 운영자 통합 지갑 buy/sell 서명·전송, nonce·서명 원문·txHash 저장, 입력 잔고 잠금, `PENDING_ONCHAIN` 응답
 - Phase 3.3 완료: receipt polling, `Bought/Sold` 이벤트 파싱, 멱등 잔고·체결 반영, 실패 잠금 해제, `SIGNED` 복구와 `REVIEW_REQUIRED` 격리
-- 백엔드 기본 테스트 36개 통과, Anvil 읽기·전송·정산 선택 테스트 2개 별도 통과
+- Phase 3.4 완료: 모의 가격을 `PriceOracle.updatePrice` 트랜잭션으로 동기화하고, `PriceUpdated` 이벤트 확정 후 온체인 가격 이력을 저장
+- 온체인 가격 동기화는 처리 중인 갱신이 있으면 중간 가격을 합치고 최신 가격 하나만 다음 트랜잭션으로 전송
+- 블록체인 활성화 시 매수·매도 견적 API가 Vault와 Oracle의 실제 온체인 값을 사용
+- Phase 3 완료: 읽기, 주문 전송, receipt 정산·복구, 오라클 가격 동기화까지 연결
+- 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기·주문 정산·오라클 갱신 선택 테스트 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
 ## 다음 개발 후보
 
-Phase 3.3 온체인 주문 정산까지 완료되었습니다. 다음은 Phase 3.4 가격 시뮬레이터의 `PriceOracle.updatePrice` 동기화이며, 그 뒤 Phase 4 WebSocket 주문·체결 알림으로 진행합니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
+Phase 3이 완료되었습니다. 다음은 Phase 4 WebSocket으로 가격·주문 상태·체결 결과를 클라이언트에 실시간 전달하는 작업입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
 
 ## 핵심 설계 원칙
 

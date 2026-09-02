@@ -44,10 +44,31 @@ class ContractEventParserTest {
                 .hasMessageContaining("입력 수량");
     }
 
+    @Test
+    void parsesPriceUpdatedEventAndRejectsDifferentTarget() {
+        TransactionReceipt receipt = receiptWithoutUser("PriceUpdated(uint256,uint256)",
+                new BigInteger("7520000000000"), BigInteger.valueOf(12345));
+        var event = parser.parsePriceUpdated(receipt, vault, new BigInteger("7520000000000"));
+        assertThat(event.updatedAt()).isEqualTo(BigInteger.valueOf(12345));
+        assertThatThrownBy(() -> parser.parsePriceUpdated(receipt, vault, BigInteger.ONE))
+                .isInstanceOf(EventValidationException.class)
+                .hasMessageContaining("목표 가격");
+    }
+
     private TransactionReceipt receipt(String signature, BigInteger... values) {
         Log log = new Log();
         log.setAddress(vault);
         log.setTopics(List.of(Hash.sha3String(signature), addressTopic(operator)));
+        log.setData(uints(values));
+        TransactionReceipt receipt = new TransactionReceipt();
+        receipt.setLogs(List.of(log));
+        return receipt;
+    }
+
+    private TransactionReceipt receiptWithoutUser(String signature, BigInteger... values) {
+        Log log = new Log();
+        log.setAddress(vault);
+        log.setTopics(List.of(Hash.sha3String(signature)));
         log.setData(uints(values));
         TransactionReceipt receipt = new TransactionReceipt();
         receipt.setLogs(List.of(log));

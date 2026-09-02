@@ -14,9 +14,11 @@
 - 블록체인 비활성화 시 DB 기반 즉시 매수·매도, 주문·체결 내역 및 포트폴리오
 - 선택적으로 활성화하는 web3j RPC 연결과 읽기 전용 컨트랙트 조회
 - 블록체인 활성화 시 운영자 지갑의 buy/sell 서명·전송, receipt polling과 자동 체결
+- 가격 시뮬레이터의 최신 가격을 `PriceOracle.updatePrice`로 동기화하고 `PriceUpdated` 이벤트를 가격 이력으로 저장
+- 블록체인 활성화 시 Oracle과 Vault를 직접 조회하는 온체인 매수·매도 견적
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
-Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. Phase 3.3은 온체인 주문 전송 후 receipt와 `Bought`/`Sold` 이벤트를 확인해 주문·잔고·체결을 자동 확정합니다.
+Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. Phase 3은 온체인 조회·주문·정산·복구와 오라클 가격 동기화까지 구현됐습니다.
 
 ## 인증 API
 
@@ -127,6 +129,10 @@ cd backend
 온체인 주문에서는 `user_balances.locked_amount`가 처리 중인 입력 자산을 나타냅니다. 사용 가능 잔고는 `amount - locked_amount`입니다. 성공 이벤트 확정 시 입력 잔고 차감·출력 잔고 추가·Trade 생성이 하나의 DB transaction으로 처리되고, 실패 receipt는 잠금만 해제합니다.
 
 receipt 처리 설정은 `BLOCKCHAIN_RECEIPT_POLL_INTERVAL_MS`(기본 1000), `BLOCKCHAIN_RECEIPT_INITIAL_DELAY_MS`(기본 1000), `BLOCKCHAIN_REQUIRED_CONFIRMATIONS`(기본 1)입니다. 서버 재시작 후 `SIGNED` 기록은 체인 존재 여부를 확인하고, 필요하면 저장된 동일 raw transaction을 재전송합니다.
+
+가격 동기화 설정은 `BLOCKCHAIN_PRICE_SYNC_ENABLED`(기본 true), `BLOCKCHAIN_PRICE_SYNC_INTERVAL_MS`(기본 3000), `BLOCKCHAIN_PRICE_SYNC_INITIAL_DELAY_MS`(기본 3000)입니다. 블록체인 기능과 가격 동기화가 모두 활성화되면 백엔드가 최신 모의 가격을 Oracle에 전송합니다. 이전 가격 갱신이 처리 중이면 새 트랜잭션을 계속 만들지 않고, 완료된 뒤 그 시점의 최신 가격만 전송합니다. 확정된 `PriceUpdated` 이벤트는 `price_ticks`에 `ONCHAIN_ORACLE` 출처로 한 번만 저장됩니다.
+
+로컬 기본값인 3초 주기는 학습·시연용입니다. 장시간 서버를 켜둘 때는 트랜잭션 수가 빠르게 늘 수 있으므로 주기를 늘리거나 `BLOCKCHAIN_PRICE_SYNC_ENABLED=false`로 중지할 수 있습니다.
 
 ### 초기 관리자 계정
 

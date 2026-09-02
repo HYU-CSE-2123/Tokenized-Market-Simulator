@@ -12,6 +12,9 @@ import jakarta.persistence.LockModeType;
 
 public interface BlockchainTransactionRepository extends JpaRepository<BlockchainTransaction, Long> {
     Optional<BlockchainTransaction> findByOrderId(Long orderId);
+    Optional<BlockchainTransaction> findByTxHash(String txHash);
+    boolean existsByTypeAndStatusIn(BlockchainTransactionType type,
+            List<BlockchainTransactionStatus> statuses);
     List<BlockchainTransaction> findAllByStatusInOrderByCreatedAtAsc(
             List<BlockchainTransactionStatus> statuses);
 

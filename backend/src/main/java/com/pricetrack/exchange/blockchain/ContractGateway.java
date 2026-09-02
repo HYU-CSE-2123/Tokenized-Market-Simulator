@@ -41,6 +41,15 @@ public class ContractGateway {
                 List.of(new TypeReference<Uint256>() {})));
     }
 
+    public String owner(String contract) {
+        List<Type> values = call(contract, new Function("owner", emptyList(),
+                List.of(new TypeReference<Address>() {})));
+        if (values.size() != 1 || !(values.getFirst().getValue() instanceof String address)) {
+            throw new BlockchainConfigurationException("owner() 반환값 ABI가 예상과 다릅니다.");
+        }
+        return address;
+    }
+
     public OraclePrice getPrice(String oracle) {
         List<Type> values = call(oracle, new Function("getPrice", emptyList(), List.of(
                 new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {})));
@@ -64,6 +73,10 @@ public class ContractGateway {
         return FunctionEncoder.encode(new Function("approve",
                 List.of(new Address(spender), new Uint256(amount)),
                 List.of(new TypeReference<org.web3j.abi.datatypes.Bool>() {})));
+    }
+
+    public String encodeUpdatePrice(BigInteger priceE8) {
+        return FunctionEncoder.encode(new Function("updatePrice", List.of(new Uint256(priceE8)), emptyList()));
     }
 
     private Quote quote(String vault, String method, BigInteger amount) {

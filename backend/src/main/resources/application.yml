@@ -48,3 +48,7 @@ app:
       poll-interval-ms: ${BLOCKCHAIN_RECEIPT_POLL_INTERVAL_MS:1000}
       initial-delay-ms: ${BLOCKCHAIN_RECEIPT_INITIAL_DELAY_MS:1000}
       required-confirmations: ${BLOCKCHAIN_REQUIRED_CONFIRMATIONS:1}
+    price-sync:
+      enabled: ${BLOCKCHAIN_PRICE_SYNC_ENABLED:false}
+      interval-ms: ${BLOCKCHAIN_PRICE_SYNC_INTERVAL_MS:3000}
+      initial-delay-ms: ${BLOCKCHAIN_PRICE_SYNC_INITIAL_DELAY_MS:3000}

@@ -25,6 +25,8 @@ public class ContractEventParser {
             List.of(new TypeReference<Address>(true) {}, new TypeReference<Uint256>() {},
                     new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {},
                     new TypeReference<Uint256>() {}));
+    private static final Event PRICE_UPDATED = new Event("PriceUpdated",
+            List.of(new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {}));
 
     public SettlementEvent parse(TransactionReceipt receipt, BlockchainTransactionType type,
             String vaultAddress, String operatorAddress, BigInteger expectedInput) {
@@ -52,6 +54,26 @@ public class ContractEventParser {
         return result;
     }
 
+    public PriceUpdatedEvent parsePriceUpdated(TransactionReceipt receipt, String oracleAddress,
+            BigInteger expectedPriceE8) {
+        List<PriceUpdatedEvent> matches = new ArrayList<>();
+        for (Log log : receipt.getLogs()) {
+            if (!sameAddress(log.getAddress(), oracleAddress) || log.getTopics().isEmpty()
+                    || !EventEncoder.encode(PRICE_UPDATED).equalsIgnoreCase(log.getTopics().getFirst())) continue;
+            List<Type> values = FunctionReturnDecoder.decode(log.getData(), PRICE_UPDATED.getNonIndexedParameters());
+            if (values.size() != 2) throw new EventValidationException("PriceUpdated ABI 반환값 수가 다릅니다.");
+            matches.add(new PriceUpdatedEvent(uint(values, 0), uint(values, 1)));
+        }
+        if (matches.size() != 1) {
+            throw new EventValidationException("예상한 PriceUpdated 이벤트 수가 1개가 아닙니다: " + matches.size());
+        }
+        PriceUpdatedEvent event = matches.getFirst();
+        if (!event.priceE8().equals(expectedPriceE8)) {
+            throw new EventValidationException("PriceUpdated 가격이 목표 가격과 다릅니다.");
+        }
+        return event;
+    }
+
     private SettlementEvent decode(Log log, BlockchainTransactionType type, Event event) {
         if (log.getTopics().size() < 2) throw new EventValidationException("이벤트 indexed user가 없습니다.");
         Type userType = FunctionReturnDecoder.decodeIndexedValue(log.getTopics().get(1),
@@ -76,6 +98,7 @@ public class ContractEventParser {
 
     public record SettlementEvent(BlockchainTransactionType type, String user,
             BigInteger inputAmount, BigInteger outputAmount, BigInteger fee, BigInteger priceE8) {}
+    public record PriceUpdatedEvent(BigInteger priceE8, BigInteger updatedAt) {}
 
     public static class EventValidationException extends RuntimeException {
         public EventValidationException(String message) { super(message); }

@@ -34,6 +34,19 @@ public class BlockchainTransactionSender {
 
     public synchronized Submission submit(Long orderId, BlockchainTransactionType type,
             String destination, String encodedFunction) {
+        return submitInternal(orderId, type, destination, encodedFunction, null);
+    }
+
+    public synchronized Submission submitSystem(BlockchainTransactionType type,
+            String destination, String encodedFunction, BigInteger targetValue) {
+        if (type == BlockchainTransactionType.BUY || type == BlockchainTransactionType.SELL) {
+            throw new IllegalArgumentException("주문 트랜잭션은 orderId가 필요합니다.");
+        }
+        return submitInternal(null, type, destination, encodedFunction, targetValue);
+    }
+
+    private Submission submitInternal(Long orderId, BlockchainTransactionType type,
+            String destination, String encodedFunction, BigInteger targetValue) {
         Credentials credentials = credentials();
         String sender = credentials.getAddress();
         try {
@@ -49,7 +62,7 @@ public class BlockchainTransactionSender {
             String rawHex = Numeric.toHexString(signed);
             String expectedHash = Numeric.toHexString(Hash.sha3(signed));
 
-            persistence.saveSigned(orderId, type, sender, nonce.longValueExact(), rawHex, expectedHash);
+            persistence.saveSigned(orderId, type, sender, nonce.longValueExact(), rawHex, expectedHash, targetValue);
             EthSendTransaction response = web3j.ethSendRawTransaction(rawHex).send();
             if (response.hasError()) {
                 throw new BlockchainConfigurationException(
@@ -59,7 +72,7 @@ public class BlockchainTransactionSender {
             if (!expectedHash.equalsIgnoreCase(rpcHash)) {
                 throw new BlockchainConfigurationException("서명 시 계산한 txHash와 RPC 응답이 일치하지 않습니다.");
             }
-            persistence.markSubmitted(orderId, rpcHash);
+            persistence.markSubmitted(rpcHash);
             return new Submission(rpcHash, nonce);
         } catch (IOException exception) {
             throw new BlockchainConfigurationException("온체인 트랜잭션 RPC 호출에 실패했습니다.", exception);
@@ -90,7 +103,7 @@ public class BlockchainTransactionSender {
                     throw new BlockchainConfigurationException("재전송 txHash가 저장값과 일치하지 않습니다.");
                 }
             }
-            persistence.markSubmitted(transaction.getOrderId(), transaction.getTxHash());
+            persistence.markSubmitted(transaction.getTxHash());
         } catch (IOException exception) {
             throw new BlockchainConfigurationException("SIGNED 트랜잭션 복구 RPC 호출에 실패했습니다.", exception);
         }

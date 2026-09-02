@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.math.BigInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -21,6 +22,7 @@ import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
 import com.pricetrack.exchange.wallet.WalletService;
 import com.pricetrack.exchange.trade.TradeRepository;
+import com.pricetrack.exchange.market.PriceTickRepository;
 
 /** 실제 Anvil에 buy를 서명·전송하고 DB의 비동기 주문 상태를 확인한다. */
 @SpringBootTest(properties = "app.blockchain.enabled=true")
@@ -33,6 +35,9 @@ class BlockchainTransactionAnvilIntegrationTest {
     @Autowired OrderRepository orderRepository;
     @Autowired TradeRepository tradeRepository;
     @Autowired Web3j web3j;
+    @Autowired BlockchainTransactionSender transactionSender;
+    @Autowired BlockchainService blockchainService;
+    @Autowired PriceTickRepository priceTickRepository;
 
     @Test
     void signsBroadcastsAndSettlesBuyTransaction() throws Exception {
@@ -61,6 +66,20 @@ class BlockchainTransactionAnvilIntegrationTest {
         assertThat(confirmed.getRawTransaction()).startsWith("0x");
         assertThat(tradeRepository.existsByOrderId(order.getId())).isTrue();
         assertThat(receipt.isStatusOK()).isTrue();
+    }
+
+    @Test
+    void updatesOracleAndStoresConfirmedPriceTick() throws Exception {
+        BigInteger target = blockchainService.oraclePrice().priceE8().add(BigInteger.valueOf(12_300_000));
+        var submission = transactionSender.submitSystem(BlockchainTransactionType.UPDATE_PRICE,
+                blockchainService.oracleAddress(), blockchainService.encodeUpdatePrice(target), target);
+        waitForReceipt(submission.txHash());
+        reconciliationService.reconcilePendingTransactions();
+
+        BlockchainTransaction transaction = transactionRepository.findByTxHash(submission.txHash()).orElseThrow();
+        assertThat(transaction.getStatus()).isEqualTo(BlockchainTransactionStatus.CONFIRMED);
+        assertThat(blockchainService.oraclePrice().priceE8()).isEqualTo(target);
+        assertThat(priceTickRepository.existsByBlockchainTransactionId(transaction.getId())).isTrue();
     }
 
     private TransactionReceipt waitForReceipt(String txHash) throws Exception {

@@ -28,13 +28,17 @@ class BlockchainAnvilIntegrationTest {
             BlockchainService.ConnectionStatus status = service.connectionStatus();
             BlockchainService.ContractSnapshot snapshot = service.contractSnapshot();
             ContractGateway.Quote quote = service.quoteBuy(new BigInteger("750000000000000000000000"));
+            BigInteger input = new BigInteger("750000000000000000000000");
+            BigInteger expectedFee = input.multiply(snapshot.feeBps()).divide(BigInteger.valueOf(10_000));
+            BigInteger expectedOutput = input.subtract(expectedFee).multiply(BigInteger.valueOf(100_000_000))
+                    .divide(snapshot.oracle().priceE8());
 
             assertThat(status.chainId()).isEqualTo(BigInteger.valueOf(31337));
             assertThat(status.latestBlock()).isPositive();
-            assertThat(snapshot.oracle().priceE8()).isEqualTo(new BigInteger("7500000000000"));
+            assertThat(snapshot.oracle().priceE8()).isPositive();
             assertThat(snapshot.feeBps()).isEqualTo(BigInteger.TEN);
-            assertThat(quote.outputAmount()).isEqualTo(new BigInteger("9990000000000000000"));
-            assertThat(quote.fee()).isEqualTo(new BigInteger("750000000000000000000"));
+            assertThat(quote.outputAmount()).isEqualTo(expectedOutput);
+            assertThat(quote.fee()).isEqualTo(expectedFee);
         } finally {
             web3j.shutdown();
         }

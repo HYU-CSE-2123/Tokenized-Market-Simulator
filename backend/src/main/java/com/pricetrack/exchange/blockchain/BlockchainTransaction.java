@@ -1,6 +1,7 @@
 package com.pricetrack.exchange.blockchain;
 
 import java.time.Instant;
+import java.math.BigInteger;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -41,6 +42,8 @@ public class BlockchainTransaction {
     private Long nonce;
     @Column(name = "raw_transaction", columnDefinition = "TEXT")
     private String rawTransaction;
+    @Column(name = "target_value", precision = 78, scale = 0)
+    private BigInteger targetValue;
     @Column(name = "block_number")
     private Long blockNumber;
     @Column(name = "error_message", columnDefinition = "TEXT")

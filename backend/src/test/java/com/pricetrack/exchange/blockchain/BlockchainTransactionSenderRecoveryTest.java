@@ -40,7 +40,7 @@ class BlockchainTransactionSenderRecoveryTest {
         sender.recoverSigned(transaction);
 
         verify(web3j).ethSendRawTransaction("0xsigned");
-        verify(persistence).markSubmitted(42L, txHash);
+        verify(persistence).markSubmitted(txHash);
     }
 
     private BlockchainProperties properties() {

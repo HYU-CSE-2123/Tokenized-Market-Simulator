@@ -84,6 +84,26 @@ public class BlockchainService {
         return contracts.quoteSell(configuredContracts().get("ExchangeVault"), tokenAmount);
     }
 
+    public ContractGateway.OraclePrice oraclePrice() {
+        requireEnabled();
+        return contracts.getPrice(configuredContracts().get("PriceOracle"));
+    }
+
+    public String oracleOwner() {
+        requireEnabled();
+        return contracts.owner(configuredContracts().get("PriceOracle"));
+    }
+
+    public String oracleAddress() {
+        requireEnabled();
+        return configuredContracts().get("PriceOracle");
+    }
+
+    public String encodeUpdatePrice(BigInteger priceE8) {
+        requirePositive(priceE8);
+        return contracts.encodeUpdatePrice(priceE8);
+    }
+
     public BuyReadiness buyReadiness(BigInteger krwAmount) {
         requirePositive(krwAmount);
         Map<String, String> addresses = configuredContracts();

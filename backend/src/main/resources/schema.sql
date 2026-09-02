@@ -58,6 +58,7 @@ ON CONFLICT (user_id, symbol) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS price_ticks (
     id BIGSERIAL PRIMARY KEY,
+    blockchain_transaction_id BIGINT UNIQUE,
     symbol VARCHAR(20) NOT NULL,
     price DECIMAL(30, 8) NOT NULL,
     source VARCHAR(50) NOT NULL,
@@ -77,6 +78,10 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
+
+ALTER TABLE price_ticks ADD COLUMN IF NOT EXISTS blockchain_transaction_id BIGINT;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_price_ticks_blockchain_transaction_id
+    ON price_ticks (blockchain_transaction_id);
 
 CREATE INDEX IF NOT EXISTS idx_orders_user_created_at ON orders (user_id, created_at DESC);
 
@@ -106,6 +111,7 @@ CREATE TABLE IF NOT EXISTS blockchain_transactions (
     sender_address VARCHAR(255),
     nonce BIGINT,
     raw_transaction TEXT,
+    target_value NUMERIC(78, 0),
     block_number BIGINT,
     error_message TEXT,
     created_at TIMESTAMP NOT NULL,
@@ -118,6 +124,7 @@ ALTER TABLE blockchain_transactions ALTER COLUMN tx_hash DROP NOT NULL;
 ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS sender_address VARCHAR(255);
 ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS nonce BIGINT;
 ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS raw_transaction TEXT;
+ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS target_value NUMERIC(78, 0);
 ALTER TABLE blockchain_transactions ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_blockchain_transactions_order_id ON blockchain_transactions (order_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_blockchain_transactions_sender_nonce

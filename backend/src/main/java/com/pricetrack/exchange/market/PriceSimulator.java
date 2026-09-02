@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 /**
  * 모의 가격 시뮬레이터 (기획서 §8.1).
  * 초기 75,000원, 1초 주기로 -0.3% ~ +0.3% 변동, WebSocket broadcast.
- * TODO(Phase 3): PriceOracle.updatePrice 온체인 반영, price_ticks 저장.
+ * BlockchainPriceSyncService가 최신 시뮬레이션 가격을 coalescing하여 PriceOracle에 반영한다.
  */
 @Component
 public class PriceSimulator {
