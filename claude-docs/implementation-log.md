@@ -565,3 +565,34 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - Phase 4 WebSocket 가격·주문 상태·체결 알림
 - 장기 운영 전 가격 갱신 주기와 트랜잭션 비용 정책 결정
 - 다중 백엔드 인스턴스 도입 시 분산 nonce lock 추가
+
+---
+
+# Phase 3 정리: 블록체인 패키지와 설계 주석 — 완료
+
+> 리팩터링 및 검증: 2026-09-03
+
+## 변경 범위
+
+- 기존 단일 `blockchain` 패키지를 `config`, `contract`, `transaction`, `reconciliation`, `settlement`, `oracle`, `support` 역할로 분리했다.
+- `BlockchainService`는 주문·견적·가격 동기화가 사용하는 공개 진입점으로 상위 패키지에 유지했다.
+- 주문 접수와 DB 잔고 잠금을 담당하는 `OnchainOrderService`, `OnchainOrderPreparationService`는 주문 도메인에 유지했다.
+- 운영 코드와 같은 하위 패키지로 관련 단위 테스트를 이동해 package-private 접근 범위를 불필요하게 넓히지 않았다.
+- 핵심 클래스에 코드 해설보다 장애 안전성, 상태 전이, 멱등성, nonce 직렬화와 가격 coalescing의 이유를 설명하는 주석을 추가했다.
+- 각 하위 패키지에 `package-info.java`를 추가해 디렉터리 책임을 코드에서 바로 확인할 수 있게 했다.
+- 실제 설정과 다르던 README의 가격 동기화 기본값을 `false`로 바로잡았다.
+
+## 보존한 동작
+
+- REST API, DB 스키마, 환경 변수 이름과 기본 실행 흐름은 변경하지 않았다.
+- 운영자 통합 지갑, 주문 자산 잠금, 서명 원문 선저장, receipt reconciliation과 Oracle 동기화 정책을 그대로 유지했다.
+
+## 검증
+
+- Java 운영 코드와 테스트 코드 컴파일 성공
+- 백엔드 전체 자동 테스트: 45개 중 42개 통과, Anvil 선택 테스트 3개 skipped, 실패·오류 0개
+- Anvil 선택 통합 테스트 3개 통과: 컨트랙트 읽기, 실제 buy 서명·전송·정산, 실제 `updatePrice`와 가격 이력 저장
+- 현재 리팩터링 코드로 Spring Boot를 재기동해 `/api/health=UP` 확인
+- 실제 PostgreSQL·HTTP·Anvil 매수 검증: 임시 사용자의 1,000 mKRW 주문이 `PENDING_ONCHAIN → FILLED`로 전환되고 잔고·평균매수가·평가금액에 반영됨
+- 검증용 사용자·잔고·주문·체결·주문 트랜잭션을 삭제한 뒤 임시 사용자 0, 잠긴 잔고 0, `FAILED`/`REVIEW_REQUIRED` 0 확인
+- Solidity 회귀 테스트: `20 passed, 0 failed`

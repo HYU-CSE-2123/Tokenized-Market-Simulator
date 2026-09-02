@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pricetrack.exchange.market.PriceSimulator;
-import com.pricetrack.exchange.blockchain.BlockchainProperties;
 import com.pricetrack.exchange.blockchain.BlockchainService;
-import com.pricetrack.exchange.blockchain.PriceUnits;
-import com.pricetrack.exchange.blockchain.TokenUnits;
+import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
+import com.pricetrack.exchange.blockchain.support.PriceUnits;
+import com.pricetrack.exchange.blockchain.support.TokenUnits;
 
 /**
  * 견적 API (기획서 §12.3, §18.3 — 견적은 참고용, 실제 체결가는 온체인 실행 시점 오라클 가격).

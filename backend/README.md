@@ -58,7 +58,14 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 | `market` | 현재가와 가격 시뮬레이션 |
 | `quote` | 매수·매도 견적 계산 |
 | `wallet`, `order`, `trade`, `portfolio` | 모의 잔고·주문·체결·포트폴리오 |
-| `blockchain` | web3j 읽기·전송, receipt polling, 이벤트 파싱, 멱등 정산·복구 |
+| `blockchain` | 다른 도메인이 사용하는 블록체인 진입점 |
+| `blockchain.config` | RPC·운영자·receipt·가격 동기화 설정 |
+| `blockchain.contract` | Solidity ABI 호출과 이벤트 파싱 |
+| `blockchain.transaction` | 서명·전송·nonce·트랜잭션 상태 저장 |
+| `blockchain.reconciliation` | 미완료 트랜잭션 receipt 조회와 복구 조정 |
+| `blockchain.settlement` | 주문·잔고·체결 및 Oracle 가격의 멱등 정산 |
+| `blockchain.oracle` | 가격 시뮬레이터와 PriceOracle 동기화 정책 |
+| `blockchain.support` | 토큰·가격 단위 변환과 공통 예외 |
 | `websocket` | STOMP 설정과 가격 스트림 |
 | `common` | 보안 설정, 헬스 체크, 공통 오류 처리 |
 
@@ -130,7 +137,7 @@ cd backend
 
 receipt 처리 설정은 `BLOCKCHAIN_RECEIPT_POLL_INTERVAL_MS`(기본 1000), `BLOCKCHAIN_RECEIPT_INITIAL_DELAY_MS`(기본 1000), `BLOCKCHAIN_REQUIRED_CONFIRMATIONS`(기본 1)입니다. 서버 재시작 후 `SIGNED` 기록은 체인 존재 여부를 확인하고, 필요하면 저장된 동일 raw transaction을 재전송합니다.
 
-가격 동기화 설정은 `BLOCKCHAIN_PRICE_SYNC_ENABLED`(기본 true), `BLOCKCHAIN_PRICE_SYNC_INTERVAL_MS`(기본 3000), `BLOCKCHAIN_PRICE_SYNC_INITIAL_DELAY_MS`(기본 3000)입니다. 블록체인 기능과 가격 동기화가 모두 활성화되면 백엔드가 최신 모의 가격을 Oracle에 전송합니다. 이전 가격 갱신이 처리 중이면 새 트랜잭션을 계속 만들지 않고, 완료된 뒤 그 시점의 최신 가격만 전송합니다. 확정된 `PriceUpdated` 이벤트는 `price_ticks`에 `ONCHAIN_ORACLE` 출처로 한 번만 저장됩니다.
+가격 동기화 설정은 `BLOCKCHAIN_PRICE_SYNC_ENABLED`(기본 false), `BLOCKCHAIN_PRICE_SYNC_INTERVAL_MS`(기본 3000), `BLOCKCHAIN_PRICE_SYNC_INITIAL_DELAY_MS`(기본 3000)입니다. 블록체인 기능과 가격 동기화를 모두 명시적으로 활성화하면 백엔드가 최신 모의 가격을 Oracle에 전송합니다. 이전 가격 갱신이 처리 중이면 새 트랜잭션을 계속 만들지 않고, 완료된 뒤 그 시점의 최신 가격만 전송합니다. 확정된 `PriceUpdated` 이벤트는 `price_ticks`에 `ONCHAIN_ORACLE` 출처로 한 번만 저장됩니다.
 
 로컬 기본값인 3초 주기는 학습·시연용입니다. 장시간 서버를 켜둘 때는 트랜잭션 수가 빠르게 늘 수 있으므로 주기를 늘리거나 `BLOCKCHAIN_PRICE_SYNC_ENABLED=false`로 중지할 수 있습니다.
 

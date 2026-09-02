@@ -1,5 +1,10 @@
 package com.pricetrack.exchange.blockchain;
 
+import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
+import com.pricetrack.exchange.blockchain.contract.ContractGateway;
+import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationException;
+import com.pricetrack.exchange.blockchain.support.OperatorNotReadyException;
+
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.LinkedHashMap;
@@ -11,7 +16,11 @@ import org.web3j.crypto.WalletUtils;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 
-/** web3j 연결 검증과 컨트랙트 읽기 작업을 제공한다. */
+/**
+ * 주문·견적·가격 동기화 코드가 사용하는 블록체인 진입점이다.
+ * 설정 검증과 운영자 주소 파생, 컨트랙트 조회 및 거래 준비 상태 확인을 제공하고
+ * 하위 코드가 RPC와 ABI 세부 구현에 직접 의존하지 않게 한다.
+ */
 @Service
 public class BlockchainService {
     private final BlockchainProperties properties;

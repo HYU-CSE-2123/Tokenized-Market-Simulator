@@ -10,8 +10,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.pricetrack.exchange.blockchain.BlockchainConfigurationException;
-import com.pricetrack.exchange.blockchain.OperatorNotReadyException;
+import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationException;
+import com.pricetrack.exchange.blockchain.support.OperatorNotReadyException;
 
 import jakarta.servlet.http.HttpServletRequest;
 

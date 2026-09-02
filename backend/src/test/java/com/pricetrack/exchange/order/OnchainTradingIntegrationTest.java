@@ -21,11 +21,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pricetrack.exchange.blockchain.BlockchainService;
-import com.pricetrack.exchange.blockchain.BlockchainTransactionPersistence;
-import com.pricetrack.exchange.blockchain.BlockchainTransactionRepository;
-import com.pricetrack.exchange.blockchain.BlockchainTransactionSender;
-import com.pricetrack.exchange.blockchain.BlockchainTransactionType;
-import com.pricetrack.exchange.blockchain.ContractGateway;
+import com.pricetrack.exchange.blockchain.contract.ContractGateway;
+import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionPersistence;
+import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionRepository;
+import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionSender;
+import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionType;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
 
 @SpringBootTest(properties = "app.blockchain.enabled=true")

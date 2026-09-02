@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.pricetrack.exchange.common.exception.InsufficientBalanceException;
 import com.pricetrack.exchange.common.exception.OrderNotFoundException;
 import com.pricetrack.exchange.common.exception.UnsupportedSymbolException;
-import com.pricetrack.exchange.blockchain.BlockchainProperties;
+import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
 import com.pricetrack.exchange.market.PriceSimulator;
 import com.pricetrack.exchange.quote.TradeCalculator;
 import com.pricetrack.exchange.trade.Trade;

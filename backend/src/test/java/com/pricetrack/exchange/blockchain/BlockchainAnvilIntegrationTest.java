@@ -1,5 +1,8 @@
 package com.pricetrack.exchange.blockchain;
 
+import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
+import com.pricetrack.exchange.blockchain.contract.ContractGateway;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigInteger;

@@ -1,5 +1,9 @@
 package com.pricetrack.exchange.blockchain;
 
+import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
+import com.pricetrack.exchange.blockchain.contract.ContractGateway;
+import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
