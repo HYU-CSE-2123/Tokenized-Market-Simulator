@@ -57,11 +57,16 @@ public class BlockchainPriceSyncService {
         this.priceSimulator = priceSimulator;
     }
 
+    /**
+     * 처리 중인 갱신이 없을 때 시뮬레이터의 최신 가격 하나만 Oracle에 제출한다.
+     * REVIEW_REQUIRED도 차단 상태로 취급해 사람이 확인하기 전 가격 거래가 더 쌓이지 않게 한다.
+     */
     @Scheduled(fixedDelayString = "${app.blockchain.price-sync.interval-ms:3000}",
             initialDelayString = "${app.blockchain.price-sync.initial-delay-ms:3000}")
     public synchronized void synchronizeLatestPrice() {
         if (!blockchainProperties.enabled() || !syncProperties.enabled()) return;
         try {
+            // 이 분기가 중간 가격을 버리고 다음 주기에 최신 가격만 보내는 coalescing 지점이다.
             if (transactionRepository.existsByTypeAndStatusIn(
                     BlockchainTransactionType.UPDATE_PRICE, BLOCKING_STATUSES)) return;
             String operator = blockchainService.operatorAddress();

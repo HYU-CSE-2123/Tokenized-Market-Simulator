@@ -16,6 +16,7 @@ import org.web3j.utils.Numeric;
 
 import com.pricetrack.exchange.blockchain.contract.ContractEventParser.EventValidationException;
 
+/** Vault·Oracle 로그 파싱과 기대 입력값 불일치 거부 규칙을 검증한다. */
 class ContractEventParserTest {
     private final ContractEventParser parser = new ContractEventParser();
     private final String vault = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";

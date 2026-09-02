@@ -14,6 +14,7 @@ import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.protocol.core.methods.response.EthTransaction;
 
+/** 체인에서 찾을 수 없는 SIGNED 거래가 동일 raw transaction으로 재전송되는지 검증한다. */
 class BlockchainTransactionSenderRecoveryTest {
     @Test
     @SuppressWarnings("unchecked")

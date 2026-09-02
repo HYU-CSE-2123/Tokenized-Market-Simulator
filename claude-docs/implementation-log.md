@@ -596,3 +596,13 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 실제 PostgreSQL·HTTP·Anvil 매수 검증: 임시 사용자의 1,000 mKRW 주문이 `PENDING_ONCHAIN → FILLED`로 전환되고 잔고·평균매수가·평가금액에 반영됨
 - 검증용 사용자·잔고·주문·체결·주문 트랜잭션을 삭제한 뒤 임시 사용자 0, 잠긴 잔고 0, `FAILED`/`REVIEW_REQUIRED` 0 확인
 - Solidity 회귀 테스트: `20 passed, 0 failed`
+
+## 역할 주석 보강
+
+- 초기 리팩터링에서 일부 클래스 Javadoc이 Spring annotation 뒤에 놓여 IDE 문서로 명확히 인식되지 않던 배치를 수정했다.
+- `BlockchainTransactionStatus`, `BlockchainTransactionType`의 각 상태·작업 의미를 코드에 기록했다.
+- `BlockchainTransaction`의 `orderId`, `txHash`, `nonce`, `rawTransaction`, `targetValue`가 복구와 검증에서 맡는 역할을 설명했다.
+- 주문 준비, 서명 선저장, RPC 전송, SIGNED 복구, receipt 대기·분기, 성공·실패·수동 검토 정산과 가격 coalescing의 public 메서드 및 중요 분기에 설계 이유를 추가했다.
+- 컨트랙트 ABI 조회·인코딩 메서드와 토큰 18 decimals·가격 8 decimals 변환 경계를 문서화했다.
+- Phase 3 핵심 테스트 클래스에는 각각 보장하는 규칙을 한 줄로 명시했다.
+- 단순 대입·getter처럼 코드 자체로 충분한 부분에는 중복 주석을 추가하지 않았다.

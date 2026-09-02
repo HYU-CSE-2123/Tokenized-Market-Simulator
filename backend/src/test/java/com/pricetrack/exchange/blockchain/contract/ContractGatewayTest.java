@@ -15,6 +15,7 @@ import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.crypto.Hash;
 
+/** ABI 반환값 디코딩과 쓰기 함수 selector 인코딩을 RPC mock으로 검증한다. */
 class ContractGatewayTest {
     private Web3j web3j;
     private Request<?, EthCall> request;

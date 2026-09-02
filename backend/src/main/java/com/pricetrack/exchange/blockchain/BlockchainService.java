@@ -33,6 +33,7 @@ public class BlockchainService {
         this.contracts = contracts;
     }
 
+    /** RPC, 운영자 키와 네 컨트랙트 주소가 실제 배포 상태와 일치하는지 점검한다. */
     public ConnectionStatus connectionStatus() {
         requireEnabled();
         Map<String, String> addresses = configuredContracts();
@@ -54,6 +55,7 @@ public class BlockchainService {
         }
     }
 
+    /** confirmation 계산에 사용할 체인의 최신 블록 번호를 조회한다. */
     public BigInteger latestBlockNumber() {
         requireEnabled();
         try {
@@ -63,6 +65,7 @@ public class BlockchainService {
         }
     }
 
+    /** 개인키를 노출하지 않고 서명 주체의 공개 주소만 파생한다. */
     public String operatorAddress() {
         String privateKey = required("OPERATOR_PRIVATE_KEY", properties.operatorPrivateKey());
         try {
@@ -72,6 +75,7 @@ public class BlockchainService {
         }
     }
 
+    /** Oracle·Vault와 운영자 ERC-20 상태를 한 번에 읽어 연결 상태를 진단한다. */
     public ContractSnapshot contractSnapshot() {
         requireEnabled();
         Map<String, String> addresses = configuredContracts();
@@ -83,11 +87,13 @@ public class BlockchainService {
                 contracts.allowance(addresses.get("MockKRW"), operator, addresses.get("ExchangeVault")));
     }
 
+    /** Vault가 현재 Oracle 가격과 수수료로 계산한 매수 결과를 읽는다. */
     public ContractGateway.Quote quoteBuy(BigInteger krwAmount) {
         requirePositive(krwAmount);
         return contracts.quoteBuy(configuredContracts().get("ExchangeVault"), krwAmount);
     }
 
+    /** Vault가 현재 Oracle 가격과 수수료로 계산한 매도 결과를 읽는다. */
     public ContractGateway.Quote quoteSell(BigInteger tokenAmount) {
         requirePositive(tokenAmount);
         return contracts.quoteSell(configuredContracts().get("ExchangeVault"), tokenAmount);
@@ -113,6 +119,7 @@ public class BlockchainService {
         return contracts.encodeUpdatePrice(priceE8);
     }
 
+    /** 운영자의 mKRW 잔고와 Vault allowance를 확인한 후 매수 견적을 반환한다. */
     public BuyReadiness buyReadiness(BigInteger krwAmount) {
         requirePositive(krwAmount);
         Map<String, String> addresses = configuredContracts();
@@ -130,6 +137,7 @@ public class BlockchainService {
                 addresses.get("ExchangeVault"));
     }
 
+    /** 운영자의 mSEC 잔고를 확인한 후 매도 견적을 반환한다. */
     public SellReadiness sellReadiness(BigInteger tokenAmount) {
         requirePositive(tokenAmount);
         Map<String, String> addresses = configuredContracts();

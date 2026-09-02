@@ -8,6 +8,7 @@ import java.math.BigInteger;
 
 import org.junit.jupiter.api.Test;
 
+/** Oracle 8 decimals 왕복 변환과 양수·정밀도 제약을 검증한다. */
 class PriceUnitsTest {
     @Test
     void convertsPriceToE8AndBack() {

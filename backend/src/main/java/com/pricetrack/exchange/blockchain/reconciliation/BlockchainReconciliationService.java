@@ -30,7 +30,6 @@ import com.pricetrack.exchange.blockchain.contract.ContractEventParser.Settlemen
 import com.pricetrack.exchange.blockchain.settlement.OnchainSettlementService.SettlementConsistencyException;
 import com.pricetrack.exchange.order.OrderRepository;
 
-@Service
 /**
  * DB에 남은 미완료 트랜잭션과 체인의 실제 상태를 주기적으로 일치시킨다.
  *
@@ -41,6 +40,7 @@ import com.pricetrack.exchange.order.OrderRepository;
  * <p>receipt 성공만으로 자산을 확정하지 않는다. 예상한 컨트랙트 이벤트와
  * 저장된 주문 정보가 일치해야 자동 정산하며, 불일치는 REVIEW_REQUIRED로 격리한다.</p>
  */
+@Service
 public class BlockchainReconciliationService {
     private static final Logger log = LoggerFactory.getLogger(BlockchainReconciliationService.class);
 
@@ -72,6 +72,11 @@ public class BlockchainReconciliationService {
         this.web3j = web3j;
     }
 
+    /**
+     * 생성 시각 순으로 미완료 거래를 처리한다.
+     * 설정 오류나 일시적인 RPC 장애는 다음 주기에 재시도하지만, 이벤트·정산 불일치는
+     * 반복 자동 처리하지 않도록 REVIEW_REQUIRED로 격리한다.
+     */
     @Scheduled(fixedDelayString = "${app.blockchain.reconciliation.poll-interval-ms:1000}",
             initialDelayString = "${app.blockchain.reconciliation.initial-delay-ms:1000}")
     public void reconcilePendingTransactions() {
@@ -101,11 +106,13 @@ public class BlockchainReconciliationService {
                 throw new BlockchainConfigurationException(
                         "receipt 조회 실패: " + response.getError().getMessage());
             }
+            // receipt가 없거나 confirmation이 부족한 것은 실패가 아니라 아직 대기 중인 상태다.
             if (response.getTransactionReceipt().isEmpty()) return;
             TransactionReceipt receipt = response.getTransactionReceipt().get();
             if (!hasRequiredConfirmations(receipt)) return;
 
             long blockNumber = receipt.getBlockNumber().longValueExact();
+            // EVM 실행 실패에는 신뢰할 이벤트 결과가 없으므로 성공 정산 경로로 들어가지 않는다.
             if (!receipt.isStatusOK()) {
                 if (transaction.getType() == BlockchainTransactionType.UPDATE_PRICE) {
                     oraclePriceSettlementService.fail(transaction.getId(), blockNumber,
@@ -116,6 +123,7 @@ public class BlockchainReconciliationService {
                 }
                 return;
             }
+            // 시스템 가격 갱신과 사용자 주문은 연결된 DB 원장이 달라 별도 정산 서비스로 보낸다.
             if (transaction.getType() == BlockchainTransactionType.UPDATE_PRICE) {
                 var event = eventParser.parsePriceUpdated(receipt, properties.priceOracleAddress(),
                         requiredTargetValue(transaction));

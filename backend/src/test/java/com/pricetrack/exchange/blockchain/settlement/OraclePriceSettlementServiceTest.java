@@ -16,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import com.pricetrack.exchange.market.PriceTickRepository;
 
+/** 동일 Oracle 확인을 반복 처리해도 가격 이력이 한 번만 저장되는지 검증한다. */
 @SpringBootTest
 class OraclePriceSettlementServiceTest {
     @Autowired OraclePriceSettlementService settlementService;

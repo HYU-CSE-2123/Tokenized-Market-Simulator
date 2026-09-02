@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import org.junit.jupiter.api.Test;
 import org.web3j.protocol.Web3j;
 
+/** 비활성화·누락 설정·잘못된 키 검증과 운영자 주소 파생을 검증한다. */
 class BlockchainServiceTest {
     private final Web3j web3j = mock(Web3j.class);
     private final ContractGateway contracts = mock(ContractGateway.class);

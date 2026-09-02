@@ -33,8 +33,10 @@ import lombok.Setter;
 public class BlockchainTransaction {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    /** 사용자 주문 거래의 연결 키. UPDATE_PRICE 같은 시스템 거래에는 값이 없다. */
     @Column(name = "order_id", unique = true)
     private Long orderId;
+    /** 서명 원문에서 계산되며 체인과 DB에서 동일 거래를 찾는 식별자다. */
     @Column(name = "tx_hash", unique = true)
     private String txHash;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 50)
@@ -43,10 +45,13 @@ public class BlockchainTransaction {
     private BlockchainTransactionStatus status = BlockchainTransactionStatus.CREATED;
     @Column(name = "sender_address")
     private String senderAddress;
+    /** 같은 운영자 주소에서는 한 번만 사용할 수 있는 트랜잭션 순번이다. */
     @Column
     private Long nonce;
+    /** 서버 재시작 후 동일 트랜잭션을 재전송하기 위한 서명 완료 원문이다. */
     @Column(name = "raw_transaction", columnDefinition = "TEXT")
     private String rawTransaction;
+    /** UPDATE_PRICE 이벤트가 실제 의도한 가격인지 검증하기 위한 priceE8 기대값이다. */
     @Column(name = "target_value", precision = 78, scale = 0)
     private BigInteger targetValue;
     @Column(name = "block_number")

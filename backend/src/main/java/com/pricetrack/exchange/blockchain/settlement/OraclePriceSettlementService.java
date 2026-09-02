@@ -32,6 +32,10 @@ public class OraclePriceSettlementService {
         this.priceTickRepository = priceTickRepository;
     }
 
+    /**
+     * 검증된 PriceUpdated를 CONFIRMED와 ONCHAIN_ORACLE 가격 이력으로 원자적으로 반영한다.
+     * 완료 상태와 unique 연결 키를 함께 검사해 동일 receipt의 반복 처리를 허용한다.
+     */
     @Transactional
     public void confirm(Long transactionId, PriceUpdatedEvent event, long blockNumber) {
         BlockchainTransaction transaction = transactionForUpdate(transactionId);
@@ -55,6 +59,7 @@ public class OraclePriceSettlementService {
         transaction.setErrorMessage(null);
     }
 
+    /** 실패 receipt를 가격 이력 없이 FAILED 트랜잭션으로 확정한다. */
     @Transactional
     public void fail(Long transactionId, long blockNumber, String reason) {
         BlockchainTransaction transaction = transactionForUpdate(transactionId);

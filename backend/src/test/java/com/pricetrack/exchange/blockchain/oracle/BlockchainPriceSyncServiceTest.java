@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import com.pricetrack.exchange.market.PriceSimulator;
 
+/** 최신 가격 제출과 처리 중 갱신을 건너뛰는 coalescing 정책을 검증한다. */
 class BlockchainPriceSyncServiceTest {
     @Test
     void submitsLatestPriceWhenNoUpdateIsInFlight() {

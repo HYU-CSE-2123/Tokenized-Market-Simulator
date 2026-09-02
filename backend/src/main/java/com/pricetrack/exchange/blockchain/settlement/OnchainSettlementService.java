@@ -23,7 +23,6 @@ import com.pricetrack.exchange.trade.TradeRepository;
 import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.WalletService;
 
-@Service
 /**
  * 검증된 Vault 이벤트를 사용자별 DB 원장에 최종 반영한다.
  *
@@ -35,6 +34,7 @@ import com.pricetrack.exchange.wallet.WalletService;
  * <p>행 잠금과 unique 제약, 완료 상태 검사를 함께 사용해 같은 receipt가
  * 반복 처리돼도 체결 결과가 한 번만 반영되도록 한다.</p>
  */
+@Service
 public class OnchainSettlementService {
     private final BlockchainTransactionRepository transactionRepository;
     private final OrderRepository orderRepository;
@@ -49,6 +49,10 @@ public class OnchainSettlementService {
         this.walletService = walletService;
     }
 
+    /**
+     * 검증된 BUY/SELL 이벤트를 잔고·Trade·주문·트랜잭션에 원자적으로 반영한다.
+     * 이미 완료된 거래에는 아무 작업도 하지 않아 scheduler 재호출에 안전하다.
+     */
     @Transactional
     public void settleSuccess(Long transactionId, SettlementEvent event, long blockNumber) {
         BlockchainTransaction transaction = transactionForUpdate(transactionId);
@@ -79,6 +83,7 @@ public class OnchainSettlementService {
             krw.setAmount(krw.getAmount().add(output));
         }
 
+        // 상태는 미완료인데 Trade만 존재한다면 부분 반영 가능성이 있으므로 자동 덮어쓰지 않는다.
         if (tradeRepository.existsByOrderId(order.getId())) {
             throw new SettlementConsistencyException("이미 체결이 존재하지만 주문이 FILLED가 아닙니다.");
         }
@@ -103,6 +108,7 @@ public class OnchainSettlementService {
         transaction.setErrorMessage(null);
     }
 
+    /** 실패 receipt의 입력 자산 잠금만 해제하고 주문과 트랜잭션을 FAILED로 확정한다. */
     @Transactional
     public void settleFailure(Long transactionId, long blockNumber, String reason) {
         BlockchainTransaction transaction = transactionForUpdate(transactionId);
@@ -126,6 +132,10 @@ public class OnchainSettlementService {
         transaction.setErrorMessage(limit(reason));
     }
 
+    /**
+     * 자동 정산 근거가 부족한 거래를 수동 검토 대상으로 격리한다.
+     * 자산 잠금은 의도적으로 유지해 검토 전 재사용되지 않게 한다.
+     */
     @Transactional
     public void markReviewRequired(Long transactionId, String reason) {
         BlockchainTransaction transaction = transactionForUpdate(transactionId);

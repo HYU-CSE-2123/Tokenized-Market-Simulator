@@ -25,6 +25,7 @@ import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
 import com.pricetrack.exchange.wallet.WalletService;
 
+/** 주문 성공·실패 정산의 잔고 변화와 반복 호출 멱등성을 검증한다. */
 @SpringBootTest
 class OnchainSettlementServiceTest {
     @Autowired OnchainSettlementService settlementService;

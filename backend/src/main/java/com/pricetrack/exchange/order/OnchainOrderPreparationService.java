@@ -28,6 +28,10 @@ public class OnchainOrderPreparationService {
         this.walletService = walletService;
     }
 
+    /**
+     * 주문을 생성하고 입력 자산을 잠근다.
+     * 잔고 부족 주문도 FAILED 기록으로 남겨야 하므로 해당 예외만 rollback 대상에서 제외한다.
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW,
             noRollbackFor = InsufficientBalanceException.class)
     public Order prepare(Long userId, OrderSide side, BigDecimal input, BigDecimal expectedOutput) {
@@ -43,6 +47,7 @@ public class OnchainOrderPreparationService {
         order = orderRepository.save(order);
 
         if (balance.getAvailableAmount().compareTo(input) < 0) {
+            // 실패 주문 이력은 보존하되 실제 잔고는 잠그지 않는다.
             order.setStatus(OrderStatus.FAILED);
             order.setUpdatedAt(Instant.now());
             throw new InsufficientBalanceException(inputSymbol);

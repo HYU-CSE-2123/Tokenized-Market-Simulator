@@ -31,22 +31,26 @@ public class ContractGateway {
 
     public ContractGateway(Web3j web3j) { this.web3j = web3j; }
 
+    /** ERC-20 balanceOf를 eth_call로 실행한다. */
     public BigInteger balanceOf(String contract, String account) {
         return singleUint(contract, new Function("balanceOf",
                 List.of(new Address(account)), List.of(new TypeReference<Uint256>() {})));
     }
 
+    /** ERC-20 owner가 spender에게 허용한 사용량을 조회한다. */
     public BigInteger allowance(String token, String owner, String spender) {
         return singleUint(token, new Function("allowance",
                 List.of(new Address(owner), new Address(spender)),
                 List.of(new TypeReference<Uint256>() {})));
     }
 
+    /** Vault 수수료율을 basis point 단위로 조회한다. */
     public BigInteger feeBps(String vault) {
         return singleUint(vault, new Function("feeBps", emptyList(),
                 List.of(new TypeReference<Uint256>() {})));
     }
 
+    /** Ownable 컨트랙트의 관리자 주소를 조회한다. */
     public String owner(String contract) {
         List<Type> values = call(contract, new Function("owner", emptyList(),
                 List.of(new TypeReference<Address>() {})));
@@ -56,31 +60,38 @@ public class ContractGateway {
         return address;
     }
 
+    /** Oracle의 priceE8과 마지막 갱신 블록 시각을 조회한다. */
     public OraclePrice getPrice(String oracle) {
         List<Type> values = call(oracle, new Function("getPrice", emptyList(), List.of(
                 new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {})));
         return new OraclePrice(asUint(values, 0), asUint(values, 1));
     }
 
+    /** 상태를 변경하지 않고 buy 실행 예상 출력량과 수수료를 조회한다. */
     public Quote quoteBuy(String vault, BigInteger krwAmount) { return quote(vault, "quoteBuy", krwAmount); }
+    /** 상태를 변경하지 않고 sell 실행 예상 출력량과 수수료를 조회한다. */
     public Quote quoteSell(String vault, BigInteger tokenAmount) { return quote(vault, "quoteSell", tokenAmount); }
 
+    /** 서명·전송 계층이 사용할 Vault.buy calldata를 생성한다. */
     public String encodeBuy(BigInteger krwAmount) {
         return FunctionEncoder.encode(new Function("buy", List.of(new Uint256(krwAmount)),
                 List.of(new TypeReference<Uint256>() {})));
     }
 
+    /** 서명·전송 계층이 사용할 Vault.sell calldata를 생성한다. */
     public String encodeSell(BigInteger tokenAmount) {
         return FunctionEncoder.encode(new Function("sell", List.of(new Uint256(tokenAmount)),
                 List.of(new TypeReference<Uint256>() {})));
     }
 
+    /** 서명·전송 계층이 사용할 ERC-20 approve calldata를 생성한다. */
     public String encodeApprove(String spender, BigInteger amount) {
         return FunctionEncoder.encode(new Function("approve",
                 List.of(new Address(spender), new Uint256(amount)),
                 List.of(new TypeReference<org.web3j.abi.datatypes.Bool>() {})));
     }
 
+    /** 서명·전송 계층이 사용할 Oracle.updatePrice calldata를 생성한다. */
     public String encodeUpdatePrice(BigInteger priceE8) {
         return FunctionEncoder.encode(new Function("updatePrice", List.of(new Uint256(priceE8)), emptyList()));
     }

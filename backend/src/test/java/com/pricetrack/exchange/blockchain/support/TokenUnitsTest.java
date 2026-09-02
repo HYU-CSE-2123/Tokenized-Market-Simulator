@@ -8,6 +8,7 @@ import java.math.BigInteger;
 
 import org.junit.jupiter.api.Test;
 
+/** ERC-20 18 decimals 왕복 변환과 허용 정밀도 경계를 검증한다. */
 class TokenUnitsTest {
     @Test
     void convertsTokenAmountToWeiAndBack() {

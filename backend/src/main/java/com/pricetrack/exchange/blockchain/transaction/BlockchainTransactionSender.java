@@ -19,8 +19,6 @@ import org.web3j.protocol.core.methods.response.EthEstimateGas;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.utils.Numeric;
 
-/** 단일 운영자 지갑의 nonce 충돌을 막으며 서명 트랜잭션을 저장 후 전송한다. */
-@Service
 /**
  * 운영자 지갑의 트랜잭션을 서명하고 장애 복구가 가능한 순서로 전송한다.
  *
@@ -31,6 +29,7 @@ import org.web3j.utils.Numeric;
  * <p>{@code synchronized}는 단일 백엔드 프로세스 안에서 운영자 nonce 사용을
  * 직렬화한다. 다중 인스턴스 운영에는 별도의 분산 nonce lock이 필요하다.</p>
  */
+@Service
 public class BlockchainTransactionSender {
     private static final BigInteger GAS_BUFFER_PERCENT = BigInteger.valueOf(120);
     private static final BigInteger PERCENT = BigInteger.valueOf(100);
@@ -46,11 +45,13 @@ public class BlockchainTransactionSender {
         this.persistence = persistence;
     }
 
+    /** 주문 ID가 필수인 BUY 또는 SELL 트랜잭션을 서명하고 전송한다. */
     public synchronized Submission submit(Long orderId, BlockchainTransactionType type,
             String destination, String encodedFunction) {
         return submitInternal(orderId, type, destination, encodedFunction, null);
     }
 
+    /** 주문과 연결되지 않는 Oracle 갱신 등의 시스템 트랜잭션을 전송한다. */
     public synchronized Submission submitSystem(BlockchainTransactionType type,
             String destination, String encodedFunction, BigInteger targetValue) {
         if (type == BlockchainTransactionType.BUY || type == BlockchainTransactionType.SELL) {
@@ -76,6 +77,7 @@ public class BlockchainTransactionSender {
             String rawHex = Numeric.toHexString(signed);
             String expectedHash = Numeric.toHexString(Hash.sha3(signed));
 
+            // RPC보다 먼저 복구 정보를 커밋해야 응답 유실 시 같은 서명 원문을 재전송할 수 있다.
             persistence.saveSigned(orderId, type, sender, nonce.longValueExact(), rawHex, expectedHash, targetValue);
             EthSendTransaction response = web3j.ethSendRawTransaction(rawHex).send();
             if (response.hasError()) {
@@ -95,6 +97,10 @@ public class BlockchainTransactionSender {
         }
     }
 
+    /**
+     * SIGNED 상태를 복구한다. 체인에 이미 존재하면 제출 상태만 복원하고,
+     * 존재하지 않으면 저장된 동일 raw transaction을 재전송한다.
+     */
     public synchronized void recoverSigned(BlockchainTransaction transaction) {
         if (transaction.getStatus() != BlockchainTransactionStatus.SIGNED) return;
         if (transaction.getTxHash() == null || transaction.getRawTransaction() == null) {
@@ -107,6 +113,7 @@ public class BlockchainTransactionSender {
                         "트랜잭션 조회 실패: " + lookup.getError().getMessage());
             }
             if (lookup.getTransaction().isEmpty()) {
+                // 새 nonce로 다시 서명하지 않고 기존 원문을 보내야 동일 거래의 멱등성이 유지된다.
                 EthSendTransaction response = web3j.ethSendRawTransaction(transaction.getRawTransaction()).send();
                 if (response.hasError() && !isAlreadyKnown(response.getError().getMessage())) {
                     throw new BlockchainConfigurationException(

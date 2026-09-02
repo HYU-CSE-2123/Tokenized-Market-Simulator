@@ -17,12 +17,12 @@ import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
-@Component
 /**
  * receipt 로그에서 프로젝트가 신뢰할 수 있는 Vault 및 Oracle 이벤트만 추출한다.
  * 이벤트 시그니처뿐 아니라 발생 주소, 운영자 주소, 거래 입력값과 목표 가격을
  * DB의 기대값과 비교해 다른 컨트랙트나 예상 밖 로그가 정산 근거가 되지 않게 한다.
  */
+@Component
 public class ContractEventParser {
     private static final Event BOUGHT = new Event("Bought",
             List.of(new TypeReference<Address>(true) {}, new TypeReference<Uint256>() {},
@@ -35,6 +35,10 @@ public class ContractEventParser {
     private static final Event PRICE_UPDATED = new Event("PriceUpdated",
             List.of(new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {}));
 
+    /**
+     * Vault receipt에서 주문 종류에 맞는 체결 이벤트 정확히 하나를 찾고,
+     * 운영자 주소와 주문 입력 수량까지 기대값과 일치하는지 검증한다.
+     */
     public SettlementEvent parse(TransactionReceipt receipt, BlockchainTransactionType type,
             String vaultAddress, String operatorAddress, BigInteger expectedInput) {
         Event expectedEvent = switch (type) {
@@ -61,6 +65,7 @@ public class ContractEventParser {
         return result;
     }
 
+    /** Oracle receipt에서 PriceUpdated 이벤트 정확히 하나와 목표 가격 일치를 검증한다. */
     public PriceUpdatedEvent parsePriceUpdated(TransactionReceipt receipt, String oracleAddress,
             BigInteger expectedPriceE8) {
         List<PriceUpdatedEvent> matches = new ArrayList<>();
