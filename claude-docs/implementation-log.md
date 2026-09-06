@@ -606,3 +606,32 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 컨트랙트 ABI 조회·인코딩 메서드와 토큰 18 decimals·가격 8 decimals 변환 경계를 문서화했다.
 - Phase 3 핵심 테스트 클래스에는 각각 보장하는 규칙을 한 줄로 명시했다.
 - 단순 대입·getter처럼 코드 자체로 충분한 부분에는 중복 주석을 추가하지 않았다.
+
+---
+
+# Phase 4.1: WebSocket 연결과 JWT 인증 — 완료
+
+> 구현 및 검증: 2026-09-04
+
+## 구현
+
+- Android 등 네이티브 클라이언트용 표준 WebSocket `/ws`와 웹 fallback용 SockJS `/ws-sockjs`를 분리했다.
+- STOMP `CONNECT` native `Authorization: Bearer ...` 헤더를 기존 `JwtTokenProvider`로 검증하고 실제 사용자를 조회해 session `Principal`로 설정한다.
+- Principal 이름은 변경 가능한 login ID가 아니라 사용자 DB ID 문자열을 사용해 Spring user destination을 안정적으로 구분한다.
+- JWT가 없는 연결은 공개 시장 destination만 구독할 수 있고, 유효하지 않은 JWT를 명시하면 연결을 거부한다.
+- 공개 destination은 가격·최근 체결, 개인 destination은 주문·포트폴리오로 whitelist를 두고 그 외 구독을 거부한다.
+- 서버 push 전용 정책에 따라 클라이언트 STOMP `SEND`를 차단한다.
+- `WEBSOCKET_ALLOWED_ORIGINS` 설정을 추가했다. 로컬 기본값은 `*`이며 배포 환경에서는 제한해야 한다.
+
+## 검증
+
+- 인증 interceptor 단위 테스트: 정상 JWT Principal, 익명 공개 구독, 인증 개인 구독, 잘못된 JWT·미허용 destination·client SEND 거부
+- 실제 임베디드 서버 통합 테스트: `/ws` 익명 공개 메시지 수신, JWT 사용자의 `/user/queue/orders` 개인 메시지 수신
+- 실제 `/ws-sockjs` 연결 성공
+- 백엔드 전체 회귀 테스트 통과
+
+## 다음 작업
+
+- Phase 4.2 공통 이벤트 envelope와 DB `AFTER_COMMIT` 발행 기반
+- Phase 4.3 공개 가격·최근 체결 이벤트 정식화
+- Phase 4.4 사용자별 주문 상태·포트폴리오 이벤트 발행

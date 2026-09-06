@@ -32,12 +32,13 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - 온체인 가격 동기화는 처리 중인 갱신이 있으면 중간 가격을 합치고 최신 가격 하나만 다음 트랜잭션으로 전송
 - 블록체인 활성화 시 매수·매도 견적 API가 Vault와 Oracle의 실제 온체인 값을 사용
 - Phase 3 완료: 읽기, 주문 전송, receipt 정산·복구, 오라클 가격 동기화까지 연결
+- Phase 4.1 완료: 일반 WebSocket·SockJS endpoint, STOMP CONNECT JWT 인증, 공개 시장·개인 사용자 구독 경계와 client SEND 차단
 - 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기·주문 정산·오라클 갱신 선택 테스트 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
 ## 다음 개발 후보
 
-Phase 3이 완료되었습니다. 다음은 Phase 4 WebSocket으로 가격·주문 상태·체결 결과를 클라이언트에 실시간 전달하는 작업입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
+Phase 3과 Phase 4.1 WebSocket 연결·인증 기반이 완료되었습니다. 다음은 DB commit 이후 가격·주문 상태·체결·포트폴리오 이벤트를 정식 payload로 발행하는 Phase 4.2~4.4입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
 
 ## 핵심 설계 원칙
 

@@ -49,7 +49,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/health",
                                 "/api/auth/**",
-                                "/ws/**")
+                                "/ws", "/ws/**",
+                                "/ws-sockjs", "/ws-sockjs/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/markets/**")
                         .permitAll()

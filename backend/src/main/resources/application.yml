@@ -27,6 +27,8 @@ server:
 
 # 애플리케이션 커스텀 설정
 app:
+  websocket:
+    allowed-origin-patterns: ${WEBSOCKET_ALLOWED_ORIGINS:*}
   admin:
     login-id: ${ADMIN_LOGIN_ID:admin}
     password: ${ADMIN_PASSWORD:}

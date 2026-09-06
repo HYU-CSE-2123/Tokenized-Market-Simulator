@@ -16,6 +16,7 @@
 - 블록체인 활성화 시 운영자 지갑의 buy/sell 서명·전송, receipt polling과 자동 체결
 - 가격 시뮬레이터의 최신 가격을 `PriceOracle.updatePrice`로 동기화하고 `PriceUpdated` 이벤트를 가격 이력으로 저장
 - 블록체인 활성화 시 Oracle과 Vault를 직접 조회하는 온체인 매수·매도 견적
+- 일반 WebSocket `/ws`와 브라우저 호환 SockJS `/ws-sockjs`, STOMP JWT 인증과 공개·개인 구독 통제
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
 Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. Phase 3은 온체인 조회·주문·정산·복구와 오라클 가격 동기화까지 구현됐습니다.
@@ -66,7 +67,8 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 | `blockchain.settlement` | 주문·잔고·체결 및 Oracle 가격의 멱등 정산 |
 | `blockchain.oracle` | 가격 시뮬레이터와 PriceOracle 동기화 정책 |
 | `blockchain.support` | 토큰·가격 단위 변환과 공통 예외 |
-| `websocket` | STOMP 설정과 가격 스트림 |
+| `websocket.config` | 일반 WebSocket·SockJS endpoint, STOMP broker와 JWT 인증·구독 통제 |
+| `websocket.auth` | WebSocket session 사용자 Principal |
 | `common` | 보안 설정, 헬스 체크, 공통 오류 처리 |
 
 ## 테스트
@@ -77,6 +79,21 @@ cd backend
 ```
 
 테스트는 H2 인메모리 DB를 사용하며 PostgreSQL 없이 실행할 수 있습니다. 인증/JWT·거래 계산 단위 테스트와 MockMvc 기반 회원가입→faucet→매수→매도→포트폴리오 통합 흐름을 포함합니다.
+
+## WebSocket 연결
+
+- `/ws`: Android 등 네이티브 클라이언트용 표준 WebSocket + STOMP
+- `/ws-sockjs`: 웹 브라우저 fallback용 SockJS + STOMP
+- `/topic/markets/mSEC/price`, `/topic/markets/mSEC/trades`: 인증 없이 구독 가능한 공개 시장 destination
+- `/user/queue/orders`, `/user/queue/portfolio`: JWT 인증 사용자만 구독 가능한 개인 destination
+
+인증이 필요한 클라이언트는 STOMP `CONNECT` native header에 REST 로그인으로 받은 같은 JWT를 전달합니다.
+
+```text
+Authorization: Bearer <access-token>
+```
+
+토큰을 생략하면 공개 시장 구독만 가능하고, 잘못되거나 만료된 토큰을 보내면 연결을 거부합니다. 이 서비스는 서버 push 전용이므로 클라이언트의 STOMP `SEND`와 명시되지 않은 destination 구독도 거부합니다. 개발 기본 Origin은 `WEBSOCKET_ALLOWED_ORIGINS=*`이며 배포 환경에서는 실제 클라이언트 Origin 목록으로 제한해야 합니다.
 
 ### Anvil 실제 연동 테스트
 
@@ -129,7 +146,7 @@ cd backend
 .\gradlew.bat bootRun
 ```
 
-주요 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `BLOCKCHAIN_ENABLED`, `RPC_URL`, `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS`, `OPERATOR_PRIVATE_KEY`.
+주요 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `WEBSOCKET_ALLOWED_ORIGINS`, `BLOCKCHAIN_ENABLED`, `RPC_URL`, `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS`, `OPERATOR_PRIVATE_KEY`.
 
 `BLOCKCHAIN_ENABLED`의 기본값은 `false`입니다. 기존 DB 모의 거래만 사용할 때는 그대로 두며, Phase 3 web3j 기능을 사용할 때 `true`로 바꿉니다. 활성화 후 연결 검증을 호출하면 RPC, 개인키, 네 컨트랙트 주소와 실제 배포 코드를 엄격히 검사합니다.
 
