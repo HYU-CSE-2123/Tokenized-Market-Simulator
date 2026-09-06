@@ -17,7 +17,7 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 
 0 초기 설정 → 0.5 최소 온체인 시나리오 → 1 컨트랙트 → 2 백엔드 mock API → 3 web3j 연동 → 4 WebSocket → 5 Android → 6 시연·문서화
 
-## 현재 상태 (2026-09-01)
+## 현재 상태 (2026-09-06)
 
 - Phase 1 완료: 컨트랙트 4종, 배포·거래 시나리오, Foundry 테스트 20개 통과
 - Phase 2.1-A 완료: 자체 계정 회원가입·로그인, BCrypt, JWT 인증 필터, `/api/me`, 공통 오류 응답 구현
@@ -33,12 +33,13 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - 블록체인 활성화 시 매수·매도 견적 API가 Vault와 Oracle의 실제 온체인 값을 사용
 - Phase 3 완료: 읽기, 주문 전송, receipt 정산·복구, 오라클 가격 동기화까지 연결
 - Phase 4.1 완료: 일반 WebSocket·SockJS endpoint, STOMP CONNECT JWT 인증, 공개 시장·개인 사용자 구독 경계와 client SEND 차단
+- Phase 4.2 완료: 버전 있는 공통 이벤트 envelope, destination·payload 정의, DB `AFTER_COMMIT` 공개·개인 발행 기반
 - 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기·주문 정산·오라클 갱신 선택 테스트 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
 ## 다음 개발 후보
 
-Phase 3과 Phase 4.1 WebSocket 연결·인증 기반이 완료되었습니다. 다음은 DB commit 이후 가격·주문 상태·체결·포트폴리오 이벤트를 정식 payload로 발행하는 Phase 4.2~4.4입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
+Phase 3과 Phase 4.1~4.2 WebSocket 연결·인증·공통 발행 기반이 완료되었습니다. 다음은 공개 가격·최근 체결을 연결하는 Phase 4.3, 사용자별 주문 상태·포트폴리오를 연결하는 Phase 4.4입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
 
 ## 핵심 설계 원칙
 

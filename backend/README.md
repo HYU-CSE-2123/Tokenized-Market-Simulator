@@ -17,6 +17,7 @@
 - 가격 시뮬레이터의 최신 가격을 `PriceOracle.updatePrice`로 동기화하고 `PriceUpdated` 이벤트를 가격 이력으로 저장
 - 블록체인 활성화 시 Oracle과 Vault를 직접 조회하는 온체인 매수·매도 견적
 - 일반 WebSocket `/ws`와 브라우저 호환 SockJS `/ws-sockjs`, STOMP JWT 인증과 공개·개인 구독 통제
+- 버전 있는 WebSocket 이벤트 envelope와 DB commit 이후에만 전송되는 공개·개인 이벤트 발행 기반
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
 Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. Phase 3은 온체인 조회·주문·정산·복구와 오라클 가격 동기화까지 구현됐습니다.
@@ -69,6 +70,8 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 | `blockchain.support` | 토큰·가격 단위 변환과 공통 예외 |
 | `websocket.config` | 일반 WebSocket·SockJS endpoint, STOMP broker와 JWT 인증·구독 통제 |
 | `websocket.auth` | WebSocket session 사용자 Principal |
+| `websocket.event` | destination 상수, 공통 이벤트 envelope와 가격·체결·주문·포트폴리오 payload |
+| `websocket.publisher` | 도메인 서비스의 발행 요청을 transaction commit 후 STOMP broker로 전달 |
 | `common` | 보안 설정, 헬스 체크, 공통 오류 처리 |
 
 ## 테스트
@@ -94,6 +97,20 @@ Authorization: Bearer <access-token>
 ```
 
 토큰을 생략하면 공개 시장 구독만 가능하고, 잘못되거나 만료된 토큰을 보내면 연결을 거부합니다. 이 서비스는 서버 push 전용이므로 클라이언트의 STOMP `SEND`와 명시되지 않은 destination 구독도 거부합니다. 개발 기본 Origin은 `WEBSOCKET_ALLOWED_ORIGINS=*`이며 배포 환경에서는 실제 클라이언트 Origin 목록으로 제한해야 합니다.
+
+모든 서버 이벤트는 다음 공통 envelope를 사용합니다.
+
+```json
+{
+  "eventId": "중복 식별용 UUID",
+  "version": 1,
+  "type": "PRICE_UPDATED",
+  "occurredAt": "2026-09-06T06:00:00Z",
+  "data": {}
+}
+```
+
+지원할 이벤트 종류는 가격 갱신, 공개 체결, 온체인 주문 대기·성공·실패, 포트폴리오 갱신입니다. DB를 변경하는 서비스가 발행을 요청하면 실제 메시지는 transaction commit 후에만 전송되고 rollback 시 폐기됩니다. 따라서 클라이언트가 아직 저장되지 않은 상태를 먼저 받지 않습니다. 현재 Phase 4.2는 이 공통 규격과 전달 기반까지 구현했으며, 실제 가격·주문 서비스 연결은 Phase 4.3과 4.4에서 진행합니다.
 
 ### Anvil 실제 연동 테스트
 

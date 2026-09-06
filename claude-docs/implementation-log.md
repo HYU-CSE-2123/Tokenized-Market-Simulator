@@ -635,3 +635,42 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - Phase 4.2 공통 이벤트 envelope와 DB `AFTER_COMMIT` 발행 기반
 - Phase 4.3 공개 가격·최근 체결 이벤트 정식화
 - Phase 4.4 사용자별 주문 상태·포트폴리오 이벤트 발행
+
+---
+
+# Phase 4.2: 공통 이벤트 규격과 transaction-safe 발행 기반 — 완료
+
+> 구현 및 검증: 2026-09-06
+
+## 구현 범위
+
+- 모든 WebSocket 메시지에 `eventId`, `version`, `type`, `occurredAt`, `data`를 갖는 `WebSocketEvent<T>` envelope를 적용할 기반을 만들었다.
+- `PRICE_UPDATED`, `TRADE_EXECUTED`, `ORDER_PENDING_ONCHAIN`, `ORDER_FILLED`, `ORDER_FAILED`, `PORTFOLIO_UPDATED` 이벤트 종류를 정의했다.
+- 가격·체결·주문·포트폴리오별 payload record를 정의하고, 공개 메시지에서 사용자 식별 정보를 제외했다.
+- 공개 topic과 개인 queue 경로를 `WebSocketDestinations` 한 곳에서 관리하며 인증 interceptor도 같은 상수를 사용하도록 정리했다.
+- 도메인 서비스가 STOMP 구현에 직접 의존하지 않도록 `WebSocketEventPublisher`를 발행 경계로 추가했다.
+- Spring 내부 `WebSocketDelivery` 이벤트와 `WebSocketDeliveryListener`를 통해 공개 topic은 `convertAndSend`, 개인 알림은 사용자 DB ID 기반 `convertAndSendToUser`로 전달한다.
+
+## transaction 정책
+
+- DB transaction 내부의 발행 요청은 `AFTER_COMMIT` 단계에서만 실제 broker로 전달된다.
+- transaction이 rollback되면 WebSocket 알림도 전송하지 않아 REST/DB 상태보다 알림이 앞서는 불일치를 막는다.
+- 가격처럼 transaction 밖에서 발생하는 이벤트는 `fallbackExecution`으로 즉시 전달할 수 있다.
+- WebSocket은 실시간 변경 알림이며 영속 저장소가 아니다. 재연결하거나 메시지를 놓친 클라이언트는 REST API로 최신 상태를 다시 조회해야 한다.
+
+## 이번 단계에서 하지 않은 작업
+
+- 가격 시뮬레이터, 체결 정산, 주문 상태 전이, 포트폴리오 서비스에는 아직 publisher를 연결하지 않았다.
+- 실제 공개 이벤트 연결은 Phase 4.3, 개인 이벤트 연결은 Phase 4.4에서 별도 검증한다.
+
+## 검증
+
+- 공통 envelope JSON 직렬화와 이벤트 type·payload 구조 테스트 통과
+- transaction commit 전 미전송 및 commit 후 개인 queue 전송 테스트 통과
+- rollback 시 미전송, transaction 밖 공개 topic 즉시 전송 테스트 통과
+- 백엔드 전체 회귀 테스트 통과
+
+## 다음 작업
+
+- Phase 4.3 공개 가격·최근 체결 이벤트 연결 및 실제 WebSocket 수신 검증
+- Phase 4.4 사용자별 온체인 주문 상태·포트폴리오 이벤트 연결 및 사용자 격리 검증

@@ -1,5 +1,10 @@
 package com.pricetrack.exchange.websocket.config;
 
+import static com.pricetrack.exchange.websocket.event.WebSocketDestinations.ORDERS_SUBSCRIPTION;
+import static com.pricetrack.exchange.websocket.event.WebSocketDestinations.PORTFOLIO_SUBSCRIPTION;
+import static com.pricetrack.exchange.websocket.event.WebSocketDestinations.PRICE_TOPIC;
+import static com.pricetrack.exchange.websocket.event.WebSocketDestinations.TRADES_TOPIC;
+
 import java.util.Set;
 
 import org.springframework.http.HttpHeaders;
@@ -26,11 +31,11 @@ import com.pricetrack.exchange.websocket.auth.WebSocketPrincipal;
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final Set<String> PUBLIC_DESTINATIONS = Set.of(
-            "/topic/markets/mSEC/price",
-            "/topic/markets/mSEC/trades");
+            PRICE_TOPIC,
+            TRADES_TOPIC);
     private static final Set<String> PRIVATE_DESTINATIONS = Set.of(
-            "/user/queue/orders",
-            "/user/queue/portfolio");
+            ORDERS_SUBSCRIPTION,
+            PORTFOLIO_SUBSCRIPTION);
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
