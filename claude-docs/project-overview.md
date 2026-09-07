@@ -34,12 +34,13 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - Phase 3 완료: 읽기, 주문 전송, receipt 정산·복구, 오라클 가격 동기화까지 연결
 - Phase 4.1 완료: 일반 WebSocket·SockJS endpoint, STOMP CONNECT JWT 인증, 공개 시장·개인 사용자 구독 경계와 client SEND 차단
 - Phase 4.2 완료: 버전 있는 공통 이벤트 envelope, destination·payload 정의, DB `AFTER_COMMIT` 공개·개인 발행 기반
+- Phase 4.3 완료: 모의 가격과 모의·온체인 체결을 공개 topic에 연결하고 체결 payload의 사용자 정보 비노출 보장
 - 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기·주문 정산·오라클 갱신 선택 테스트 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
 ## 다음 개발 후보
 
-Phase 3과 Phase 4.1~4.2 WebSocket 연결·인증·공통 발행 기반이 완료되었습니다. 다음은 공개 가격·최근 체결을 연결하는 Phase 4.3, 사용자별 주문 상태·포트폴리오를 연결하는 Phase 4.4입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
+Phase 3과 Phase 4.1~4.3 WebSocket 연결·인증·공통 발행 기반 및 공개 시장 스트림이 완료되었습니다. 다음은 사용자별 주문 상태·포트폴리오를 연결하는 Phase 4.4입니다. Google OAuth, 이메일 인증과 계정 연결, 리프레시 토큰은 별도 설계 승인 후 진행합니다.
 
 ## 핵심 설계 원칙
 

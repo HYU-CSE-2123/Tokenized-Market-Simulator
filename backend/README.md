@@ -18,6 +18,7 @@
 - 블록체인 활성화 시 Oracle과 Vault를 직접 조회하는 온체인 매수·매도 견적
 - 일반 WebSocket `/ws`와 브라우저 호환 SockJS `/ws-sockjs`, STOMP JWT 인증과 공개·개인 구독 통제
 - 버전 있는 WebSocket 이벤트 envelope와 DB commit 이후에만 전송되는 공개·개인 이벤트 발행 기반
+- 1초 주기 모의 가격과 모의·온체인 체결 결과를 공통 envelope로 공개 WebSocket topic에 발행
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
 Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. Phase 3은 온체인 조회·주문·정산·복구와 오라클 가격 동기화까지 구현됐습니다.
@@ -110,7 +111,12 @@ Authorization: Bearer <access-token>
 }
 ```
 
-지원할 이벤트 종류는 가격 갱신, 공개 체결, 온체인 주문 대기·성공·실패, 포트폴리오 갱신입니다. DB를 변경하는 서비스가 발행을 요청하면 실제 메시지는 transaction commit 후에만 전송되고 rollback 시 폐기됩니다. 따라서 클라이언트가 아직 저장되지 않은 상태를 먼저 받지 않습니다. 현재 Phase 4.2는 이 공통 규격과 전달 기반까지 구현했으며, 실제 가격·주문 서비스 연결은 Phase 4.3과 4.4에서 진행합니다.
+이벤트 종류는 가격 갱신, 공개 체결, 온체인 주문 대기·성공·실패, 포트폴리오 갱신으로 정의돼 있습니다. 현재 가격과 공개 체결 이벤트가 실제 서비스에 연결돼 있으며, 사용자별 주문·포트폴리오 연결은 Phase 4.4 범위입니다.
+
+- `PRICE_UPDATED`: 시뮬레이터의 각 tick을 `/topic/markets/mSEC/price`로 즉시 발행
+- `TRADE_EXECUTED`: 모의 거래 또는 온체인 정산으로 저장된 체결을 `/topic/markets/mSEC/trades`로 발행
+
+공개 체결 payload에는 시장 정보만 포함하며 `userId`, `orderId`, `txHash`는 노출하지 않습니다. DB를 변경하는 체결 서비스가 발행을 요청하면 실제 메시지는 transaction commit 후에만 전송되고 rollback 시 폐기됩니다. 따라서 클라이언트가 아직 저장되지 않은 체결을 먼저 받지 않습니다.
 
 ### Anvil 실제 연동 테스트
 

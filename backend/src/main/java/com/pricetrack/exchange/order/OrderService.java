@@ -18,6 +18,7 @@ import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.trade.TradeRepository;
 import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.WalletService;
+import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
 
 @Service
 @Transactional(readOnly = true)
@@ -29,10 +30,12 @@ public class OrderService {
     private final TradeCalculator tradeCalculator;
     private final BlockchainProperties blockchainProperties;
     private final OnchainOrderService onchainOrderService;
+    private final MarketWebSocketPublisher marketEvents;
 
     public OrderService(OrderRepository orderRepository, TradeRepository tradeRepository,
             WalletService walletService, PriceSimulator priceSimulator, TradeCalculator tradeCalculator,
-            BlockchainProperties blockchainProperties, OnchainOrderService onchainOrderService) {
+            BlockchainProperties blockchainProperties, OnchainOrderService onchainOrderService,
+            MarketWebSocketPublisher marketEvents) {
         this.orderRepository = orderRepository;
         this.tradeRepository = tradeRepository;
         this.walletService = walletService;
@@ -40,6 +43,7 @@ public class OrderService {
         this.tradeCalculator = tradeCalculator;
         this.blockchainProperties = blockchainProperties;
         this.onchainOrderService = onchainOrderService;
+        this.marketEvents = marketEvents;
     }
 
     @Transactional(noRollbackFor = InsufficientBalanceException.class)
@@ -108,6 +112,8 @@ public class OrderService {
         trade.setQuoteAmount(quoteAmount);
         trade.setFee(fee);
         tradeRepository.save(trade);
+        // WebSocketEventPublisher defers delivery until this transaction commits.
+        marketEvents.publishTrade(trade);
     }
 
     private void updateAverageBuyPrice(UserBalance token, BigDecimal addedTokens, BigDecimal cost) {

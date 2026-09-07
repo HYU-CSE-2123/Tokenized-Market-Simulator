@@ -8,6 +8,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +20,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.math.BigDecimal;
 
@@ -24,6 +29,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pricetrack.exchange.trade.TradeRepository;
 import com.pricetrack.exchange.user.UserRepository;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
+import com.pricetrack.exchange.trade.Trade;
+import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -34,6 +41,7 @@ class TradingIntegrationTest {
     @Autowired OrderRepository orderRepository;
     @Autowired UserBalanceRepository balanceRepository;
     @Autowired UserRepository userRepository;
+    @MockBean MarketWebSocketPublisher marketEvents;
 
     @BeforeEach
     void cleanDatabase() {
@@ -90,6 +98,7 @@ class TradingIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)));
         mockMvc.perform(get("/api/trades").header("Authorization", bearer(token)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)));
+        verify(marketEvents, times(2)).publishTrade(any(Trade.class));
     }
 
     @Test
@@ -109,6 +118,7 @@ class TradingIntegrationTest {
                 .andExpect(jsonPath("$[0].status", is("FAILED")));
         mockMvc.perform(get("/api/trades").header("Authorization", bearer(token)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+        verifyNoInteractions(marketEvents);
     }
 
     @Test

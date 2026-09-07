@@ -2,13 +2,13 @@ package com.pricetrack.exchange.market;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Instant;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
 
 /**
  * 모의 가격 시뮬레이터 (기획서 §8.1).
@@ -21,11 +21,11 @@ public class PriceSimulator {
     public static final String SYMBOL = "mSEC";
     private static final BigDecimal INITIAL_PRICE = new BigDecimal("75000");
 
-    private final SimpMessagingTemplate messagingTemplate;
+    private final MarketWebSocketPublisher marketEvents;
     private final AtomicReference<BigDecimal> currentPrice = new AtomicReference<>(INITIAL_PRICE);
 
-    public PriceSimulator(SimpMessagingTemplate messagingTemplate) {
-        this.messagingTemplate = messagingTemplate;
+    public PriceSimulator(MarketWebSocketPublisher marketEvents) {
+        this.marketEvents = marketEvents;
     }
 
     public BigDecimal getCurrentPrice() {
@@ -47,11 +47,6 @@ public class PriceSimulator {
                 .divide(previous, 8, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
 
-        messagingTemplate.convertAndSend(
-                "/topic/markets/" + SYMBOL + "/price",
-                new PriceEvent("PRICE_UPDATED", SYMBOL, next, changeRate, Instant.now().toString()));
+        marketEvents.publishPrice(next, changeRate);
     }
-
-    public record PriceEvent(String type, String symbol, BigDecimal price,
-                             BigDecimal changeRate, String timestamp) {}
 }

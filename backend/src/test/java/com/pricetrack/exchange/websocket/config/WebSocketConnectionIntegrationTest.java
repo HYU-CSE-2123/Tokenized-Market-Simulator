@@ -3,6 +3,8 @@ package com.pricetrack.exchange.websocket.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +30,12 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 import com.pricetrack.exchange.auth.JwtTokenProvider;
 import com.pricetrack.exchange.user.User;
 import com.pricetrack.exchange.user.UserRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pricetrack.exchange.order.OrderSide;
+import com.pricetrack.exchange.trade.Trade;
+import com.pricetrack.exchange.websocket.event.WebSocketDestinations;
+import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
 
 /** 실제 서버 endpoint에서 공개 구독, JWT 개인 queue와 SockJS 연결을 검증한다. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -36,6 +44,8 @@ class WebSocketConnectionIntegrationTest {
     @Autowired JwtTokenProvider jwtTokenProvider;
     @Autowired UserRepository userRepository;
     @Autowired SimpMessagingTemplate messagingTemplate;
+    @Autowired MarketWebSocketPublisher marketEvents;
+    @Autowired ObjectMapper objectMapper;
 
     private StompSession session;
     private final List<WebSocketStompClient> clients = new ArrayList<>();
@@ -47,13 +57,35 @@ class WebSocketConnectionIntegrationTest {
     }
 
     @Test
-    void anonymousClientReceivesPublicMarketEventOverNativeWebSocket() throws Exception {
+    void anonymousClientReceivesVersionedPriceEventOverNativeWebSocket() throws Exception {
         session = connect(nativeClient(), "ws://localhost:" + port + "/ws", null);
-        CompletableFuture<String> received = subscribe(session, "/topic/markets/mSEC/price");
+        CompletableFuture<String> received = subscribe(session, WebSocketDestinations.PRICE_TOPIC);
 
         String payload = sendUntilReceived(received, () ->
-                messagingTemplate.convertAndSend("/topic/markets/mSEC/price", "public-price"));
-        assertThat(payload).isEqualTo("public-price");
+                marketEvents.publishPrice(new BigDecimal("75100"), new BigDecimal("0.13333333")));
+        JsonNode event = objectMapper.readTree(payload);
+        assertThat(event.path("version").asInt()).isEqualTo(1);
+        assertThat(event.path("type").asText()).isEqualTo("PRICE_UPDATED");
+        assertThat(event.path("eventId").asText()).isNotBlank();
+        assertThat(event.path("occurredAt").asText()).isNotBlank();
+        assertThat(event.path("data").path("symbol").asText()).isEqualTo("mSEC");
+        assertThat(event.path("data").path("price").decimalValue()).isEqualByComparingTo("75100");
+    }
+
+    @Test
+    void anonymousClientReceivesPublicTradeWithoutPrivateFields() throws Exception {
+        session = connect(nativeClient(), "ws://localhost:" + port + "/ws", null);
+        CompletableFuture<String> received = subscribe(session, WebSocketDestinations.TRADES_TOPIC);
+        Trade trade = publicTrade();
+
+        String payload = sendUntilReceived(received, () -> marketEvents.publishTrade(trade));
+        JsonNode event = objectMapper.readTree(payload);
+        assertThat(event.path("type").asText()).isEqualTo("TRADE_EXECUTED");
+        assertThat(event.path("data").path("tradeId").asLong()).isEqualTo(77L);
+        assertThat(event.path("data").path("side").asText()).isEqualTo("SELL");
+        assertThat(event.path("data").has("userId")).isFalse();
+        assertThat(event.path("data").has("orderId")).isFalse();
+        assertThat(event.path("data").has("txHash")).isFalse();
     }
 
     @Test
@@ -123,5 +155,21 @@ class WebSocketConnectionIntegrationTest {
             }
         }
         return received.get(1, TimeUnit.SECONDS);
+    }
+
+    private Trade publicTrade() {
+        Trade trade = new Trade();
+        trade.setId(77L);
+        trade.setUserId(88L);
+        trade.setOrderId(99L);
+        trade.setTxHash("0xprivate");
+        trade.setSymbol("mSEC");
+        trade.setSide(OrderSide.SELL);
+        trade.setPrice(new BigDecimal("75200"));
+        trade.setBaseAmount(new BigDecimal("2"));
+        trade.setQuoteAmount(new BigDecimal("150249.6"));
+        trade.setFee(new BigDecimal("150.4"));
+        trade.setCreatedAt(Instant.parse("2026-09-06T06:00:00Z"));
+        return trade;
     }
 }

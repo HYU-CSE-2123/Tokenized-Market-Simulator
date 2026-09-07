@@ -674,3 +674,40 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - Phase 4.3 공개 가격·최근 체결 이벤트 연결 및 실제 WebSocket 수신 검증
 - Phase 4.4 사용자별 온체인 주문 상태·포트폴리오 이벤트 연결 및 사용자 격리 검증
+
+---
+
+# Phase 4.3: 공개 가격·체결 스트림 — 완료
+
+> 구현 및 검증: 2026-09-06
+
+## 구현 범위
+
+- `MarketWebSocketPublisher`를 추가해 시장 도메인 값에서 공개 WebSocket payload로 변환하는 책임을 한 곳에 모았다.
+- `PriceSimulator`가 `SimpMessagingTemplate`과 과거 임시 `PriceEvent`를 직접 사용하던 구조를 제거했다.
+- 각 가격 tick을 공통 envelope의 `PRICE_UPDATED`로 `/topic/markets/mSEC/price`에 발행한다.
+- 블록체인 비활성 모의 체결은 `OrderService`, 온체인 성공 체결은 `OnchainSettlementService`에서 저장 직후 `TRADE_EXECUTED` 발행을 요청한다.
+- 공개 체결 payload에는 체결 ID, 종목, 방향, 가격, 기준·결제 수량, 수수료, 체결 시각만 포함하고 `userId`, `orderId`, `txHash`는 제외했다.
+
+## 일관성·중복 정책
+
+- 체결 이벤트 발행 요청은 체결을 저장하는 동일 DB transaction 안에서 발생하며 실제 STOMP 전송은 Phase 4.2의 `AFTER_COMMIT` listener가 수행한다.
+- DB rollback 시 공개 체결도 전송되지 않는다.
+- 온체인 reconciliation 재호출은 이미 완료된 주문을 조기에 반환하므로 같은 체결을 다시 생성하거나 발행하지 않는다.
+- WebSocket은 알림 채널이므로 최근 체결의 최종 기준은 DB와 REST API다.
+
+## 검증
+
+- 가격 tick이 현재 가격을 변경하고 같은 가격·변동률을 publisher에 전달하는 단위 테스트 통과
+- 가격과 체결 도메인 값을 정식 payload로 변환하는 테스트 통과
+- 모의 매수·매도에서 각각 공개 체결 발행, 실패 주문에서 미발행 검증
+- 온체인 성공 정산 반복 호출에서 공개 체결 1회 발행, 실패 정산에서 미발행 검증
+- 익명 STOMP client가 실제 `/ws`에서 version 1 가격·체결 envelope를 수신하는 통합 테스트 통과
+- 실제 공개 체결 JSON에 `userId`, `orderId`, `txHash`가 없음을 검증
+- 백엔드 전체 회귀 테스트 통과
+
+## 다음 작업
+
+- Phase 4.4 사용자별 `PENDING_ONCHAIN`·`FILLED`·`FAILED` 주문 상태 알림
+- 체결 또는 주문 변경 후 사용자별 포트폴리오 갱신 알림
+- 서로 다른 JWT 사용자의 개인 queue 격리와 실제 STOMP 수신 검증

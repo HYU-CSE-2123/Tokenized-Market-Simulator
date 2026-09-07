@@ -22,6 +22,7 @@ import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.trade.TradeRepository;
 import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.WalletService;
+import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
 
 /**
  * 검증된 Vault 이벤트를 사용자별 DB 원장에 최종 반영한다.
@@ -40,13 +41,16 @@ public class OnchainSettlementService {
     private final OrderRepository orderRepository;
     private final TradeRepository tradeRepository;
     private final WalletService walletService;
+    private final MarketWebSocketPublisher marketEvents;
 
     public OnchainSettlementService(BlockchainTransactionRepository transactionRepository,
-            OrderRepository orderRepository, TradeRepository tradeRepository, WalletService walletService) {
+            OrderRepository orderRepository, TradeRepository tradeRepository, WalletService walletService,
+            MarketWebSocketPublisher marketEvents) {
         this.transactionRepository = transactionRepository;
         this.orderRepository = orderRepository;
         this.tradeRepository = tradeRepository;
         this.walletService = walletService;
+        this.marketEvents = marketEvents;
     }
 
     /**
@@ -98,6 +102,8 @@ public class OnchainSettlementService {
         trade.setFee(fee);
         trade.setTxHash(transaction.getTxHash());
         tradeRepository.save(trade);
+        // Receipt reconciliation can retry, but the completed-state guard keeps this event single-shot.
+        marketEvents.publishTrade(trade);
 
         Instant now = Instant.now();
         order.setStatus(OrderStatus.FILLED);
