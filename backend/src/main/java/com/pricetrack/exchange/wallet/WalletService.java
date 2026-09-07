@@ -6,10 +6,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pricetrack.exchange.common.exception.BalanceNotFoundException;
+import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
 
 /**
- * 사용자 지갑 주소 관리 (기획서 §10, §5.1 — 지갑 생성/연결).
- * TODO(Phase 2): 회원가입 시 지갑 주소 발급/연결, mKRW faucet 트리거.
+ * 사용자별 모의 자산 잔고를 초기화하고 변경한다.
+ * 잔고가 실제로 바뀌는 faucet은 commit 후 개인 포트폴리오 알림도 요청한다.
  */
 @Service
 public class WalletService {
@@ -19,9 +20,11 @@ public class WalletService {
     public static final BigDecimal FAUCET_AMOUNT = new BigDecimal("1000000.000000000000000000");
 
     private final UserBalanceRepository balanceRepository;
+    private final UserWebSocketPublisher userEvents;
 
-    public WalletService(UserBalanceRepository balanceRepository) {
+    public WalletService(UserBalanceRepository balanceRepository, UserWebSocketPublisher userEvents) {
         this.balanceRepository = balanceRepository;
+        this.userEvents = userEvents;
     }
 
     @Transactional
@@ -34,6 +37,7 @@ public class WalletService {
     public FaucetResult faucet(Long userId) {
         UserBalance balance = getForUpdate(userId, KRW_SYMBOL);
         balance.setAmount(balance.getAmount().add(FAUCET_AMOUNT));
+        userEvents.publishPortfolio(userId);
         return new FaucetResult(KRW_SYMBOL, FAUCET_AMOUNT, balance.getAmount());
     }
 

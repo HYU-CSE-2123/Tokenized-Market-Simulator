@@ -31,6 +31,7 @@ import com.pricetrack.exchange.user.UserRepository;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
 import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
+import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -42,6 +43,7 @@ class TradingIntegrationTest {
     @Autowired UserBalanceRepository balanceRepository;
     @Autowired UserRepository userRepository;
     @MockBean MarketWebSocketPublisher marketEvents;
+    @MockBean UserWebSocketPublisher userEvents;
 
     @BeforeEach
     void cleanDatabase() {
@@ -99,6 +101,8 @@ class TradingIntegrationTest {
         mockMvc.perform(get("/api/trades").header("Authorization", bearer(token)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)));
         verify(marketEvents, times(2)).publishTrade(any(Trade.class));
+        verify(userEvents, times(2)).publishOrder(any(Order.class));
+        verify(userEvents, times(3)).publishPortfolio(any(Long.class));
     }
 
     @Test
@@ -119,6 +123,7 @@ class TradingIntegrationTest {
         mockMvc.perform(get("/api/trades").header("Authorization", bearer(token)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
         verifyNoInteractions(marketEvents);
+        verify(userEvents).publishOrder(any(Order.class));
     }
 
     @Test

@@ -31,6 +31,7 @@ import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
 import com.pricetrack.exchange.wallet.WalletService;
 import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
+import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
 
 /** 주문 성공·실패 정산의 잔고 변화와 반복 호출 멱등성을 검증한다. */
 @SpringBootTest
@@ -41,6 +42,7 @@ class OnchainSettlementServiceTest {
     @Autowired UserBalanceRepository balanceRepository;
     @Autowired TradeRepository tradeRepository;
     @MockBean MarketWebSocketPublisher marketEvents;
+    @MockBean UserWebSocketPublisher userEvents;
 
     @Test
     void buySettlementIsIdempotent() {
@@ -63,6 +65,8 @@ class OnchainSettlementServiceTest {
         assertThat(tradeRepository.findAll().stream().filter(t -> t.getOrderId().equals(order.getId())).count())
                 .isEqualTo(1);
         verify(marketEvents, times(1)).publishTrade(any(Trade.class));
+        verify(userEvents, times(1)).publishOrder(any(Order.class));
+        verify(userEvents, times(1)).publishPortfolio(fixture.userId());
     }
 
     @Test
@@ -81,6 +85,8 @@ class OnchainSettlementServiceTest {
         assertThat(transaction.getStatus()).isEqualTo(BlockchainTransactionStatus.FAILED);
         assertThat(tradeRepository.existsByOrderId(order.getId())).isFalse();
         verifyNoInteractions(marketEvents);
+        verify(userEvents, times(1)).publishOrder(any(Order.class));
+        verify(userEvents, times(1)).publishPortfolio(fixture.userId());
     }
 
     private Fixture fixture(long userId, OrderSide side, String input, String krwAmount, String tokenAmount) {

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.pricetrack.exchange.order.Order;
 import com.pricetrack.exchange.order.OrderRepository;
 import com.pricetrack.exchange.order.OrderStatus;
+import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
 
 /**
  * 온체인 전송 단계의 상태를 독립 DB 트랜잭션으로 확정한다.
@@ -21,11 +22,13 @@ import com.pricetrack.exchange.order.OrderStatus;
 public class BlockchainTransactionPersistence {
     private final BlockchainTransactionRepository transactionRepository;
     private final OrderRepository orderRepository;
+    private final UserWebSocketPublisher userEvents;
 
     public BlockchainTransactionPersistence(BlockchainTransactionRepository transactionRepository,
-            OrderRepository orderRepository) {
+            OrderRepository orderRepository, UserWebSocketPublisher userEvents) {
         this.transactionRepository = transactionRepository;
         this.orderRepository = orderRepository;
+        this.userEvents = userEvents;
     }
 
     /** 주문에 연결된 서명 트랜잭션을 RPC 전송 전에 독립 커밋한다. */
@@ -77,6 +80,7 @@ public class BlockchainTransactionPersistence {
             order.setTxHash(txHash);
             order.setStatus(OrderStatus.PENDING_ONCHAIN);
             order.setUpdatedAt(Instant.now());
+            userEvents.publishOrder(order);
         }
     }
 }

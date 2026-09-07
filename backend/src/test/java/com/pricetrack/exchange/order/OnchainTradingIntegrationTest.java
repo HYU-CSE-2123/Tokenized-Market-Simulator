@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,6 +28,7 @@ import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionRepos
 import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionSender;
 import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionType;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
+import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
 
 @SpringBootTest(properties = "app.blockchain.enabled=true")
 @AutoConfigureMockMvc
@@ -39,6 +41,7 @@ class OnchainTradingIntegrationTest {
     @Autowired OrderRepository orderRepository;
     @MockBean BlockchainService blockchainService;
     @MockBean BlockchainTransactionSender transactionSender;
+    @MockBean UserWebSocketPublisher userEvents;
 
     @Test
     void buyLocksBalancePersistsTransactionAndReturnsAccepted() throws Exception {
@@ -71,6 +74,7 @@ class OnchainTradingIntegrationTest {
         Long userId = orderRepository.findById(orderId).orElseThrow().getUserId();
         assertThat(balanceRepository.findByUserIdAndSymbol(userId, "mKRW").orElseThrow().getLockedAmount())
                 .isEqualByComparingTo("100000");
+        verify(userEvents).publishOrder(any(Order.class));
     }
 
     private String signupAndFaucet() throws Exception {

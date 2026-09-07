@@ -19,6 +19,7 @@ import com.pricetrack.exchange.trade.TradeRepository;
 import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.WalletService;
 import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
+import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
 
 @Service
 @Transactional(readOnly = true)
@@ -31,11 +32,12 @@ public class OrderService {
     private final BlockchainProperties blockchainProperties;
     private final OnchainOrderService onchainOrderService;
     private final MarketWebSocketPublisher marketEvents;
+    private final UserWebSocketPublisher userEvents;
 
     public OrderService(OrderRepository orderRepository, TradeRepository tradeRepository,
             WalletService walletService, PriceSimulator priceSimulator, TradeCalculator tradeCalculator,
             BlockchainProperties blockchainProperties, OnchainOrderService onchainOrderService,
-            MarketWebSocketPublisher marketEvents) {
+            MarketWebSocketPublisher marketEvents, UserWebSocketPublisher userEvents) {
         this.orderRepository = orderRepository;
         this.tradeRepository = tradeRepository;
         this.walletService = walletService;
@@ -44,6 +46,7 @@ public class OrderService {
         this.blockchainProperties = blockchainProperties;
         this.onchainOrderService = onchainOrderService;
         this.marketEvents = marketEvents;
+        this.userEvents = userEvents;
     }
 
     @Transactional(noRollbackFor = InsufficientBalanceException.class)
@@ -114,6 +117,8 @@ public class OrderService {
         tradeRepository.save(trade);
         // WebSocketEventPublisher defers delivery until this transaction commits.
         marketEvents.publishTrade(trade);
+        userEvents.publishOrder(order);
+        userEvents.publishPortfolio(order.getUserId());
     }
 
     private void updateAverageBuyPrice(UserBalance token, BigDecimal addedTokens, BigDecimal cost) {
@@ -126,6 +131,7 @@ public class OrderService {
         if (balance.getAmount().compareTo(required) < 0) {
             order.setStatus(OrderStatus.FAILED);
             order.setUpdatedAt(Instant.now());
+            userEvents.publishOrder(order);
             throw new InsufficientBalanceException(balance.getSymbol());
         }
     }

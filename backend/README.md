@@ -19,6 +19,7 @@
 - 일반 WebSocket `/ws`와 브라우저 호환 SockJS `/ws-sockjs`, STOMP JWT 인증과 공개·개인 구독 통제
 - 버전 있는 WebSocket 이벤트 envelope와 DB commit 이후에만 전송되는 공개·개인 이벤트 발행 기반
 - 1초 주기 모의 가격과 모의·온체인 체결 결과를 공통 envelope로 공개 WebSocket topic에 발행
+- 온체인 주문 대기·성공·실패와 포트폴리오 변경을 해당 사용자의 개인 queue에 발행
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
 Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. Phase 3은 온체인 조회·주문·정산·복구와 오라클 가격 동기화까지 구현됐습니다.
@@ -117,6 +118,15 @@ Authorization: Bearer <access-token>
 - `TRADE_EXECUTED`: 모의 거래 또는 온체인 정산으로 저장된 체결을 `/topic/markets/mSEC/trades`로 발행
 
 공개 체결 payload에는 시장 정보만 포함하며 `userId`, `orderId`, `txHash`는 노출하지 않습니다. DB를 변경하는 체결 서비스가 발행을 요청하면 실제 메시지는 transaction commit 후에만 전송되고 rollback 시 폐기됩니다. 따라서 클라이언트가 아직 저장되지 않은 체결을 먼저 받지 않습니다.
+
+개인 주문 이벤트는 실제 DB 상태가 확정되는 지점에서 발행합니다.
+
+- `ORDER_PENDING_ONCHAIN`: RPC 제출 기록과 주문의 `PENDING_ONCHAIN`, `txHash`가 함께 저장된 후
+- `ORDER_FILLED`: 모의 즉시 체결 또는 성공한 온체인 receipt 정산 후
+- `ORDER_FAILED`: 잔고 부족 주문 기록 또는 실패한 온체인 receipt 정산 후
+- `PORTFOLIO_UPDATED`: faucet, 모의 체결, 온체인 성공 정산, 실패 정산의 자산 잠금 해제 후
+
+개인 이벤트는 사용자 DB ID로 라우팅되므로 다른 사용자의 `/user/queue/...` 구독에는 전달되지 않습니다. 현재 구현되지 않은 취소 흐름의 `CANCELED`와 운영 검토 상태인 `REVIEW_REQUIRED`는 실패 알림으로 잘못 표현하지 않고 발행하지 않습니다. WebSocket 메시지는 재전송을 보장하는 영속 로그가 아니므로 앱 재연결 후에는 REST API로 주문과 포트폴리오 최신 상태를 다시 조회해야 합니다.
 
 ### Anvil 실제 연동 테스트
 

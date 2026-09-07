@@ -23,6 +23,7 @@ import com.pricetrack.exchange.trade.TradeRepository;
 import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.WalletService;
 import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
+import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
 
 /**
  * 검증된 Vault 이벤트를 사용자별 DB 원장에 최종 반영한다.
@@ -42,15 +43,17 @@ public class OnchainSettlementService {
     private final TradeRepository tradeRepository;
     private final WalletService walletService;
     private final MarketWebSocketPublisher marketEvents;
+    private final UserWebSocketPublisher userEvents;
 
     public OnchainSettlementService(BlockchainTransactionRepository transactionRepository,
             OrderRepository orderRepository, TradeRepository tradeRepository, WalletService walletService,
-            MarketWebSocketPublisher marketEvents) {
+            MarketWebSocketPublisher marketEvents, UserWebSocketPublisher userEvents) {
         this.transactionRepository = transactionRepository;
         this.orderRepository = orderRepository;
         this.tradeRepository = tradeRepository;
         this.walletService = walletService;
         this.marketEvents = marketEvents;
+        this.userEvents = userEvents;
     }
 
     /**
@@ -112,6 +115,8 @@ public class OnchainSettlementService {
         transaction.setBlockNumber(blockNumber);
         transaction.setConfirmedAt(now);
         transaction.setErrorMessage(null);
+        userEvents.publishOrder(order);
+        userEvents.publishPortfolio(order.getUserId());
     }
 
     /** 실패 receipt의 입력 자산 잠금만 해제하고 주문과 트랜잭션을 FAILED로 확정한다. */
@@ -136,6 +141,8 @@ public class OnchainSettlementService {
         transaction.setBlockNumber(blockNumber);
         transaction.setConfirmedAt(now);
         transaction.setErrorMessage(limit(reason));
+        userEvents.publishOrder(order);
+        userEvents.publishPortfolio(order.getUserId());
     }
 
     /**

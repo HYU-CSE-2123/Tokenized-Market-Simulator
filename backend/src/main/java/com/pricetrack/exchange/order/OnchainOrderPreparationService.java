@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.pricetrack.exchange.common.exception.InsufficientBalanceException;
 import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.WalletService;
+import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
 
 /**
  * 온체인 주문을 보내기 전에 주문과 입력 자산 잠금을 먼저 확정한다.
@@ -22,10 +23,13 @@ import com.pricetrack.exchange.wallet.WalletService;
 public class OnchainOrderPreparationService {
     private final OrderRepository orderRepository;
     private final WalletService walletService;
+    private final UserWebSocketPublisher userEvents;
 
-    public OnchainOrderPreparationService(OrderRepository orderRepository, WalletService walletService) {
+    public OnchainOrderPreparationService(OrderRepository orderRepository, WalletService walletService,
+            UserWebSocketPublisher userEvents) {
         this.orderRepository = orderRepository;
         this.walletService = walletService;
+        this.userEvents = userEvents;
     }
 
     /**
@@ -50,6 +54,7 @@ public class OnchainOrderPreparationService {
             // 실패 주문 이력은 보존하되 실제 잔고는 잠그지 않는다.
             order.setStatus(OrderStatus.FAILED);
             order.setUpdatedAt(Instant.now());
+            userEvents.publishOrder(order);
             throw new InsufficientBalanceException(inputSymbol);
         }
         balance.lock(input);

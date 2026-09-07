@@ -711,3 +711,52 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - Phase 4.4 사용자별 `PENDING_ONCHAIN`·`FILLED`·`FAILED` 주문 상태 알림
 - 체결 또는 주문 변경 후 사용자별 포트폴리오 갱신 알림
 - 서로 다른 JWT 사용자의 개인 queue 격리와 실제 STOMP 수신 검증
+
+---
+
+# Phase 4.4: 사용자별 주문·포트폴리오 스트림 — 완료
+
+> 구현 및 검증: 2026-09-07
+
+## 구현 범위
+
+- `UserWebSocketPublisher`를 추가해 주문과 포트폴리오 도메인 상태를 개인 WebSocket payload로 변환한다.
+- 개인 destination은 기존 JWT Principal의 사용자 DB ID를 이용해 `/user/queue/orders`, `/user/queue/portfolio`로 라우팅한다.
+- 온체인 트랜잭션이 `SUBMITTED`로 독립 커밋되고 주문에 `txHash`와 `PENDING_ONCHAIN`이 저장되는 지점에서 `ORDER_PENDING_ONCHAIN`을 발행한다.
+- 모의 즉시 체결과 온체인 성공 receipt 정산 후 `ORDER_FILLED` 및 최신 `PORTFOLIO_UPDATED`를 발행한다.
+- 잔고 부족으로 실패 주문을 보존하는 경로와 온체인 실패 receipt 정산 후 `ORDER_FAILED`를 발행한다.
+- faucet, 모의 체결, 온체인 성공 정산, 실패 정산의 자산 잠금 해제 후 포트폴리오 스냅샷을 발행한다.
+
+## 일관성·보안 정책
+
+- 주문·잔고를 변경하는 동일 transaction 안에서 payload를 만들고 Phase 4.2의 `AFTER_COMMIT` listener로 실제 전송한다.
+- rollback된 상태는 사용자에게 전달하지 않으며, 클라이언트가 알림 직후 REST를 조회해도 같은 상태를 확인할 수 있다.
+- 온체인 reconciliation이 완료 상태를 다시 처리하면 조기에 반환하므로 주문·포트폴리오 이벤트도 중복 발행하지 않는다.
+- `REQUESTED`는 외부 확정 상태가 아니고 `CANCELED` 흐름은 아직 구현되지 않아 현재 발행 대상에서 제외했다.
+- `REVIEW_REQUIRED`는 블록체인 트랜잭션의 운영 검토 상태이며 주문 실패 확정이 아니므로 `ORDER_FAILED`로 오표현하지 않는다.
+- 개인 queue는 인증된 사용자 DB ID 단위로 격리하며 다른 사용자의 주문·포트폴리오를 payload에 포함하거나 전달하지 않는다.
+
+## 검증
+
+- `PENDING_ONCHAIN`, `FILLED`, `FAILED`별 event type과 주문 payload 매핑 테스트 통과
+- 현재 포트폴리오를 `PORTFOLIO_UPDATED` payload로 변환하는 테스트 통과
+- 모의 매수·매도, 잔고 부족, faucet 경로의 주문·포트폴리오 발행 호출 검증
+- 온체인 제출 시 pending 알림, 성공 정산 1회 알림, 실패 정산 알림 검증
+- 실제 `/ws`에 JWT 사용자 두 명을 동시에 연결해 소유자만 주문 이벤트를 받고 다른 사용자는 받지 못함을 검증
+- 실제 개인 포트폴리오 envelope 수신 검증
+- transaction commit·rollback 동작은 Phase 4.2 회귀 테스트로 함께 검증
+- 백엔드 전체 회귀 테스트 통과
+
+## Phase 4 완료 결과
+
+- 네이티브 WebSocket과 SockJS 연결, STOMP JWT 인증 및 구독 권한 통제
+- version 1 공통 이벤트 envelope와 DB commit 이후 발행 기반
+- 익명 공개 가격·최근 체결 스트림
+- 인증 사용자별 주문 상태·포트폴리오 스트림
+- WebSocket 유실 시 REST API를 최종 상태 기준으로 사용하는 복구 원칙
+
+## 다음 작업
+
+- Phase 5 Android에서 REST 로그인·조회와 네이티브 STOMP `/ws` 연결
+- 공개 가격·체결 및 사용자별 주문·포트폴리오 Flow를 UI 상태에 반영
+- 앱 재연결·백그라운드 복귀 시 REST 재동기화 정책 구현
