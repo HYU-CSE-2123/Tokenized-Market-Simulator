@@ -128,6 +128,8 @@ Authorization: Bearer <access-token>
 
 개인 이벤트는 사용자 DB ID로 라우팅되므로 다른 사용자의 `/user/queue/...` 구독에는 전달되지 않습니다. 현재 구현되지 않은 취소 흐름의 `CANCELED`와 운영 검토 상태인 `REVIEW_REQUIRED`는 실패 알림으로 잘못 표현하지 않고 발행하지 않습니다. WebSocket 메시지는 재전송을 보장하는 영속 로그가 아니므로 앱 재연결 후에는 REST API로 주문과 포트폴리오 최신 상태를 다시 조회해야 합니다.
 
+Android 연동 전 실제 브라우저에서 REST·JWT·Native WebSocket·SockJS 흐름을 확인하려면 [`tools/websocket-test-client`](../tools/websocket-test-client)를 사용합니다. 개발 프록시가 요청을 이 서버로 전달하므로 테스트를 위해 REST CORS를 개방할 필요가 없습니다.
+
 ### Anvil 실제 연동 테스트
 
 기본 테스트에서는 Anvil 연동 테스트를 건너뜁니다. Anvil에 `Deploy.s.sol`을 배포한 후 다음 환경 변수를 설정하면 web3j가 실제 체인·컨트랙트를 읽는 테스트를 실행할 수 있습니다.

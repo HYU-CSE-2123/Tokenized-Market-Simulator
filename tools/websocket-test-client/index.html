@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Tokenized Market Simulator REST/STOMP integration test client" />
+    <title>Tokenized Market · WebSocket Test Client</title>
+  </head>
+  <body>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">DEVELOPMENT TOOL</p>
+        <h1>Market Stream Console</h1>
+        <p class="subtitle">REST, JWT, Native WebSocket와 SockJS를 한 화면에서 검증합니다.</p>
+      </div>
+      <div class="status-cluster">
+        <span id="auth-status" class="badge neutral">로그인 안 됨</span>
+        <span id="socket-status" class="badge neutral">DISCONNECTED</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel controls-panel">
+        <div class="section-heading">
+          <div>
+            <p class="step">01</p>
+            <h2>계정과 REST 요청</h2>
+          </div>
+          <button id="clear-token" class="button subtle" type="button">JWT 지우기</button>
+        </div>
+
+        <div class="form-grid auth-grid">
+          <label>아이디<input id="login-id" value="webtester" autocomplete="username" /></label>
+          <label>비밀번호<input id="password" type="password" value="password123" autocomplete="current-password" /></label>
+          <label>닉네임<input id="nickname" value="Web Tester" /></label>
+        </div>
+        <div class="button-row">
+          <button id="signup" class="button primary" type="button">회원가입</button>
+          <button id="login" class="button" type="button">로그인</button>
+          <button id="me" class="button" type="button">내 정보</button>
+          <button id="faucet" class="button" type="button">mKRW Faucet</button>
+          <button id="portfolio" class="button" type="button">포트폴리오 조회</button>
+          <button id="orders" class="button" type="button">주문 조회</button>
+        </div>
+
+        <div class="trade-grid">
+          <label>매수 mKRW<input id="buy-amount" type="number" min="0" step="any" value="100000" /></label>
+          <button id="buy" class="button buy" type="button">mSEC 매수</button>
+          <label>매도 mSEC<input id="sell-amount" type="number" min="0" step="any" value="1" /></label>
+          <button id="sell" class="button sell" type="button">mSEC 매도</button>
+        </div>
+
+        <details class="token-details">
+          <summary>현재 JWT 확인</summary>
+          <code id="token-value">없음</code>
+        </details>
+        <pre id="rest-output" class="rest-output">REST 실행 결과가 여기에 표시됩니다.</pre>
+      </section>
+
+      <section class="panel socket-panel">
+        <div class="section-heading">
+          <div>
+            <p class="step">02</p>
+            <h2>STOMP 연결</h2>
+          </div>
+          <button id="clear-events" class="button subtle" type="button">이벤트 비우기</button>
+        </div>
+
+        <div class="socket-controls">
+          <label class="radio"><input type="radio" name="transport" value="native" checked /> Native `/ws`</label>
+          <label class="radio"><input type="radio" name="transport" value="sockjs" /> SockJS `/ws-sockjs`</label>
+          <label class="checkbox"><input id="stomp-debug" type="checkbox" /> STOMP debug</label>
+          <button id="connect" class="button primary" type="button">연결</button>
+          <button id="disconnect" class="button" type="button">연결 해제</button>
+        </div>
+        <p class="hint">JWT가 있으면 공개·개인 채널을 구독하고, 없으면 공개 채널만 구독합니다.</p>
+      </section>
+
+      <section class="metrics">
+        <article class="metric-card price-card">
+          <p>mSEC CURRENT PRICE</p>
+          <strong id="current-price">—</strong>
+          <span id="change-rate">가격 이벤트 대기 중</span>
+        </article>
+        <article class="metric-card">
+          <p>LAST EVENT</p>
+          <strong id="last-event">—</strong>
+          <span id="event-count">0 events received</span>
+        </article>
+      </section>
+
+      <section class="stream-grid">
+        <article class="panel stream-panel">
+          <h2>실시간 가격 <code>/topic/markets/mSEC/price</code></h2>
+          <div id="price-events" class="event-list empty" data-empty="가격 이벤트가 없습니다."></div>
+        </article>
+        <article class="panel stream-panel">
+          <h2>공개 체결 <code>/topic/markets/mSEC/trades</code></h2>
+          <div id="trade-events" class="event-list empty" data-empty="체결 이벤트가 없습니다."></div>
+        </article>
+        <article class="panel stream-panel private">
+          <h2>내 주문 <code>/user/queue/orders</code></h2>
+          <div id="order-events" class="event-list empty" data-empty="주문 이벤트가 없습니다."></div>
+        </article>
+        <article class="panel stream-panel private">
+          <h2>내 포트폴리오 <code>/user/queue/portfolio</code></h2>
+          <div id="portfolio-events" class="event-list empty" data-empty="포트폴리오 이벤트가 없습니다."></div>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

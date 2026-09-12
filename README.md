@@ -1,12 +1,12 @@
 # 삼성전자 가격 추종 토큰 거래소 (Price-Tracking Token Exchange)
 
-Ethereum ERC-20 기반으로 **삼성전자 기준 가격을 추종하는 모의 토큰(mSEC)**을 모의 원화(mKRW)로 매수·매도하는 **현물 모의 거래소**. 안드로이드 앱 · Spring Boot 백엔드 · 스마트 컨트랙트를 연동한 종합 프로젝트.
+Ethereum ERC-20 기반으로 **삼성전자 기준 가격을 추종하는 교육용 합성자산 토큰(mSEC)**을 모의 원화(mKRW)로 매수·매도하는 **현물 모의 거래소**. 안드로이드 앱 · Spring Boot 백엔드 · 스마트 컨트랙트를 연동한 종합 프로젝트.
 
 > 단일 출처(상세 기획): [`구현 계획.md`](구현%20계획.md)
 
 ## ⚠️ 면책 (기획서 §19.1)
 본 프로젝트는 학습 및 포트폴리오 목적의 모의 거래 시스템입니다.
-본 프로젝트의 토큰은 실제 삼성전자 주식, 배당권, 의결권, 상환권을 나타내지 않습니다.
+본 프로젝트의 mSEC는 실제 삼성전자 주가 데이터를 참조하도록 확장하는 교육용 합성자산입니다. 실제 삼성전자 주식으로 담보되지 않으며 주식, 배당권, 의결권 또는 실제 원화 상환권을 나타내지 않습니다. 모든 거래와 손익은 모의 자산인 mKRW로 처리합니다.
 모든 거래는 테스트넷 또는 로컬체인에서 이루어지며, 실제 투자 또는 금융거래 기능을 제공하지 않습니다.
 
 ## 모노레포 구조
@@ -15,7 +15,8 @@ Ethereum ERC-20 기반으로 **삼성전자 기준 가격을 추종하는 모의
 | [`contracts/`](contracts) | 스마트 컨트랙트 (mKRW, mSEC, PriceOracle, ExchangeVault) | Solidity, **Foundry** |
 | [`backend/`](backend) | REST/WebSocket API, 온체인 연동 | **Java 21**, Spring Boot 3.3 |
 | [`android/`](android) | 모바일 클라이언트 | Kotlin, Jetpack Compose |
-| [`claude-docs/`](claude-docs) | 프로젝트 컨텍스트 문서 (Claude 메모리 미러) | — |
+| [`claude-docs/`](claude-docs) | 사람과 Claude·Codex 등 개발 에이전트가 공유하는 프로젝트 문서 | — |
+| [`tools/websocket-test-client/`](tools/websocket-test-client) | REST·JWT·WebSocket 브라우저 검증 도구 | Vite, STOMP, SockJS |
 
 ## 아키텍처
 ```
@@ -58,7 +59,16 @@ cd backend
 curl http://localhost:8080/api/health
 ```
 
-### 4. 안드로이드
+### 4. WebSocket 브라우저 검증
+```bash
+cd tools/websocket-test-client
+npm install
+npm run dev
+```
+
+브라우저에서 `http://127.0.0.1:5173`을 열어 REST 요청과 공개·개인 STOMP 이벤트를 확인한다.
+
+### 5. 안드로이드
 ```bash
 cd android
 ./gradlew :app:assembleDebug
@@ -70,9 +80,10 @@ cd android
 - **Foundry** (`brew install foundry`) — 이 환경에서는 `foundry.paradigm.sh` DNS 차단으로 brew 설치 사용
 - **JDK 21** (`brew install openjdk@21`)
 - **Docker** (PostgreSQL, Anvil 컨테이너)
+- **Node.js / npm** (선택, WebSocket 브라우저 테스트 클라이언트)
 - **Android SDK** (platform 35)
 
 ## 구현 단계 (기획서 §16)
 Phase 0 세팅 → 0.5 컨트랙트 최소검증 → 1 컨트랙트 → 2 백엔드 API → 3 web3j 연동 → 4 WebSocket → 5 Android → 6 시연/문서화
 
-현재: **Phase 1 완료** — 스마트 컨트랙트 4종, 배포/시나리오 스크립트, 권한·입력 경계·이벤트·수수료·유동성·fuzz 테스트를 구현했다. Foundry 테스트 20개와 Anvil 독립 배포 및 매수→가격변경→매도 흐름을 재검증했다.
+현재: **Phase 4.5 완료** — 컨트랙트, 백엔드 API와 web3j 연동, 공개·개인 WebSocket 스트림 및 Android 전달 전 브라우저 검증 도구까지 구현했다. 다음 단계는 Android 클라이언트 연동이다.

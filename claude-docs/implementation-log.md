@@ -760,3 +760,77 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - Phase 5 Android에서 REST 로그인·조회와 네이티브 STOMP `/ws` 연결
 - 공개 가격·체결 및 사용자별 주문·포트폴리오 Flow를 UI 상태에 반영
 - 앱 재연결·백그라운드 복귀 시 REST 재동기화 정책 구현
+
+---
+
+# Phase 4.5: WebSocket 브라우저 검증 클라이언트 — 완료
+
+> 구현 및 검증: 2026-09-08
+
+## 목적과 위치
+
+- Android 담당자에게 연결 규격을 전달하기 전에 실제 브라우저에서 백엔드 REST·JWT·STOMP 흐름을 확인하는 개발 도구다.
+- 제품용 웹 서비스가 아니며 `tools/websocket-test-client/`에 백엔드·Android와 분리해 배치했다.
+- Vite와 순수 JavaScript, `@stomp/stompjs`, `sockjs-client`만 사용해 화면 프레임워크 의존성을 추가하지 않았다.
+
+## 구현 범위
+
+- 회원가입·로그인, 내 정보, faucet, 매수·매도, 주문·포트폴리오 REST 요청을 한 화면에서 실행한다.
+- 발급받은 JWT는 브라우저 메모리에만 유지하며 새로고침 시 폐기한다.
+- Native WebSocket `/ws`와 SockJS `/ws-sockjs`를 선택해 STOMP `CONNECT`의 Bearer JWT 인증을 확인한다.
+- 공개 가격·체결과 개인 주문·포트폴리오 네 destination을 분리된 로그 패널로 표시한다.
+- 공통 envelope의 event type, 발생 시각, event ID, payload 요약과 원본 JSON을 확인할 수 있다.
+- 로그는 각 패널 최근 100개로 제한하고 서버 payload는 HTML이 아닌 text로 렌더링한다.
+- JWT 없이 연결하면 공개 topic만 구독하고, JWT가 있으면 개인 queue도 함께 구독한다.
+
+## 프록시와 보안 결정
+
+- Vite 개발 서버의 `/api`, `/ws`, `/ws-sockjs` 프록시를 기본 `http://127.0.0.1:8080` 백엔드로 연결한다.
+- 브라우저 테스트만을 위해 백엔드 REST CORS 정책을 개방하지 않는다.
+- 다른 백엔드는 `BACKEND_URL` 환경 변수로 지정할 수 있다.
+- 이 도구는 WebSocket 알림 유실을 복구하지 않으며 재연결 후 REST 재조회가 필요하다는 원칙을 README에 명시했다.
+
+## 검증
+
+- npm 의존성 79개 audit: 알려진 취약점 0개
+- Vite production build 성공: 76 modules transformed
+- SockJS import 단계에서 브라우저 전역 `global`이 없어 모든 UI 초기화가 중단되는 문제를 확인하고 Vite에서 표준 `globalThis`로 매핑했다.
+- 수정된 production bundle에 미매핑 `global.*` 참조가 없음을 확인했다.
+- 개발 서버 기동 성공: Vite 7.3.6, `http://127.0.0.1:5173`
+- 개발 서버 문서 요청 HTTP 200 및 화면·module entry 확인
+- 백엔드 전체 회귀 테스트 성공
+- 실제 PostgreSQL·백엔드는 검증 시점에 꺼져 있어 브라우저 수동 REST/STOMP 시나리오는 실행 체크리스트로 남겼다.
+
+## 다음 작업
+
+- PostgreSQL과 백엔드를 실행한 상태에서 README 체크리스트로 Native·SockJS 흐름 수동 확인
+- 확인된 destination과 payload를 Android 담당자에게 전달
+- Phase 5 Android 네이티브 STOMP 연결 및 재동기화 구현
+
+---
+
+# 상품 정의 의사결정 — 완료
+
+> 확정일: 2026-09-12
+
+## 결정
+
+- mSEC를 실제 삼성전자 주가 데이터를 참조해 가격 변동을 모사하는 **교육용 합성자산 토큰**으로 정의한다.
+- 실제 삼성전자 주식으로 담보하지 않으며 주주권, 배당권, 의결권 및 실제 원화 상환권을 제공하지 않는다.
+- 모든 거래와 손익은 실제 원화가 아닌 모의 자산 mKRW로 처리한다.
+- 실제 시세 연동 이후에도 이 상품 정의와 고지 범위를 유지한다.
+
+## 구조상 의미
+
+- mSEC 가격은 사용자 간 오더북의 수요·공급이 아니라 PriceOracle 값으로 결정된다.
+- 사용자는 다른 사용자가 아니라 ExchangeVault를 상대로 즉시 매수·매도한다.
+- 현재 실제 기초주식 헤지가 없으므로 환매 재원은 Vault의 모의 mKRW 유동성에 의존한다.
+- 실제 시세 연동은 가격 참조의 현실성을 높이지만 실물 담보나 실제 금융상품 지위를 만들지는 않는다.
+
+## 후속 설계 순서
+
+1. 실제 삼성전자 시세 제공자와 이용 조건 비교
+2. 실시간·지연 시세, 장 운영시간 및 휴장 처리 결정
+3. 오래된 가격과 외부 API 장애 시 거래 제한 정책 결정
+4. `SIMULATED`·`REAL` 가격 공급자 모드와 테스트 전략 설계
+5. 설계 승인 후 실제 시세 수집 및 PriceOracle 연동 구현
