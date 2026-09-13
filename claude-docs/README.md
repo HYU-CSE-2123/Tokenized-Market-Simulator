@@ -16,7 +16,7 @@
 - [`project-overview.md`](project-overview.md) — 프로젝트 개요, 기술 스택, MVP 범위, Phase, 모듈 구조
 - [`implementation-log.md`](implementation-log.md) — 실제 구축된 코드 상태(모듈별 구현/스텁, 검증 명령, 환경, 임의 결정값)
 - [`reviewer.md`](reviewer.md) — 별도 검토자의 역할, 검토 기준과 보고 형식
-- [`ai-development-experience.md`](ai-development-experience.md) — AI 활용 및 경량 하네스 구성 경험, 실제 검증 범위와 포트폴리오 표현
+- [`ai-development-experience.md`](ai-development-experience.md) — 프로젝트 지식 관리·독립 검토를 통한 하네스 엔지니어링 적용 경험, 근거와 실제 검증 범위
 
 ## 단일 출처(Source of Truth)
 
