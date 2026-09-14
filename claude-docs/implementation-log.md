@@ -869,3 +869,40 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 ## 남은 작업
 
 - 향후 구현 작업에서 이 절차를 적용한다. 자동 강제 장치는 추가하지 않았다.
+
+---
+
+# Phase 4.6.1: 가격 공급 계층 분리 — 완료
+
+> 작성: 2026-09-13
+
+## 구현
+
+- `MarketPriceProvider`를 추가해 가격 공급 구현과 주문·견적·포트폴리오·마켓·Oracle 동기화 소비 코드를 분리했다.
+- `MarketPriceService`를 나머지 도메인이 사용하는 단일 가격 진입점으로 추가했다.
+- 공급자 공통 `MarketPriceSnapshot`에 가격, 기준 가격, 변동액·변동률, 시장 상태, 가격 상태, 공급자와 관측 시각을 정의했다.
+- 기존 `PriceSimulator`를 `market.provider.simulated.SimulatedPriceProvider`로 이동·교체하고 기존 75,000원 초기값과 1초 랜덤 tick, 공개 가격 이벤트 동작을 유지했다.
+- 온체인 Oracle 동기화가 시뮬레이터 구현 대신 `MarketPriceService`를 읽도록 변경해 다음 Toss 공급자 연동 지점을 마련했다.
+
+## 결정
+
+- 이번 세부 단계에서는 REST·WebSocket 응답 계약과 거래 가능 정책을 변경하지 않는다.
+- 실제 Toss 공급자와 `PRICE_PROVIDER` 선택 설정은 Phase 4.6.2 이후에 추가하며 현재 Spring Bean은 시뮬레이션 공급자 하나만 등록한다.
+- 시뮬레이션 스냅샷의 기준 가격은 기존 tick 변동률 의미를 유지하도록 직전 tick으로 기록한다. 실제 공급자는 전일 종가를 사용한다.
+
+## 검증
+
+- `cd backend && .\gradlew.bat test --no-daemon`
+- 결과: `BUILD SUCCESSFUL`, 총 69개 중 66개 통과·선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- `git diff --check` 통과(LF→CRLF 안내 외 오류 없음)
+
+## 검토
+
+- 별도 검토 에이전트 `review_phase_4_6_1`: 실제 diff와 추적되지 않은 신규 파일, Spring Bean 구성, 주문·견적·포트폴리오·Oracle·WebSocket 호출 경로 및 테스트를 독립 확인
+- 결과: 발견된 필수 수정 없음
+- 검토자의 테스트 재실행은 Gradle 캐시로 `UP-TO-DATE` 성공했으며, `--rerun-tasks`는 검토자 샌드박스의 `C:\.gradle` 쓰기 제한으로 시작 전에 실패했다. 구현자가 실행한 전체 테스트는 실제로 다시 수행되어 성공했다.
+- 외부 Anvil 선택 테스트는 가격 계층 분리 범위에서 실행하지 않았으며 기본 테스트의 해당 3개는 건너뛰었다.
+
+## 남은 작업
+
+- Phase 4.6.2 Toss OAuth와 REST 초기 가격 조회 설계·구현

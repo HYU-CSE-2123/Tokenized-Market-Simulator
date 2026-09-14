@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pricetrack.exchange.market.PriceSimulator;
+import com.pricetrack.exchange.market.MarketPriceService;
 import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
 import com.pricetrack.exchange.wallet.WalletService;
@@ -18,11 +18,11 @@ import com.pricetrack.exchange.wallet.WalletService;
 @Transactional(readOnly = true)
 public class PortfolioService {
     private final UserBalanceRepository balanceRepository;
-    private final PriceSimulator priceSimulator;
+    private final MarketPriceService marketPriceService;
 
-    public PortfolioService(UserBalanceRepository balanceRepository, PriceSimulator priceSimulator) {
+    public PortfolioService(UserBalanceRepository balanceRepository, MarketPriceService marketPriceService) {
         this.balanceRepository = balanceRepository;
-        this.priceSimulator = priceSimulator;
+        this.marketPriceService = marketPriceService;
     }
 
     public Portfolio portfolio(Long userId) {
@@ -32,7 +32,7 @@ public class PortfolioService {
                 new UserBalance(userId, WalletService.KRW_SYMBOL));
         UserBalance token = balances.getOrDefault(WalletService.TOKEN_SYMBOL,
                 new UserBalance(userId, WalletService.TOKEN_SYMBOL));
-        BigDecimal price = priceSimulator.getCurrentPrice();
+        BigDecimal price = marketPriceService.currentPrice();
         BigDecimal tokenValue = token.getAmount().multiply(price).setScale(18, RoundingMode.HALF_UP);
         BigDecimal costBasis = token.getAmount().multiply(token.getAverageBuyPrice()).setScale(18, RoundingMode.HALF_UP);
         return new Portfolio(krw.getAmount(), token.getAmount(), price, token.getAverageBuyPrice(),

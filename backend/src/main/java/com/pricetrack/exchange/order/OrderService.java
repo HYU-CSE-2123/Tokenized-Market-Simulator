@@ -12,7 +12,7 @@ import com.pricetrack.exchange.common.exception.InsufficientBalanceException;
 import com.pricetrack.exchange.common.exception.OrderNotFoundException;
 import com.pricetrack.exchange.common.exception.UnsupportedSymbolException;
 import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
-import com.pricetrack.exchange.market.PriceSimulator;
+import com.pricetrack.exchange.market.MarketPriceService;
 import com.pricetrack.exchange.quote.TradeCalculator;
 import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.trade.TradeRepository;
@@ -27,7 +27,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final TradeRepository tradeRepository;
     private final WalletService walletService;
-    private final PriceSimulator priceSimulator;
+    private final MarketPriceService marketPriceService;
     private final TradeCalculator tradeCalculator;
     private final BlockchainProperties blockchainProperties;
     private final OnchainOrderService onchainOrderService;
@@ -35,13 +35,13 @@ public class OrderService {
     private final UserWebSocketPublisher userEvents;
 
     public OrderService(OrderRepository orderRepository, TradeRepository tradeRepository,
-            WalletService walletService, PriceSimulator priceSimulator, TradeCalculator tradeCalculator,
+            WalletService walletService, MarketPriceService marketPriceService, TradeCalculator tradeCalculator,
             BlockchainProperties blockchainProperties, OnchainOrderService onchainOrderService,
             MarketWebSocketPublisher marketEvents, UserWebSocketPublisher userEvents) {
         this.orderRepository = orderRepository;
         this.tradeRepository = tradeRepository;
         this.walletService = walletService;
-        this.priceSimulator = priceSimulator;
+        this.marketPriceService = marketPriceService;
         this.tradeCalculator = tradeCalculator;
         this.blockchainProperties = blockchainProperties;
         this.onchainOrderService = onchainOrderService;
@@ -53,7 +53,7 @@ public class OrderService {
     public Order buy(Long userId, String symbol, BigDecimal krwAmount) {
         validateSymbol(symbol);
         if (blockchainProperties.enabled()) return onchainOrderService.buy(userId, krwAmount);
-        BigDecimal price = priceSimulator.getCurrentPrice();
+        BigDecimal price = marketPriceService.currentPrice();
         TradeCalculator.BuyCalculation calculation = tradeCalculator.buy(krwAmount, price);
         UserBalance krw = walletService.getForUpdate(userId, WalletService.KRW_SYMBOL);
         UserBalance token = walletService.getForUpdate(userId, WalletService.TOKEN_SYMBOL);
@@ -70,7 +70,7 @@ public class OrderService {
     public Order sell(Long userId, String symbol, BigDecimal tokenAmount) {
         validateSymbol(symbol);
         if (blockchainProperties.enabled()) return onchainOrderService.sell(userId, tokenAmount);
-        BigDecimal price = priceSimulator.getCurrentPrice();
+        BigDecimal price = marketPriceService.currentPrice();
         TradeCalculator.SellCalculation calculation = tradeCalculator.sell(tokenAmount, price);
         UserBalance krw = walletService.getForUpdate(userId, WalletService.KRW_SYMBOL);
         UserBalance token = walletService.getForUpdate(userId, WalletService.TOKEN_SYMBOL);

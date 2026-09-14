@@ -22,7 +22,7 @@ import java.math.BigInteger;
 
 import org.junit.jupiter.api.Test;
 
-import com.pricetrack.exchange.market.PriceSimulator;
+import com.pricetrack.exchange.market.MarketPriceService;
 
 /** 최신 가격 제출과 처리 중 갱신을 건너뛰는 coalescing 정책을 검증한다. */
 class BlockchainPriceSyncServiceTest {
@@ -51,7 +51,7 @@ class BlockchainPriceSyncServiceTest {
         BlockchainTransactionRepository repository = mock(BlockchainTransactionRepository.class);
         BlockchainService blockchainService = mock(BlockchainService.class);
         BlockchainTransactionSender sender = mock(BlockchainTransactionSender.class);
-        PriceSimulator simulator = mock(PriceSimulator.class);
+        MarketPriceService marketPriceService = mock(MarketPriceService.class);
         String operator = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
         String oracle = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
         when(repository.existsByTypeAndStatusIn(eq(BlockchainTransactionType.UPDATE_PRICE), anyList()))
@@ -62,9 +62,9 @@ class BlockchainPriceSyncServiceTest {
         when(blockchainService.oraclePrice()).thenReturn(
                 new ContractGateway.OraclePrice(new BigInteger("7500000000000"), BigInteger.ONE));
         when(blockchainService.encodeUpdatePrice(any())).thenReturn("0xencoded");
-        when(simulator.getCurrentPrice()).thenReturn(new BigDecimal("75200"));
+        when(marketPriceService.currentPrice()).thenReturn(new BigDecimal("75200"));
         BlockchainPriceSyncService service = new BlockchainPriceSyncService(blockchainProperties,
-                syncProperties, repository, blockchainService, sender, simulator);
+                syncProperties, repository, blockchainService, sender, marketPriceService);
         return new Fixture(service, sender, oracle);
     }
 

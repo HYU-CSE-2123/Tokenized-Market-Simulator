@@ -1,4 +1,4 @@
-package com.pricetrack.exchange.market;
+package com.pricetrack.exchange.market.provider.simulated;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -9,22 +9,23 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import com.pricetrack.exchange.market.model.PriceStatus;
 import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
 
-/** Verifies that every simulated tick updates the price and emits the matching public event. */
-class PriceSimulatorTest {
+/** 기존 랜덤 tick의 가격 범위와 공개 이벤트 계약이 공급자 분리 뒤에도 유지되는지 검증한다. */
+class SimulatedPriceProviderTest {
     @Test
     void tickPublishesUpdatedPriceAndChangeRate() {
         MarketWebSocketPublisher marketEvents = mock(MarketWebSocketPublisher.class);
-        PriceSimulator simulator = new PriceSimulator(marketEvents);
-        BigDecimal previous = simulator.getCurrentPrice();
+        SimulatedPriceProvider provider = new SimulatedPriceProvider(marketEvents);
+        BigDecimal previous = provider.current().price();
 
-        simulator.tick();
+        provider.tick();
 
         ArgumentCaptor<BigDecimal> price = ArgumentCaptor.forClass(BigDecimal.class);
         ArgumentCaptor<BigDecimal> changeRate = ArgumentCaptor.forClass(BigDecimal.class);
         verify(marketEvents).publishPrice(price.capture(), changeRate.capture());
-        assertThat(price.getValue()).isEqualByComparingTo(simulator.getCurrentPrice());
+        assertThat(price.getValue()).isEqualByComparingTo(provider.current().price());
         assertThat(price.getValue()).isBetween(
                 previous.multiply(new BigDecimal("0.997")),
                 previous.multiply(new BigDecimal("1.003")));
@@ -32,5 +33,9 @@ class PriceSimulatorTest {
                 price.getValue().subtract(previous)
                         .divide(previous, 8, java.math.RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100)));
+        assertThat(provider.current().previousClose()).isEqualByComparingTo(previous);
+        assertThat(provider.current().change()).isEqualByComparingTo(price.getValue().subtract(previous));
+        assertThat(provider.current().priceStatus()).isEqualTo(PriceStatus.SIMULATED);
+        assertThat(provider.current().provider()).isEqualTo("SIMULATED");
     }
 }

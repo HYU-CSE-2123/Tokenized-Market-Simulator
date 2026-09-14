@@ -49,6 +49,7 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - Phase 4.4 완료: 사용자별 온체인 주문 대기·성공·실패와 자산 변경 후 포트폴리오를 개인 queue에 연결하고 사용자 격리 검증
 - Phase 4 완료: 연결·JWT 인증, 공통 envelope, transaction-safe 발행, 공개 시장 및 개인 사용자 스트림 구현
 - Phase 4.5 완료: Android 전달 전 REST·JWT·Native WebSocket·SockJS를 브라우저에서 확인하는 독립 Vite 테스트 클라이언트와 실행 체크리스트 추가
+- Phase 4.6.1 완료: 가격 소비 코드를 공급자 구현에서 분리하고 실제 Toss 시세 연동을 위한 공통 스냅샷과 공급자 경계 추가
 - 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기·주문 정산·오라클 갱신 선택 테스트 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 

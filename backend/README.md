@@ -19,6 +19,8 @@
 - 일반 WebSocket `/ws`와 브라우저 호환 SockJS `/ws-sockjs`, STOMP JWT 인증과 공개·개인 구독 통제
 - 버전 있는 WebSocket 이벤트 envelope와 DB commit 이후에만 전송되는 공개·개인 이벤트 발행 기반
 - 1초 주기 모의 가격과 모의·온체인 체결 결과를 공통 envelope로 공개 WebSocket topic에 발행
+- 가격 소비 도메인이 공급자 구현을 직접 알지 않도록 `MarketPriceService`와 `MarketPriceProvider` 경계 적용
+- 실제 시세 연동 전 기본 공급자인 `SimulatedPriceProvider`와 공급자 공통 가격 스냅샷 모델 적용
 - 온체인 주문 대기·성공·실패와 포트폴리오 변경을 해당 사용자의 개인 queue에 발행
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
@@ -59,7 +61,10 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 | --- | --- |
 | `auth` | 회원가입·로그인, JWT 발급·검증, 인증 필터 |
 | `user` | 사용자 엔티티와 리포지토리 |
-| `market` | 현재가와 가격 시뮬레이션 |
+| `market` | 공급자 독립적인 현재가 진입점과 마켓 API |
+| `market.model` | 가격·변동·관측 시각·시장 및 신선도 상태의 공통 모델 |
+| `market.provider` | 시뮬레이션·실제 시세 구현이 따르는 가격 공급자 경계 |
+| `market.provider.simulated` | 기본 개발·테스트용 랜덤 가격 공급자 |
 | `quote` | 매수·매도 견적 계산 |
 | `wallet`, `order`, `trade`, `portfolio` | 모의 잔고·주문·체결·포트폴리오 |
 | `blockchain` | 다른 도메인이 사용하는 블록체인 진입점 |

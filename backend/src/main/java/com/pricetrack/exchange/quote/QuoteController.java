@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pricetrack.exchange.market.PriceSimulator;
+import com.pricetrack.exchange.market.MarketPriceService;
 import com.pricetrack.exchange.blockchain.BlockchainService;
 import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
 import com.pricetrack.exchange.blockchain.support.PriceUnits;
@@ -20,14 +20,14 @@ import com.pricetrack.exchange.blockchain.support.TokenUnits;
 @RequestMapping("/api/quotes")
 public class QuoteController {
 
-    private final PriceSimulator priceSimulator;
+    private final MarketPriceService marketPriceService;
     private final TradeCalculator tradeCalculator;
     private final BlockchainProperties blockchainProperties;
     private final BlockchainService blockchainService;
 
-    public QuoteController(PriceSimulator priceSimulator, TradeCalculator tradeCalculator,
+    public QuoteController(MarketPriceService marketPriceService, TradeCalculator tradeCalculator,
             BlockchainProperties blockchainProperties, BlockchainService blockchainService) {
-        this.priceSimulator = priceSimulator;
+        this.marketPriceService = marketPriceService;
         this.tradeCalculator = tradeCalculator;
         this.blockchainProperties = blockchainProperties;
         this.blockchainService = blockchainService;
@@ -53,7 +53,7 @@ public class QuoteController {
             return new BuyQuoteResponse(request.symbol(), "BUY", price, request.krwAmount(),
                     TokenUnits.fromWei(quote.fee()), TokenUnits.fromWei(quote.outputAmount()));
         }
-        BigDecimal price = priceSimulator.getCurrentPrice();
+        BigDecimal price = marketPriceService.currentPrice();
         TradeCalculator.BuyCalculation calculation = tradeCalculator.buy(request.krwAmount(), price);
         return new BuyQuoteResponse(request.symbol(), "BUY", price,
                 request.krwAmount(), calculation.fee(), calculation.tokenAmount());
@@ -67,7 +67,7 @@ public class QuoteController {
             return new SellQuoteResponse(request.symbol(), "SELL", price, request.tokenAmount(),
                     TokenUnits.fromWei(quote.fee()), TokenUnits.fromWei(quote.outputAmount()));
         }
-        BigDecimal price = priceSimulator.getCurrentPrice();
+        BigDecimal price = marketPriceService.currentPrice();
         TradeCalculator.SellCalculation calculation = tradeCalculator.sell(request.tokenAmount(), price);
         return new SellQuoteResponse(request.symbol(), "SELL", price,
                 request.tokenAmount(), calculation.fee(), calculation.netKrw());

@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/markets")
 public class MarketController {
 
-    private final PriceSimulator priceSimulator;
+    private final MarketPriceService marketPriceService;
     private final PriceTickRepository priceTickRepository;
 
-    public MarketController(PriceSimulator priceSimulator, PriceTickRepository priceTickRepository) {
-        this.priceSimulator = priceSimulator;
+    public MarketController(MarketPriceService marketPriceService, PriceTickRepository priceTickRepository) {
+        this.marketPriceService = marketPriceService;
         this.priceTickRepository = priceTickRepository;
     }
 
@@ -44,9 +44,9 @@ public class MarketController {
 
     private MarketResponse current() {
         return new MarketResponse(
-                PriceSimulator.SYMBOL,
+                MarketPriceService.SYMBOL,
                 "Samsung Electronics Price-Tracking Token",
-                priceSimulator.getCurrentPrice(),
+                marketPriceService.currentPrice(),
                 BigDecimal.ZERO,
                 Instant.now().toString());
     }

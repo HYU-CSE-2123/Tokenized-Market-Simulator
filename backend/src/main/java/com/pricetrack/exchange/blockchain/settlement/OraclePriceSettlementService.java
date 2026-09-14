@@ -12,7 +12,7 @@ import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pricetrack.exchange.market.PriceSimulator;
+import com.pricetrack.exchange.market.MarketPriceService;
 import com.pricetrack.exchange.market.PriceTick;
 import com.pricetrack.exchange.market.PriceTickRepository;
 
@@ -48,7 +48,7 @@ public class OraclePriceSettlementService {
         if (!priceTickRepository.existsByBlockchainTransactionId(transactionId)) {
             PriceTick tick = new PriceTick();
             tick.setBlockchainTransactionId(transactionId);
-            tick.setSymbol(PriceSimulator.SYMBOL);
+            tick.setSymbol(MarketPriceService.SYMBOL);
             tick.setPrice(PriceUnits.fromPriceE8(event.priceE8()));
             tick.setSource("ONCHAIN_ORACLE");
             priceTickRepository.save(tick);

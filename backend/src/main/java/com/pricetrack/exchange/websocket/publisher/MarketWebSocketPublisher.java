@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 import org.springframework.stereotype.Component;
 
-import com.pricetrack.exchange.market.PriceSimulator;
+import com.pricetrack.exchange.market.MarketPriceService;
 import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.websocket.event.PriceEventPayload;
 import com.pricetrack.exchange.websocket.event.TradeEventPayload;
@@ -20,12 +20,12 @@ public class MarketWebSocketPublisher {
         this.eventPublisher = eventPublisher;
     }
 
-    /** Publishes the latest simulated price without requiring a DB transaction. */
+    /** Publishes the latest market price without requiring a DB transaction. */
     public void publishPrice(BigDecimal price, BigDecimal changeRate) {
         eventPublisher.publishPublic(
                 WebSocketDestinations.PRICE_TOPIC,
                 WebSocketEventType.PRICE_UPDATED,
-                new PriceEventPayload(PriceSimulator.SYMBOL, price, changeRate));
+                new PriceEventPayload(MarketPriceService.SYMBOL, price, changeRate));
     }
 
     /**
