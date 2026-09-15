@@ -21,7 +21,7 @@
 - 1초 주기 모의 가격과 모의·온체인 체결 결과를 공통 envelope로 공개 WebSocket topic에 발행
 - 가격 소비 도메인이 공급자 구현을 직접 알지 않도록 `MarketPriceService`와 `MarketPriceProvider` 경계 적용
 - 실제 시세 연동 전 기본 공급자인 `SimulatedPriceProvider`와 공급자 공통 가격 스냅샷 모델 적용
-- `PRICE_PROVIDER=toss` 선택 시 토스증권 Client Credentials 토큰을 재사용하고 REST로 삼성전자 초기 가격 조회
+- `PRICE_PROVIDER=toss` 선택 시 토스증권 REST 초기 가격 이후 WebSocket으로 삼성전자 실시간 체결가 수신
 - 온체인 주문 대기·성공·실패와 포트폴리오 변경을 해당 사용자의 개인 queue에 발행
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
@@ -66,7 +66,7 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 | `market.model` | 가격·변동·관측 시각·시장 및 신선도 상태의 공통 모델 |
 | `market.provider` | 시뮬레이션·실제 시세 구현이 따르는 가격 공급자 경계 |
 | `market.provider.simulated` | 기본 개발·테스트용 랜덤 가격 공급자 |
-| `market.provider.toss` | 토스증권 OAuth 토큰 관리와 REST 초기 가격 조회 공급자 |
+| `market.provider.toss` | 토스증권 OAuth·REST 초기 가격과 WebSocket 실시간 체결 공급자 |
 | `quote` | 매수·매도 견적 계산 |
 | `wallet`, `order`, `trade`, `portfolio` | 모의 잔고·주문·체결·포트폴리오 |
 | `blockchain` | 다른 도메인이 사용하는 블록체인 진입점 |
@@ -200,6 +200,10 @@ TOSS_API_BASE_URL=https://openapi.tossinvest.com
 TOSS_SYMBOL=005930
 TOSS_CONNECT_TIMEOUT=2s
 TOSS_READ_TIMEOUT=5s
+TOSS_WEBSOCKET_URL=wss://openapi-ws.tossinvest.com/ws/v1
+TOSS_WEBSOCKET_PING_INTERVAL=60s
+TOSS_WEBSOCKET_RECONNECT_INITIAL_DELAY=1s
+TOSS_WEBSOCKET_RECONNECT_MAX_DELAY=30s
 TOSS_CLIENT_ID=토스증권-client-id
 TOSS_CLIENT_SECRET=토스증권-client-secret
 ```
@@ -209,7 +213,10 @@ TOSS_CLIENT_SECRET=토스증권-client-secret
 - 연결·응답 timeout의 기본값은 각각 2초·5초이며 Spring `Duration` 형식(`500ms`, `2s` 등)으로 조정할 수 있습니다.
 - Client Credentials 액세스 토큰은 만료 전에 재발급하며, API가 401을 반환하면 캐시를 폐기하고 한 번만 다시 요청합니다.
 - `toss` 모드는 기동 완료 시 REST로 첫 가격을 확보합니다. 자격 증명 누락, 인증 실패, 허용 IP 오류 또는 잘못된 시세 응답이 있으면 기동을 실패시켜 모의 가격을 실제 가격으로 오인하지 않게 합니다.
-- 현재 단계는 초기 REST 조회만 구현했습니다. 실시간 WebSocket 수신, 장 운영시간 판정, 지연·오래된 가격의 거래 차단과 Oracle 반영 정책은 후속 단계입니다.
+- REST 초기 가격 확보 후 Toss WebSocket에서 `trade:kr:005930`을 구독합니다. 구독 ACK를 확인한 연결만 정상으로 간주하고 60초마다 `PING`을 전송합니다.
+- 연결이 끊기면 1초부터 최대 30초까지 지수 백오프와 jitter를 적용해 새 토큰으로 재연결하고 전체 구독을 다시 선언합니다.
+- 검증된 최신 체결만 스냅샷에 반영하며 과거·동일 시각 체결은 무시합니다. 가격이 바뀌면 기존 `/topic/markets/mSEC/price`로 앱에 전달하고 기존 Oracle 동기화도 최신 가격을 읽습니다.
+- Toss 시세 채널은 공급자 정책상 유실 가능한 최신값 우선 스트림입니다. 장 운영시간 판정, 지연·오래된 가격의 거래 차단과 Oracle 반영 정책은 후속 단계입니다.
 - 초기 REST 응답에는 전일 종가가 없으므로 최초 스냅샷은 현재가를 기준 가격으로 두고 변동액·변동률을 0, 시장 상태를 `UNKNOWN`으로 표시합니다.
 
 `TOSS_CLIENT_SECRET`은 실제 `.env` 또는 배포 환경 Secret에만 저장하고 저장소에는 커밋하지 않습니다.

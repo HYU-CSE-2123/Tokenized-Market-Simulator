@@ -3,6 +3,7 @@ package com.pricetrack.exchange.market.provider.toss;
 import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 /** 토스증권 시세 공급자 연결 설정이다. 비밀값은 환경 변수에서만 주입한다. */
 @ConfigurationProperties("app.price.toss")
@@ -12,7 +13,21 @@ public record TossPriceProperties(
         String clientSecret,
         String symbol,
         Duration connectTimeout,
-        Duration readTimeout) {
+        Duration readTimeout,
+        String websocketUrl,
+        Duration pingInterval,
+        Duration reconnectInitialDelay,
+        Duration reconnectMaxDelay) {
+
+    @ConstructorBinding
+    public TossPriceProperties {}
+
+    TossPriceProperties(String baseUrl, String clientId, String clientSecret, String symbol,
+            Duration connectTimeout, Duration readTimeout) {
+        this(baseUrl, clientId, clientSecret, symbol, connectTimeout, readTimeout,
+                "wss://openapi-ws.tossinvest.com/ws/v1", Duration.ofSeconds(60),
+                Duration.ofSeconds(1), Duration.ofSeconds(30));
+    }
 
     public void validate() {
         requireText(baseUrl, "TOSS_API_BASE_URL");
@@ -24,6 +39,19 @@ public record TossPriceProperties(
         }
         requirePositive(connectTimeout, "TOSS_CONNECT_TIMEOUT");
         requirePositive(readTimeout, "TOSS_READ_TIMEOUT");
+        requireText(websocketUrl, "TOSS_WEBSOCKET_URL");
+        if (!websocketUrl.startsWith("wss://") && !websocketUrl.startsWith("ws://")) {
+            throw new IllegalStateException("TOSS_WEBSOCKET_URL은 WebSocket URL이어야 합니다.");
+        }
+        requirePositive(pingInterval, "TOSS_WEBSOCKET_PING_INTERVAL");
+        if (pingInterval.compareTo(Duration.ofSeconds(180)) >= 0) {
+            throw new IllegalStateException("TOSS_WEBSOCKET_PING_INTERVAL은 180초보다 짧아야 합니다.");
+        }
+        requirePositive(reconnectInitialDelay, "TOSS_WEBSOCKET_RECONNECT_INITIAL_DELAY");
+        requirePositive(reconnectMaxDelay, "TOSS_WEBSOCKET_RECONNECT_MAX_DELAY");
+        if (reconnectMaxDelay.compareTo(reconnectInitialDelay) < 0) {
+            throw new IllegalStateException("TOSS_WEBSOCKET_RECONNECT_MAX_DELAY는 초기 지연보다 짧을 수 없습니다.");
+        }
     }
 
     private static void requireText(String value, String environmentName) {

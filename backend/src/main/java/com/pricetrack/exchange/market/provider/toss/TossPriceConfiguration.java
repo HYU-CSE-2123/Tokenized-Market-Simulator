@@ -1,5 +1,8 @@
 package com.pricetrack.exchange.market.provider.toss;
 
+import java.net.http.HttpClient;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -36,8 +39,23 @@ public class TossPriceConfiguration {
     }
 
     @Bean
-    TossPriceProvider tossPriceProvider(TossMarketDataClient marketDataClient,
+    TossRealtimeProtocol tossRealtimeProtocol(ObjectMapper objectMapper, TossPriceProperties properties) {
+        return new TossRealtimeProtocol(objectMapper, properties.symbol());
+    }
+
+    @Bean
+    TossRealtimeClient tossRealtimeClient(TossAuthClient authClient, TossRealtimeProtocol protocol,
             TossPriceProperties properties) {
-        return new TossPriceProvider(marketDataClient, properties);
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(properties.connectTimeout())
+                .build();
+        return new TossRealtimeClient(httpClient, authClient, protocol, properties);
+    }
+
+    @Bean
+    TossPriceProvider tossPriceProvider(TossMarketDataClient marketDataClient,
+            TossRealtimeClient realtimeClient, TossPriceProperties properties,
+            com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher marketEvents) {
+        return new TossPriceProvider(marketDataClient, realtimeClient, properties, marketEvents);
     }
 }

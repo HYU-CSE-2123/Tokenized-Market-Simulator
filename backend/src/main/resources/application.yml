@@ -46,6 +46,10 @@ app:
       symbol: ${TOSS_SYMBOL:005930}
       connect-timeout: ${TOSS_CONNECT_TIMEOUT:2s}
       read-timeout: ${TOSS_READ_TIMEOUT:5s}
+      websocket-url: ${TOSS_WEBSOCKET_URL:wss://openapi-ws.tossinvest.com/ws/v1}
+      ping-interval: ${TOSS_WEBSOCKET_PING_INTERVAL:60s}
+      reconnect-initial-delay: ${TOSS_WEBSOCKET_RECONNECT_INITIAL_DELAY:1s}
+      reconnect-max-delay: ${TOSS_WEBSOCKET_RECONNECT_MAX_DELAY:30s}
   blockchain:
     enabled: ${BLOCKCHAIN_ENABLED:false}
     rpc-url: ${RPC_URL:http://127.0.0.1:8545}      # 로컬 Anvil / Sepolia
