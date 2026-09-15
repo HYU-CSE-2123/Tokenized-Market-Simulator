@@ -13,6 +13,7 @@ import com.pricetrack.exchange.common.exception.OrderNotFoundException;
 import com.pricetrack.exchange.common.exception.UnsupportedSymbolException;
 import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
 import com.pricetrack.exchange.market.MarketPriceService;
+import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
 import com.pricetrack.exchange.quote.TradeCalculator;
 import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.trade.TradeRepository;
@@ -52,8 +53,9 @@ public class OrderService {
     @Transactional(noRollbackFor = InsufficientBalanceException.class)
     public Order buy(Long userId, String symbol, BigDecimal krwAmount) {
         validateSymbol(symbol);
+        MarketPriceSnapshot snapshot = marketPriceService.requireTradableSnapshot();
         if (blockchainProperties.enabled()) return onchainOrderService.buy(userId, krwAmount);
-        BigDecimal price = marketPriceService.currentPrice();
+        BigDecimal price = snapshot.price();
         TradeCalculator.BuyCalculation calculation = tradeCalculator.buy(krwAmount, price);
         UserBalance krw = walletService.getForUpdate(userId, WalletService.KRW_SYMBOL);
         UserBalance token = walletService.getForUpdate(userId, WalletService.TOKEN_SYMBOL);
@@ -69,8 +71,9 @@ public class OrderService {
     @Transactional(noRollbackFor = InsufficientBalanceException.class)
     public Order sell(Long userId, String symbol, BigDecimal tokenAmount) {
         validateSymbol(symbol);
+        MarketPriceSnapshot snapshot = marketPriceService.requireTradableSnapshot();
         if (blockchainProperties.enabled()) return onchainOrderService.sell(userId, tokenAmount);
-        BigDecimal price = marketPriceService.currentPrice();
+        BigDecimal price = snapshot.price();
         TradeCalculator.SellCalculation calculation = tradeCalculator.sell(tokenAmount, price);
         UserBalance krw = walletService.getForUpdate(userId, WalletService.KRW_SYMBOL);
         UserBalance token = walletService.getForUpdate(userId, WalletService.TOKEN_SYMBOL);

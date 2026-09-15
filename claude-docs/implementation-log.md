@@ -1046,3 +1046,47 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - Phase 4.6.5에서 `CLOSED`·`STALE` 가격의 주문 생성과 PriceOracle 반영 차단
 - 회전된 자격 증명 준비 후 장중 실제 체결 → 마켓 API·클라이언트 WebSocket·Oracle 연동 검증
+
+---
+
+# Phase 4.6.5: 거래·Oracle 가격 가용성 정책 — 완료
+
+> 작성: 2026-09-15
+
+## 구현
+
+- `MarketPriceService`가 주문과 Oracle이 공유하는 가격 가용성 경계를 제공한다.
+- Toss 실제 가격의 `marketStatus=CLOSED` 또는 `priceStatus=STALE`을 주문 생성 전에 검사한다.
+- 매수·매도 모두 검사 실패 시 주문, 체결, 잔고 잠금·변경과 온체인 트랜잭션을 만들지 않는다.
+- 장 마감은 HTTP 409 `MARKET_CLOSED`, 오래된 가격은 HTTP 503 `PRICE_STALE` 오류로 구분한다.
+- Oracle 동기화도 같은 스냅샷을 한 번 읽어 가용성을 확인하고 `CLOSED`·`STALE`이면 신규 가격 트랜잭션을 제출하지 않는다.
+- 이미 제출된 온체인 주문·가격 트랜잭션의 receipt 확인과 정산 흐름은 변경하지 않는다.
+
+## 결정
+
+- 실제 삼성전자 가격을 사용하는 Toss 모드는 기준 시장이 닫히면 즉시 체결하지 않는다. 마지막 종가로 장외 거래를 허용해 Vault가 개장 갭 위험을 부담하는 것을 막는다.
+- `DEGRADED`는 마지막 가격이 아직 60초 이내인 짧은 연결 장애 상태이므로 거래와 Oracle 반영을 허용한다. 60초 이후 `STALE`부터 차단한다.
+- `SIMULATED` 가격은 `MarketStatus.UNKNOWN`·`PriceStatus.SIMULATED`이며 학습·시연 목적대로 24시간 거래를 유지한다.
+- 견적과 각종 조회는 장 마감에도 허용하고 실제 상태 변경이 시작되는 주문 진입점에서 다시 검사한다.
+
+## 검증
+
+- `MarketPriceServiceTest`: OPEN+LIVE, OPEN+DEGRADED, SIMULATED 허용과 CLOSED, STALE 거부
+- `OrderMarketPolicyTest`: 거부된 매수·매도가 주문·체결·지갑·온체인 서비스를 호출하지 않음
+- `BlockchainPriceSyncServiceTest`: 허용 가격만 제출하고 비허용 가격은 저장소 조회와 트랜잭션 제출 전에 건너뜀
+- `MarketAvailabilityExceptionHandlerTest`: 409 `MARKET_CLOSED`, 503 `PRICE_STALE` 응답 계약
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: `BUILD SUCCESSFUL`, 총 106개 중 103개 통과·선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- `git diff --check` 통과(LF→CRLF 안내 외 오류 없음)
+
+## 검토
+
+- 별도 검토자는 기준 커밋 `79fa626` 대비 전체 변경과 신규 파일을 확인했으며 발견된 필수 수정은 없었다.
+- 주문 검사가 모의·온체인 분기 전에 실행되고 거부 시 저장소·지갑·체결·온체인 호출이 없으며, 조회·견적과 기존 receipt 정산은 영향받지 않음을 확인했다.
+- Oracle이 동일 스냅샷으로 검사와 가격 변환을 수행하고 비허용 상태에서 coalescing 조회·권한 확인·신규 제출 전에 종료됨을 확인했다.
+- 검토자가 `--rerun-tasks` 전체 테스트를 직접 실행해 106개 중 103개 통과·선택적 Anvil 3개 건너뜀·실패와 오류 0개를 확인했고 `git diff --check 79fa626`도 통과했다.
+- 공유 Anvil·PostgreSQL 상태 변경과 실제 장중 상태 전환 순간의 Toss 연동 검증은 수행하지 않았다.
+
+## 남은 작업
+
+- 장중 실제 Toss 체결 → 공개 WebSocket → PriceOracle 전체 흐름 검증
+- Android 전달용 API·WebSocket 연동 가이드와 최종 MVP 인수 검증

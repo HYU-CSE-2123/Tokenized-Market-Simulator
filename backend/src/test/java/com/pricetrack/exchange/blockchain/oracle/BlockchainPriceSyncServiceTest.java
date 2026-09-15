@@ -23,12 +23,16 @@ import java.math.BigInteger;
 import org.junit.jupiter.api.Test;
 
 import com.pricetrack.exchange.market.MarketPriceService;
+import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
+import com.pricetrack.exchange.market.model.MarketStatus;
+import com.pricetrack.exchange.market.model.PriceStatus;
+import java.time.Instant;
 
 /** 최신 가격 제출과 처리 중 갱신을 건너뛰는 coalescing 정책을 검증한다. */
 class BlockchainPriceSyncServiceTest {
     @Test
     void submitsLatestPriceWhenNoUpdateIsInFlight() {
-        Fixture fixture = fixture(false);
+        Fixture fixture = fixture(false, true);
 
         fixture.service.synchronizeLatestPrice();
 
@@ -38,14 +42,24 @@ class BlockchainPriceSyncServiceTest {
 
     @Test
     void coalescesBySkippingWhileUpdateIsInFlight() {
-        Fixture fixture = fixture(true);
+        Fixture fixture = fixture(true, true);
 
         fixture.service.synchronizeLatestPrice();
 
         verify(fixture.sender, never()).submitSystem(any(), any(), any(), any());
     }
 
-    private Fixture fixture(boolean inFlight) {
+    @Test
+    void skipsOracleSubmissionWhenMarketSettlementIsNotAllowed() {
+        Fixture fixture = fixture(false, false);
+
+        fixture.service.synchronizeLatestPrice();
+
+        verify(fixture.sender, never()).submitSystem(any(), any(), any(), any());
+        verify(fixture.repository, never()).existsByTypeAndStatusIn(any(), anyList());
+    }
+
+    private Fixture fixture(boolean inFlight, boolean settlementAllowed) {
         BlockchainProperties blockchainProperties = new BlockchainProperties(true, "rpc", "", "", "", "", "key");
         BlockchainPriceSyncProperties syncProperties = new BlockchainPriceSyncProperties(true, 3000, 3000);
         BlockchainTransactionRepository repository = mock(BlockchainTransactionRepository.class);
@@ -62,12 +76,17 @@ class BlockchainPriceSyncServiceTest {
         when(blockchainService.oraclePrice()).thenReturn(
                 new ContractGateway.OraclePrice(new BigInteger("7500000000000"), BigInteger.ONE));
         when(blockchainService.encodeUpdatePrice(any())).thenReturn("0xencoded");
-        when(marketPriceService.currentPrice()).thenReturn(new BigDecimal("75200"));
+        MarketPriceSnapshot snapshot = new MarketPriceSnapshot("mSEC", new BigDecimal("75200"),
+                new BigDecimal("75000"), new BigDecimal("200"), new BigDecimal("0.26666667"),
+                MarketStatus.OPEN, PriceStatus.LIVE, "TOSS", Instant.EPOCH);
+        when(marketPriceService.current()).thenReturn(snapshot);
+        when(marketPriceService.isSettlementAllowed(snapshot)).thenReturn(settlementAllowed);
         BlockchainPriceSyncService service = new BlockchainPriceSyncService(blockchainProperties,
                 syncProperties, repository, blockchainService, sender, marketPriceService);
-        return new Fixture(service, sender, oracle);
+        return new Fixture(service, sender, repository, oracle);
     }
 
     private record Fixture(BlockchainPriceSyncService service,
-            BlockchainTransactionSender sender, String oracle) {}
+            BlockchainTransactionSender sender, BlockchainTransactionRepository repository,
+            String oracle) {}
 }

@@ -224,7 +224,9 @@ TOSS_CLIENT_SECRET=토스증권-client-secret
 - 장중에는 마지막 관측 후 15초부터 `DEGRADED`, 60초부터 `STALE`이며 WebSocket이 재연결 중이어도 `DEGRADED`입니다. 장 마감·휴장 시 마지막 공식 가격은 시간 경과만으로 오래된 가격이 되지 않습니다.
 - 캘린더와 전일 종가는 매일 KST 00:05에 갱신하며 실패하면 마지막 정상 참조 데이터를 유지합니다.
 - `GET /api/markets/mSEC`는 `price`, `previousClose`, `change`, `changeRate`, `marketStatus`, `priceStatus`, `provider`, `observedAt`을 반환합니다. 기존 Android 호환용 `updatedAt`은 `observedAt`과 같은 값으로 유지합니다.
-- 이번 단계는 상태를 조회에 노출하는 기반까지이며, `CLOSED`·`STALE` 주문 및 Oracle 반영 차단은 다음 단계에서 적용합니다.
+- Toss 모드에서는 `CLOSED`이면 HTTP 409 `MARKET_CLOSED`, 장중 `STALE`이면 HTTP 503 `PRICE_STALE`로 매수·매도를 주문 생성 전에 거부합니다. `DEGRADED`는 60초 유예 범위라 거래할 수 있고 시뮬레이션 모드는 24시간 거래할 수 있습니다.
+- `CLOSED`·`STALE` 가격은 PriceOracle에도 새로 제출하지 않습니다. 이미 제출된 온체인 주문과 가격 트랜잭션의 receipt 정산은 계속 처리합니다.
+- 장이 닫혀도 마켓·견적·포트폴리오·주문 및 체결 내역 조회는 계속 사용할 수 있습니다.
 
 `TOSS_CLIENT_SECRET`은 실제 `.env` 또는 배포 환경 Secret에만 저장하고 저장소에는 커밋하지 않습니다.
 

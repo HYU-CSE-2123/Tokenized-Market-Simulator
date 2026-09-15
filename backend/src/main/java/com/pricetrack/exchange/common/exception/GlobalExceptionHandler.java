@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationException;
 import com.pricetrack.exchange.blockchain.support.OperatorNotReadyException;
+import com.pricetrack.exchange.market.MarketClosedException;
+import com.pricetrack.exchange.market.StalePriceException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -76,6 +78,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> blockchainUnavailable(
             BlockchainConfigurationException exception, HttpServletRequest request) {
         return error(HttpStatus.SERVICE_UNAVAILABLE, "BLOCKCHAIN_UNAVAILABLE", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(MarketClosedException.class)
+    public ResponseEntity<ApiErrorResponse> marketClosed(
+            MarketClosedException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "MARKET_CLOSED", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(StalePriceException.class)
+    public ResponseEntity<ApiErrorResponse> stalePrice(
+            StalePriceException exception, HttpServletRequest request) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "PRICE_STALE", exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -19,6 +19,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.pricetrack.exchange.market.MarketPriceService;
+import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
 
 /**
  * 선택된 가격 공급자의 최신 값을 운영자 지갑으로 PriceOracle에 동기화한다.
@@ -66,6 +67,8 @@ public class BlockchainPriceSyncService {
     public synchronized void synchronizeLatestPrice() {
         if (!blockchainProperties.enabled() || !syncProperties.enabled()) return;
         try {
+            MarketPriceSnapshot snapshot = marketPriceService.current();
+            if (!marketPriceService.isSettlementAllowed(snapshot)) return;
             // 이 분기가 중간 가격을 버리고 다음 주기에 최신 가격만 보내는 coalescing 지점이다.
             if (transactionRepository.existsByTypeAndStatusIn(
                     BlockchainTransactionType.UPDATE_PRICE, BLOCKING_STATUSES)) return;
@@ -74,7 +77,7 @@ public class BlockchainPriceSyncService {
             if (!operator.equalsIgnoreCase(owner)) {
                 throw new OperatorNotReadyException("운영자 주소가 PriceOracle owner가 아닙니다.");
             }
-            BigInteger targetPriceE8 = PriceUnits.toPriceE8(marketPriceService.currentPrice());
+            BigInteger targetPriceE8 = PriceUnits.toPriceE8(snapshot.price());
             if (blockchainService.oraclePrice().priceE8().equals(targetPriceE8)) return;
             transactionSender.submitSystem(BlockchainTransactionType.UPDATE_PRICE,
                     blockchainService.oracleAddress(), blockchainService.encodeUpdatePrice(targetPriceE8),

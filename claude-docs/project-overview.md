@@ -54,6 +54,7 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - 사용자 로컬 Toss 자격 증명으로 OAuth와 삼성전자 초기 가격 REST 실연동 검증 완료(비밀값은 저장소·문서에서 제외)
 - Phase 4.6.3 완료: Toss WebSocket `trade:kr:005930` 구독, keepalive·재연결과 실시간 가격 반영 구현
 - Phase 4.6.4 완료: Toss 장 캘린더·전일 종가를 연동하고 마켓 API에 장 상태와 가격 신선도를 노출
+- Phase 4.6.5 완료: Toss 장 마감·오래된 가격의 신규 주문 및 PriceOracle 반영을 차단하고 시뮬레이션 거래는 유지
 - 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기·주문 정산·오라클 갱신 선택 테스트 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
