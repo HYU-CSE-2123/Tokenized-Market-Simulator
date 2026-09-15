@@ -1077,6 +1077,8 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - `MarketAvailabilityExceptionHandlerTest`: 409 `MARKET_CLOSED`, 503 `PRICE_STALE` 응답 계약
 - `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: `BUILD SUCCESSFUL`, 총 106개 중 103개 통과·선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
 - `git diff --check` 통과(LF→CRLF 안내 외 오류 없음)
+- 커밋 후 실제 Toss·PostgreSQL·Anvil 설정으로 임시 서버를 기동해 OAuth/REST와 `trade:kr:005930` WebSocket 구독 ACK, 마켓 API의 `CLOSED`·`LIVE`를 확인했다. 8초 이상 동기화 주기를 기다리는 동안 `UPDATE_PRICE` 트랜잭션 수가 22,600에서 증가하지 않아 장 마감 중 Oracle 신규 제출 차단도 확인했다.
+- 검증 시각이 23시대 KST라 신규 삼성전자 체결 tick, 공개 WebSocket 가격 이벤트와 그 가격의 Oracle 반영은 확인할 수 없었다. 다음 영업일 통합 세션 중 별도 검증한다.
 
 ## 검토
 
