@@ -906,3 +906,49 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 ## 남은 작업
 
 - Phase 4.6.2 Toss OAuth와 REST 초기 가격 조회 설계·구현
+
+---
+
+# Phase 4.6.2: Toss OAuth와 REST 초기 가격 조회 — 완료
+
+> 작성: 2026-09-14
+
+## 구현
+
+- `PRICE_PROVIDER` 설정으로 기본 `simulated`와 실제 `toss` 가격 공급자 중 하나만 Spring Bean으로 등록하도록 구성했다.
+- `TossAuthClient`가 Client Credentials 형식으로 `/oauth2/token`을 호출하고 액세스 토큰을 만료 전까지 재사용하도록 구현했다.
+- 토스증권이 한 client에 하나의 유효 토큰만 허용하는 특성을 고려해 프로세스 안에서 토큰 발급을 동기화하고, 만료 60초 전 또는 수명이 짧을 때 절반 시점에 갱신한다.
+- `TossMarketDataClient`가 Bearer 토큰으로 `/api/v1/prices?symbols=005930`을 호출하고, 401이면 거부된 토큰만 폐기한 뒤 새 토큰으로 한 번 재시도한다.
+- 종목코드·통화·양수 가격·관측 시각을 검증한 뒤 공통 `MarketPriceSnapshot`으로 변환하는 `TossPriceProvider`를 추가했다.
+- mSEC에 다른 국내 종목 가격이 들어가지 않도록 `TOSS_SYMBOL`은 삼성전자 코드 `005930`만 허용하고, 외부 호출에 연결·응답 timeout을 적용했다.
+- Toss 모드는 애플리케이션 준비 시 첫 가격을 반드시 조회하며 설정·인증·응답 오류를 숨기지 않고 기동 실패로 처리한다.
+- 공유 환경 변수 예제와 백엔드 README에 공급자 선택 및 비밀정보·허용 IP 주의사항을 추가했다.
+
+## 결정
+
+- 기존 개발과 자동 테스트의 안정성을 위해 기본 공급자는 계속 `simulated`로 둔다.
+- 이번 작업은 OAuth 토큰 관리와 REST 초기 가격 확보까지만 포함한다. Toss 실시간 WebSocket, 장 상태 계산, 오래된 가격 거래 차단과 Oracle 동기화 시점은 후속 작업에서 각각 설계한다.
+- 현재가 REST 응답에는 전일 종가가 없으므로 초기 스냅샷의 기준 가격은 현재가, 변동액·변동률은 0, 시장 상태는 `UNKNOWN`으로 둔다.
+- Toss 모드가 준비되지 않았는데 모의 가격으로 조용히 대체하지 않는다. 설정 누락과 외부 연결 실패는 시작 단계에서 드러낸다.
+
+## 검증
+
+- `cd backend && .\gradlew.bat test --no-daemon`
+- 결과: `BUILD SUCCESSFUL`, 총 80개 중 77개 통과·선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- OAuth form 요청·토큰 캐시·명시적 무효화, REST 응답 변환·잘못된 가격 거부·401 후 단일 재시도, 삼성전자 외 종목 거부, 유한한 HTTP timeout, 초기 스냅샷 변환과 준비 전 접근 거부를 모의 HTTP 및 단위 테스트로 검증했다.
+- `git diff --check` 통과(LF→CRLF 안내 외 오류 없음)
+- 최초 자동 검증 시에는 자격 증명과 허용 IP가 없어 실제 Toss 호출을 실행하지 않았다.
+- 2026-09-15 사용자 로컬 `.env`에 자격 증명을 설정한 뒤 `PRICE_PROVIDER=toss`로 백엔드를 기동해 실제 OAuth 발급과 삼성전자 초기 가격 조회를 완료했다. `GET /api/health`는 `UP`, `GET /api/markets/mSEC`는 실제 조회 가격 `249500`을 반환했다. 비밀값은 출력하거나 문서화하지 않았다.
+
+## 검토
+
+- 최초 별도 검토에서 다른 6자리 종목도 mSEC 가격으로 변환되는 문제와 외부 HTTP timeout 부재를 필수 수정으로 지적했다.
+- 종목을 `005930`으로 제한하고 연결·응답 timeout 및 관련 테스트를 추가했다.
+- 1차 재검토 결과 최초 지적 2건이 모두 해소됐고 발견된 추가 필수 수정은 없었다.
+- 재검토자는 `--rerun-tasks`로 Toss 및 시뮬레이션 관련 테스트 12개를 다시 실행해 모두 통과했고 `git diff --check 93b985f`도 통과했다.
+- 독립 검토 시점에는 자격 증명과 허용 IP가 없어 실제 Toss API를 실행하지 못했으나, 검토 완료 후 사용자 환경에서 별도 실연동 검증에 성공했다.
+
+## 남은 작업
+
+- Toss 실시간 WebSocket 가격 스트림과 재연결 정책 설계·구현
+- 장 운영시간과 가격 신선도에 따른 API·주문·Oracle 정책 설계

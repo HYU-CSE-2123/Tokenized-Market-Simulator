@@ -37,7 +37,15 @@ app:
     secret: ${JWT_SECRET:change-me-please-change-me-please-32bytes-minimum}
     validity-ms: ${JWT_VALIDITY_MS:3600000}   # 1시간
   price:
+    provider: ${PRICE_PROVIDER:simulated}
     update-interval-ms: ${PRICE_INTERVAL_MS:1000}  # 기획서 §8.1 가격 시뮬레이터 주기
+    toss:
+      base-url: ${TOSS_API_BASE_URL:https://openapi.tossinvest.com}
+      client-id: ${TOSS_CLIENT_ID:}
+      client-secret: ${TOSS_CLIENT_SECRET:}
+      symbol: ${TOSS_SYMBOL:005930}
+      connect-timeout: ${TOSS_CONNECT_TIMEOUT:2s}
+      read-timeout: ${TOSS_READ_TIMEOUT:5s}
   blockchain:
     enabled: ${BLOCKCHAIN_ENABLED:false}
     rpc-url: ${RPC_URL:http://127.0.0.1:8545}      # 로컬 Anvil / Sepolia

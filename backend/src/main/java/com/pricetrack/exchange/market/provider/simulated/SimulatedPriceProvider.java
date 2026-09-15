@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.pricetrack.exchange.market.MarketPriceService;
 import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
@@ -18,6 +19,7 @@ import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
 
 /** 기본 개발·테스트 모드에서 기존 랜덤 가격 흐름을 제공한다. */
 @Component
+@ConditionalOnProperty(name = "app.price.provider", havingValue = "simulated", matchIfMissing = true)
 public class SimulatedPriceProvider implements MarketPriceProvider {
     private static final BigDecimal INITIAL_PRICE = new BigDecimal("75000");
 
