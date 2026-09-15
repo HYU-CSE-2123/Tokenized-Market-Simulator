@@ -33,6 +33,10 @@ export class ApiClient {
     return this.#request('/api/me');
   }
 
+  market() {
+    return this.#request('/api/markets/mSEC');
+  }
+
   faucet() {
     return this.#request('/api/wallet/faucet', { method: 'POST' });
   }

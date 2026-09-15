@@ -9,6 +9,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
+import com.pricetrack.exchange.market.model.MarketStatus;
+import com.pricetrack.exchange.market.model.PriceStatus;
+
 /** 마켓 API (기획서 §12.2). */
 @RestController
 @RequestMapping("/api/markets")
@@ -23,7 +27,10 @@ public class MarketController {
     }
 
     public record MarketResponse(String symbol, String name, BigDecimal price,
-                                 BigDecimal changeRate, String updatedAt) {}
+                                 BigDecimal previousClose, BigDecimal change,
+                                 BigDecimal changeRate, MarketStatus marketStatus,
+                                 PriceStatus priceStatus, String provider, Instant observedAt,
+                                 Instant updatedAt) {}
 
     @GetMapping
     public List<MarketResponse> markets() {
@@ -43,12 +50,13 @@ public class MarketController {
     }
 
     private MarketResponse current() {
+        MarketPriceSnapshot snapshot = marketPriceService.current();
         return new MarketResponse(
-                MarketPriceService.SYMBOL,
+                snapshot.symbol(),
                 "Samsung Electronics Price-Tracking Token",
-                marketPriceService.currentPrice(),
-                BigDecimal.ZERO,
-                Instant.now().toString());
+                snapshot.price(), snapshot.previousClose(), snapshot.change(),
+                snapshot.changeRate(), snapshot.marketStatus(), snapshot.priceStatus(),
+                snapshot.provider(), snapshot.observedAt(), snapshot.observedAt());
     }
 
     public record PriceTickResponse(BigDecimal price, String source, Instant createdAt) {

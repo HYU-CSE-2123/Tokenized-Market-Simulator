@@ -204,6 +204,9 @@ TOSS_WEBSOCKET_URL=wss://openapi-ws.tossinvest.com/ws/v1
 TOSS_WEBSOCKET_PING_INTERVAL=60s
 TOSS_WEBSOCKET_RECONNECT_INITIAL_DELAY=1s
 TOSS_WEBSOCKET_RECONNECT_MAX_DELAY=30s
+TOSS_PRICE_DEGRADED_AFTER=15s
+TOSS_PRICE_STALE_AFTER=60s
+TOSS_REFERENCE_REFRESH_CRON=0 5 0 * * *
 TOSS_CLIENT_ID=토스증권-client-id
 TOSS_CLIENT_SECRET=토스증권-client-secret
 ```
@@ -217,7 +220,11 @@ TOSS_CLIENT_SECRET=토스증권-client-secret
 - 연결이 끊기면 1초부터 최대 30초까지 지수 백오프와 jitter를 적용해 새 토큰으로 재연결하고 전체 구독을 다시 선언합니다.
 - 검증된 최신 체결만 스냅샷에 반영하며 과거·동일 시각 체결은 무시합니다. 가격이 바뀌면 기존 `/topic/markets/mSEC/price`로 앱에 전달하고 기존 Oracle 동기화도 최신 가격을 읽습니다.
 - Toss 시세 채널은 공급자 정책상 유실 가능한 최신값 우선 스트림입니다. 장 운영시간 판정, 지연·오래된 가격의 거래 차단과 Oracle 반영 정책은 후속 단계입니다.
-- 초기 REST 응답에는 전일 종가가 없으므로 최초 스냅샷은 현재가를 기준 가격으로 두고 변동액·변동률을 0, 시장 상태를 `UNKNOWN`으로 표시합니다.
+- 시작 시 국내 장 캘린더와 수정주가 일봉을 함께 조회해 전 영업일 종가를 기준 가격으로 사용합니다. 프리·정규·애프터 세션 중 하나면 `OPEN`, 그 외와 휴장일은 `CLOSED`입니다.
+- 장중에는 마지막 관측 후 15초부터 `DEGRADED`, 60초부터 `STALE`이며 WebSocket이 재연결 중이어도 `DEGRADED`입니다. 장 마감·휴장 시 마지막 공식 가격은 시간 경과만으로 오래된 가격이 되지 않습니다.
+- 캘린더와 전일 종가는 매일 KST 00:05에 갱신하며 실패하면 마지막 정상 참조 데이터를 유지합니다.
+- `GET /api/markets/mSEC`는 `price`, `previousClose`, `change`, `changeRate`, `marketStatus`, `priceStatus`, `provider`, `observedAt`을 반환합니다. 기존 Android 호환용 `updatedAt`은 `observedAt`과 같은 값으로 유지합니다.
+- 이번 단계는 상태를 조회에 노출하는 기반까지이며, `CLOSED`·`STALE` 주문 및 Oracle 반영 차단은 다음 단계에서 적용합니다.
 
 `TOSS_CLIENT_SECRET`은 실제 `.env` 또는 배포 환경 Secret에만 저장하고 저장소에는 커밋하지 않습니다.
 

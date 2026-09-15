@@ -999,3 +999,50 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 장중 실제 삼성전자 체결 프레임 → 우리 WebSocket → Oracle 반영 검증
 - 장 운영시간과 가격 신선도에 따른 조회·주문·Oracle 정책 설계
+
+---
+
+# Phase 4.6.4: 장 상태와 가격 신선도 기반 — 완료
+
+> 작성: 2026-09-15
+
+## 구현
+
+- Toss 최신 공식 REST OpenAPI 1.2.17의 국내 장 캘린더와 수정주가 일봉을 조회해 삼성전자 전 영업일 종가를 확보한다.
+- 캘린더의 프리마켓·정규장·애프터마켓 세션 중 현재 시각이 하나라도 포함되면 `OPEN`, 그 외와 휴장일은 `CLOSED`로 판정한다.
+- 전 영업일 일봉을 날짜로 정확히 선택해 `previousClose`, `change`, `changeRate`를 계산하고, 누락·통화·가격·세션 범위 오류는 잘못된 실제 가격으로 대체하지 않고 실패시킨다.
+- Toss WebSocket 연결 상태를 `CONNECTING`, `CONNECTED`, `DISCONNECTED`, `STOPPED`로 추적한다.
+- 장중 가격은 연결 상태와 관측 시각을 함께 사용해 기본 15초 이후 `DEGRADED`, 60초 이후 `STALE`로 판정한다. 장 마감·휴장 중 마지막 공식 가격은 경과 시간만으로 `STALE`이 되지 않는다.
+- KST 매일 00:05에 장 캘린더와 전일 종가를 갱신하며 실패 시 마지막 정상 참조 데이터를 유지한다.
+- 마켓 REST 응답에 현재가·전일 종가·변동액·변동률·장 상태·가격 상태·공급자·실제 관측 시각을 모두 노출하고, 기존 Android 호환용 `updatedAt`은 `observedAt`과 같은 값으로 유지한다.
+- 브라우저 테스트 도구에 시장 상태 조회 버튼과 상태 배지를 추가했다.
+
+## 결정
+
+- 실제 거래 가능 시간은 KRX 정규장만이 아니라 Toss가 제공하는 KRX+NXT 통합 세션을 기준으로 한다.
+- `observedAt`은 API 요청 시각이 아니라 Toss가 제공한 가격 관측 시각을 유지한다.
+- 휴장·장 마감에는 체결이 없는 것이 정상이라 장 상태와 가격 신선도를 분리한다. 주문 제한은 `marketStatus`를 별도로 확인하게 된다.
+- 이번 단계는 상태 계산과 공개까지다. `CLOSED`·`STALE` 주문 및 Oracle 갱신 차단은 Phase 4.6.5에서 적용한다.
+
+## 검증
+
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`
+- 결과: `BUILD SUCCESSFUL`, 총 97개 중 94개 통과·선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- 모의 HTTP로 장 캘린더·일봉 요청 계약, 전 영업일 종가 선택, 장 세션 경계와 누락 일봉 거부를 검증했다.
+- 고정 시계와 모의 WebSocket 상태로 OPEN/CLOSED, LIVE/DEGRADED/STALE 및 전체 마켓 응답 계약을 검증했다.
+- `cd tools/websocket-test-client && npm run build` 성공
+- 노출된 기존 자격 증명을 재사용하지 않기 위해 실제 Toss 외부 호출은 수행하지 않았다.
+- 이후 사용자가 위험을 이해하고 기존 로컬 자격 증명 사용을 명시적으로 승인해 실제 기동 검증을 수행했다. OAuth·REST·WebSocket 구독 ACK가 성공했고 마켓 API는 Toss 현재가 `250500`, 전 영업일 종가 `248500`, 변동액 `2000`, 변동률 `0.80482900`, `CLOSED`·`LIVE`, 동일한 `observedAt`·`updatedAt`을 반환했다. 장 마감 후라 신규 실시간 체결 tick은 확인하지 못했다.
+
+## 검토
+
+- 최초 별도 검토에서 새 `observedAt`으로 기존 `updatedAt`을 대체해 저장소 내 Android DTO의 필수 필드 역직렬화가 깨지는 호환성 문제를 필수 수정으로 지적했다.
+- `updatedAt`을 `observedAt`과 같은 값의 호환 필드로 복구하고 두 필드의 ISO-8601 JSON 직렬화 테스트를 추가했다.
+- 검토 제안에 따라 재연결 작업과 종료가 경합할 때 `STOPPED`가 `CONNECTING`으로 덮일 수 있는 상태 전이도 같은 monitor의 실행 상태 재검사로 보강했다.
+- 1차 재검토 결과 최초 호환성 지적과 상태 경쟁조건이 해소됐으며 발견된 추가 필수 수정은 없었다.
+- 재검토자는 공식 REST OpenAPI 1.2.17의 캘린더·일봉 요청과 응답 필드가 구현과 일치함을 확인했다. 실제 Toss·Android 런타임 호출은 보안 제약과 현재 범위 때문에 실행하지 않았다.
+
+## 남은 작업
+
+- Phase 4.6.5에서 `CLOSED`·`STALE` 가격의 주문 생성과 PriceOracle 반영 차단
+- 회전된 자격 증명 준비 후 장중 실제 체결 → 마켓 API·클라이언트 WebSocket·Oracle 연동 검증

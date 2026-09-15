@@ -50,6 +50,9 @@ app:
       ping-interval: ${TOSS_WEBSOCKET_PING_INTERVAL:60s}
       reconnect-initial-delay: ${TOSS_WEBSOCKET_RECONNECT_INITIAL_DELAY:1s}
       reconnect-max-delay: ${TOSS_WEBSOCKET_RECONNECT_MAX_DELAY:30s}
+      degraded-after: ${TOSS_PRICE_DEGRADED_AFTER:15s}
+      stale-after: ${TOSS_PRICE_STALE_AFTER:60s}
+      reference-refresh-cron: ${TOSS_REFERENCE_REFRESH_CRON:0 5 0 * * *}
   blockchain:
     enabled: ${BLOCKCHAIN_ENABLED:false}
     rpc-url: ${RPC_URL:http://127.0.0.1:8545}      # 로컬 Anvil / Sepolia

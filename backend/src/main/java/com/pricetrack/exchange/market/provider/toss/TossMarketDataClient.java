@@ -2,7 +2,9 @@ package com.pricetrack.exchange.market.provider.toss;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpHeaders;
@@ -26,6 +28,76 @@ public class TossMarketDataClient {
         } catch (HttpClientErrorException.Unauthorized exception) {
             authClient.invalidate(token);
             return requestCurrentPrice(symbol, authClient.accessToken());
+        }
+    }
+
+    public TossMarketReference marketReference(String symbol, LocalDate date) {
+        String token = authClient.accessToken();
+        try {
+            return requestMarketReference(symbol, date, token);
+        } catch (HttpClientErrorException.Unauthorized exception) {
+            authClient.invalidate(token);
+            return requestMarketReference(symbol, date, authClient.accessToken());
+        }
+    }
+
+    private TossMarketReference requestMarketReference(String symbol, LocalDate date, String token) {
+        try {
+            CalendarEnvelope calendar = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/v1/market-calendar/KR")
+                            .queryParam("date", date).build())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .retrieve().body(CalendarEnvelope.class);
+            if (calendar == null || calendar.result() == null || calendar.result().today() == null
+                    || calendar.result().previousBusinessDay() == null) {
+                throw new TossApiException("Toss market calendar response is empty.");
+            }
+            CandleEnvelope candles = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/v1/candles")
+                            .queryParam("symbol", symbol).queryParam("interval", "1d")
+                            .queryParam("count", 10).queryParam("adjusted", true).build())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .retrieve().body(CandleEnvelope.class);
+            LocalDate previousDate = LocalDate.parse(calendar.result().previousBusinessDay().date());
+            BigDecimal previousClose = requirePreviousClose(candles, previousDate);
+            return new TossMarketReference(previousClose, sessions(calendar.result().today()));
+        } catch (HttpClientErrorException.Unauthorized exception) {
+            throw exception;
+        } catch (TossApiException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new TossApiException("Failed to load Toss market reference data.", exception);
+        }
+    }
+
+    private static BigDecimal requirePreviousClose(CandleEnvelope envelope, LocalDate expectedDate) {
+        if (envelope == null || envelope.result() == null || envelope.result().candles() == null) {
+            throw new TossApiException("Toss daily candle response is empty.");
+        }
+        return envelope.result().candles().stream()
+                .filter(candle -> OffsetDateTime.parse(candle.timestamp()).toLocalDate().equals(expectedDate))
+                .filter(candle -> "KRW".equals(candle.currency()))
+                .map(candle -> new BigDecimal(candle.closePrice()))
+                .filter(price -> price.signum() > 0)
+                .findFirst()
+                .orElseThrow(() -> new TossApiException("Previous business-day close is missing."));
+    }
+
+    private static List<MarketSession> sessions(MarketDay day) {
+        if (day.integrated() == null) return List.of();
+        List<MarketSession> result = new ArrayList<>();
+        addSession(result, day.integrated().preMarket());
+        addSession(result, day.integrated().regularMarket());
+        addSession(result, day.integrated().afterMarket());
+        return List.copyOf(result);
+    }
+
+    private static void addSession(List<MarketSession> sessions, Session session) {
+        if (session != null) {
+            Instant start = OffsetDateTime.parse(session.startTime()).toInstant();
+            Instant end = OffsetDateTime.parse(session.endTime()).toInstant();
+            if (!end.isAfter(start)) throw new TossApiException("Toss market session range is invalid.");
+            sessions.add(new MarketSession(start, end));
         }
     }
 
@@ -70,4 +142,29 @@ public class TossMarketDataClient {
     record PriceResponse(List<PriceItem> result) {}
     record PriceItem(String symbol, String timestamp, String lastPrice, String currency) {}
     public record TossPrice(String symbol, BigDecimal price, Instant observedAt) {}
+    record CalendarEnvelope(CalendarResult result) {}
+    record CalendarResult(MarketDay today, MarketDay previousBusinessDay, MarketDay nextBusinessDay) {}
+    record MarketDay(String date, Integrated integrated) {}
+    record Integrated(Session preMarket, Session regularMarket, Session afterMarket) {}
+    record Session(String startTime, String endTime) {}
+    record CandleEnvelope(CandlePage result) {}
+    record CandlePage(List<Candle> candles) {}
+    record Candle(String timestamp, String closePrice, String currency) {}
+    public record MarketSession(Instant start, Instant end) {
+        boolean contains(Instant instant) {
+            return !instant.isBefore(start) && instant.isBefore(end);
+        }
+    }
+    public record TossMarketReference(BigDecimal previousClose, List<MarketSession> sessions) {
+        public TossMarketReference {
+            if (previousClose == null || previousClose.signum() <= 0) {
+                throw new IllegalArgumentException("previousClose must be positive");
+            }
+            sessions = List.copyOf(sessions);
+        }
+
+        public boolean isOpenAt(Instant instant) {
+            return sessions.stream().anyMatch(session -> session.contains(instant));
+        }
+    }
 }

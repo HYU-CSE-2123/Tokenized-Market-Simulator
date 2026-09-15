@@ -17,7 +17,9 @@ public record TossPriceProperties(
         String websocketUrl,
         Duration pingInterval,
         Duration reconnectInitialDelay,
-        Duration reconnectMaxDelay) {
+        Duration reconnectMaxDelay,
+        Duration degradedAfter,
+        Duration staleAfter) {
 
     @ConstructorBinding
     public TossPriceProperties {}
@@ -26,7 +28,16 @@ public record TossPriceProperties(
             Duration connectTimeout, Duration readTimeout) {
         this(baseUrl, clientId, clientSecret, symbol, connectTimeout, readTimeout,
                 "wss://openapi-ws.tossinvest.com/ws/v1", Duration.ofSeconds(60),
-                Duration.ofSeconds(1), Duration.ofSeconds(30));
+                Duration.ofSeconds(1), Duration.ofSeconds(30), Duration.ofSeconds(15),
+                Duration.ofSeconds(60));
+    }
+
+    TossPriceProperties(String baseUrl, String clientId, String clientSecret, String symbol,
+            Duration connectTimeout, Duration readTimeout, String websocketUrl,
+            Duration pingInterval, Duration reconnectInitialDelay, Duration reconnectMaxDelay) {
+        this(baseUrl, clientId, clientSecret, symbol, connectTimeout, readTimeout, websocketUrl,
+                pingInterval, reconnectInitialDelay, reconnectMaxDelay, Duration.ofSeconds(15),
+                Duration.ofSeconds(60));
     }
 
     public void validate() {
@@ -51,6 +62,11 @@ public record TossPriceProperties(
         requirePositive(reconnectMaxDelay, "TOSS_WEBSOCKET_RECONNECT_MAX_DELAY");
         if (reconnectMaxDelay.compareTo(reconnectInitialDelay) < 0) {
             throw new IllegalStateException("TOSS_WEBSOCKET_RECONNECT_MAX_DELAY는 초기 지연보다 짧을 수 없습니다.");
+        }
+        requirePositive(degradedAfter, "TOSS_PRICE_DEGRADED_AFTER");
+        requirePositive(staleAfter, "TOSS_PRICE_STALE_AFTER");
+        if (staleAfter.compareTo(degradedAfter) <= 0) {
+            throw new IllegalStateException("TOSS_PRICE_STALE_AFTER must be greater than TOSS_PRICE_DEGRADED_AFTER.");
         }
     }
 

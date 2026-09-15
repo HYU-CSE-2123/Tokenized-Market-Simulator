@@ -18,6 +18,7 @@ const socket = new MarketSocket({
 elements.signup.addEventListener('click', () => authRequest('signup'));
 elements.login.addEventListener('click', () => authRequest('login'));
 elements.me.addEventListener('click', () => runRest(() => api.me()));
+elements.market.addEventListener('click', () => runRest(() => api.market(), renderMarket));
 elements.faucet.addEventListener('click', () => runRest(() => api.faucet()));
 elements.portfolio.addEventListener('click', () => runRest(() => api.portfolio()));
 elements.orders.addEventListener('click', () => runRest(() => api.orders()));
@@ -46,11 +47,12 @@ async function authRequest(action) {
   });
 }
 
-async function runRest(request) {
+async function runRest(request, onSuccess) {
   setButtonsDisabled(true);
   try {
     const result = await request();
     elements['rest-output'].textContent = JSON.stringify(result, null, 2);
+    onSuccess?.(result.body);
   } catch (error) {
     const output = error instanceof ApiError
       ? { status: error.status, message: error.message, body: error.body }
@@ -59,6 +61,15 @@ async function runRest(request) {
   } finally {
     setButtonsDisabled(false);
   }
+}
+
+function renderMarket(market) {
+  elements['current-price'].textContent = formatNumber(market.price, '원');
+  elements['change-rate'].textContent = `${formatNumber(market.changeRate, '%')} · ${displayTime(market.observedAt)}`;
+  elements['market-health'].textContent = `${market.marketStatus} · ${market.priceStatus} · ${market.provider}`;
+  const style = market.priceStatus === 'LIVE' || market.priceStatus === 'SIMULATED'
+    ? 'success' : market.priceStatus === 'STALE' ? 'error' : 'neutral';
+  elements['market-health'].className = `badge ${style}`;
 }
 
 function connectSocket() {

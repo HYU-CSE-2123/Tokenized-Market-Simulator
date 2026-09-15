@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 /** Owns the single Toss WebSocket connection, keepalive and reconnect lifecycle. */
 public class TossRealtimeClient {
+    public enum ConnectionState { STOPPED, CONNECTING, CONNECTED, DISCONNECTED }
     private static final Logger log = LoggerFactory.getLogger(TossRealtimeClient.class);
 
     private final HttpClient httpClient;
@@ -35,6 +36,7 @@ public class TossRealtimeClient {
     private volatile ScheduledFuture<?> pingTask;
     private volatile ScheduledFuture<?> reconnectTask;
     private int reconnectAttempts;
+    private volatile ConnectionState connectionState = ConnectionState.STOPPED;
 
     public TossRealtimeClient(HttpClient httpClient, TossAuthClient authClient,
             TossRealtimeProtocol protocol, TossPriceProperties properties) {
@@ -58,7 +60,14 @@ public class TossRealtimeClient {
 
     public void start(Consumer<TossRealtimeProtocol.TossTrade> tradeConsumer) {
         this.tradeConsumer = tradeConsumer;
-        if (running.compareAndSet(false, true)) scheduler.execute(this::connect);
+        if (running.compareAndSet(false, true)) {
+            connectionState = ConnectionState.CONNECTING;
+            scheduler.execute(this::connect);
+        }
+    }
+
+    public ConnectionState connectionState() {
+        return connectionState;
     }
 
     public void stop() {
@@ -66,6 +75,7 @@ public class TossRealtimeClient {
         WebSocket current;
         synchronized (this) {
             running.set(false);
+            connectionState = ConnectionState.STOPPED;
             cancel(pingTask);
             cancel(reconnectTask);
             pending = connecting;
@@ -126,6 +136,7 @@ public class TossRealtimeClient {
     private synchronized boolean subscribed(WebSocket socket) {
         if (socket != webSocket || !running.get()) return false;
         reconnectAttempts = 0;
+        connectionState = ConnectionState.CONNECTED;
         cancel(pingTask);
         long interval = properties.pingInterval().toMillis();
         pingTask = scheduler.scheduleAtFixedRate(() -> sendPing(socket), interval, interval,
@@ -146,6 +157,7 @@ public class TossRealtimeClient {
         if (source != null && source != webSocket) return;
         WebSocket previous = webSocket;
         webSocket = null;
+        connectionState = ConnectionState.DISCONNECTED;
         cancel(pingTask);
         if (previous != null) previous.abort();
         if (reconnectTask != null && !reconnectTask.isDone()) return;
@@ -156,7 +168,11 @@ public class TossRealtimeClient {
         log.warn("Toss realtime connection lost; retrying in {} ms ({})", delay,
                 failure.getClass().getSimpleName());
         reconnectTask = scheduler.schedule(() -> {
-            reconnectTask = null;
+            synchronized (this) {
+                reconnectTask = null;
+                if (!running.get()) return;
+                connectionState = ConnectionState.CONNECTING;
+            }
             connect();
         }, delay, TimeUnit.MILLISECONDS);
     }
