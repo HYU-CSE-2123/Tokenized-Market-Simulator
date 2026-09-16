@@ -37,6 +37,12 @@ export class ApiClient {
     return this.#request('/api/markets/mSEC');
   }
 
+  candles(interval, count = 100, before = null) {
+    const query = new URLSearchParams({ interval, count: String(count) });
+    if (before) query.set('before', before);
+    return this.#request(`/api/markets/mSEC/candles?${query}`);
+  }
+
   faucet() {
     return this.#request('/api/wallet/faucet', { method: 'POST' });
   }

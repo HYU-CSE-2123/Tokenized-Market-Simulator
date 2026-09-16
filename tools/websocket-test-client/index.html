@@ -91,6 +91,28 @@
         </article>
       </section>
 
+      <section class="panel chart-panel">
+        <div class="section-heading chart-heading">
+          <div>
+            <p class="step">LIVE CHART</p>
+            <h2>mSEC 가격과 거래량</h2>
+          </div>
+          <div class="chart-actions">
+            <div class="interval-switch" role="group" aria-label="차트 주기">
+              <button class="button interval active" type="button" data-interval="1m">1분</button>
+              <button class="button interval" type="button" data-interval="1d">1일</button>
+            </div>
+            <button id="reload-chart" class="button subtle" type="button">새로고침</button>
+          </div>
+        </div>
+        <div class="chart-meta">
+          <span id="chart-status" class="badge neutral">캔들 불러오는 중</span>
+          <span id="chart-updated">마지막 갱신 —</span>
+        </div>
+        <div id="market-chart" class="market-chart" aria-label="mSEC 캔들 차트"></div>
+        <p class="hint">과거 봉은 REST에서 불러오고, 연결 후 현재 봉은 <code>PRICE_UPDATED</code>의 실제 관측 시각으로 갱신합니다.</p>
+      </section>
+
       <section class="stream-grid">
         <article class="panel stream-panel">
           <h2>실시간 가격 <code>/topic/markets/mSEC/price</code></h2>

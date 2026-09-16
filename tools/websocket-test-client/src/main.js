@@ -1,13 +1,20 @@
 import './style.css';
 import { ApiClient, ApiError } from './api.js';
 import { MarketSocket } from './websocket.js';
+import { CandleLoadBuffer, applyPriceTick, normalizeCandles } from './candles.js';
+import { MarketChart } from './market-chart.js';
 
 const api = new ApiClient();
 let eventCount = 0;
+let chartInterval = '1m';
+let chartCandles = [];
+let chartRequest = 0;
+const chartLoadBuffer = new CandleLoadBuffer();
 
 const elements = Object.fromEntries(
   [...document.querySelectorAll('[id]')].map((element) => [element.id, element]),
 );
+const marketChart = new MarketChart(elements['market-chart']);
 
 const socket = new MarketSocket({
   onStatus: renderSocketStatus,
@@ -26,6 +33,10 @@ elements.buy.addEventListener('click', () => runRest(() => api.buy(requiredAmoun
 elements.sell.addEventListener('click', () => runRest(() => api.sell(requiredAmount('sell-amount'))));
 elements.connect.addEventListener('click', connectSocket);
 elements.disconnect.addEventListener('click', () => socket.disconnect());
+elements['reload-chart'].addEventListener('click', loadChart);
+document.querySelectorAll('[data-interval]').forEach((button) => {
+  button.addEventListener('click', () => selectChartInterval(button.dataset.interval));
+});
 elements['clear-events'].addEventListener('click', clearEvents);
 elements['clear-token'].addEventListener('click', () => {
   socket.disconnect();
@@ -92,6 +103,7 @@ function renderSocketStatus(status, detail) {
   elements['socket-status'].textContent = detail ? `${status}: ${detail}` : status;
   const style = status === 'CONNECTED' ? 'success' : status === 'ERROR' ? 'error' : 'neutral';
   elements['socket-status'].className = `badge ${style}`;
+  if (status === 'CONNECTED') loadChart();
 }
 
 function renderEvent(channel, event) {
@@ -100,7 +112,9 @@ function renderEvent(channel, event) {
   elements['last-event'].textContent = event.type || 'UNKNOWN';
   if (channel === 'price') {
     elements['current-price'].textContent = formatNumber(event.data?.price, '원');
-    elements['change-rate'].textContent = `${formatNumber(event.data?.changeRate, '%')} · ${displayTime(event.occurredAt)}`;
+    elements['change-rate'].textContent = `${formatNumber(event.data?.changeRate, '%')} · ${displayTime(event.data?.observedAt)}`;
+    renderPriceHealth(event.data);
+    updateChart(event.data);
   }
 
   const container = elements[`${channel}-events`];
@@ -115,6 +129,79 @@ function renderEvent(channel, event) {
   item.append(summary, body);
   container.prepend(item);
   while (container.children.length > 100) container.lastElementChild.remove();
+}
+
+async function loadChart() {
+  const request = ++chartRequest;
+  const interval = chartInterval;
+  const load = chartLoadBuffer.begin(interval);
+  setChartStatus('LOADING', `${interval} 캔들 불러오는 중`);
+  elements['reload-chart'].disabled = true;
+  try {
+    const result = await api.candles(interval, 100);
+    if (request !== chartRequest) return;
+    const reconciled = chartLoadBuffer.resolve(load, normalizeCandles(result.body.candles));
+    if (!reconciled) return;
+    chartCandles = reconciled.candles;
+    marketChart.setData(chartCandles);
+    const receivedLiveTick = reconciled.tickCount > 0;
+    setChartStatus(receivedLiveTick ? 'LIVE' : 'READY',
+      `${result.body.provider} · ${chartCandles.length}개`);
+    const latest = chartCandles.at(-1);
+    elements['chart-updated'].textContent = latest
+      ? `마지막 봉 ${displayTime(latest.time * 1000)}` : '표시할 캔들이 없습니다';
+  } catch (error) {
+    if (request !== chartRequest) return;
+    chartLoadBuffer.reject(load);
+    setChartStatus('ERROR', error.message || String(error));
+  } finally {
+    if (request === chartRequest) {
+      elements['reload-chart'].disabled = false;
+    }
+  }
+}
+
+function selectChartInterval(interval) {
+  if (interval === chartInterval) return;
+  chartInterval = interval;
+  chartCandles = [];
+  marketChart.setData([]);
+  document.querySelectorAll('[data-interval]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.interval === interval);
+  });
+  loadChart();
+}
+
+function updateChart(tick) {
+  try {
+    const pendingCount = chartLoadBuffer.buffer(tick);
+    if (pendingCount !== null) {
+      elements['chart-updated'].textContent = `로딩 중 tick 대기 ${pendingCount}개`;
+      return;
+    }
+    const result = applyPriceTick(chartCandles, tick, chartInterval);
+    if (!result.changed) return;
+    chartCandles = result.candles;
+    marketChart.update(chartCandles.at(-1));
+    setChartStatus('LIVE', `${tick.provider || 'UNKNOWN'} · ${chartInterval}`);
+    elements['chart-updated'].textContent = `실시간 ${displayTime(tick.observedAt)}`;
+  } catch (error) {
+    setChartStatus('ERROR', error.message || String(error));
+  }
+}
+
+function renderPriceHealth(data = {}) {
+  if (!data.marketStatus && !data.priceStatus) return;
+  elements['market-health'].textContent = `${data.marketStatus} · ${data.priceStatus} · ${data.provider}`;
+  const style = data.priceStatus === 'LIVE' || data.priceStatus === 'SIMULATED'
+    ? 'success' : data.priceStatus === 'STALE' ? 'error' : 'neutral';
+  elements['market-health'].className = `badge ${style}`;
+}
+
+function setChartStatus(state, detail) {
+  elements['chart-status'].textContent = `${state} · ${detail}`;
+  const style = state === 'LIVE' || state === 'READY' ? 'success' : state === 'ERROR' ? 'error' : 'neutral';
+  elements['chart-status'].className = `badge ${style}`;
 }
 
 function summaryText(channel, data = {}) {
@@ -164,3 +251,4 @@ function setButtonsDisabled(disabled) {
 
 renderToken();
 renderSocketStatus('DISCONNECTED');
+loadChart();

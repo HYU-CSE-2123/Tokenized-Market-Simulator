@@ -1177,3 +1177,46 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - Phase 4.7.3 브라우저에서 과거 REST 캔들과 실시간 WebSocket tick을 결합한 캔들 차트 구현
 - 장중 실제 Toss 체결 → 공개 WebSocket 확장 payload 수신 검증
+
+---
+
+# Phase 4.7.3: 브라우저 실시간 캔들 차트 — 완료
+
+> 작성: 2026-09-16
+
+## 구현
+
+- 기존 브라우저 검증 도구에 mSEC 1분봉·일봉 전환, 새로고침, 로딩·준비·실시간·오류 상태를 갖는 캔들/거래량 차트를 추가했다.
+- 최초 로딩과 주기 변경, WebSocket 재연결 시 `GET /api/markets/mSEC/candles`에서 최근 100개를 조회한다.
+- `PRICE_UPDATED`의 `observedAt`으로 현재 1분 또는 KST 일봉 구간을 계산하고 open·high·low·close와 tick volume을 갱신한다.
+- REST 정규화와 실시간 OHLCV 병합을 `candles.js`, 렌더링을 `market-chart.js`로 분리해 데이터 규칙을 브라우저 UI와 독립적으로 검증할 수 있게 했다.
+- 가격 카드의 표시 시각도 서버 `occurredAt` 대신 실제 가격 `observedAt`을 사용하고 WebSocket의 시장·가격 상태를 즉시 반영한다.
+
+## 결정
+
+- 금융 캔들·거래량 렌더링은 테스트 웹에만 `lightweight-charts` 5.x를 사용하고 백엔드·Android에는 의존성을 추가하지 않는다.
+- Apache-2.0 패키지 안내에 따라 TradingView 저작자 표시 로고와 링크를 차트에서 숨기지 않는다.
+- 차트가 보유한 마지막 봉보다 과거 구간의 tick은 역행 갱신을 막기 위해 무시한다. WebSocket은 영속 로그가 아니므로 재연결 시 REST를 다시 조회한다.
+- 상승 봉은 국내 시장 관례에 맞춰 빨간색, 하락 봉은 파란색으로 표시한다.
+
+## 검증
+
+- `cd tools/websocket-test-client && npm test`: 총 7개 통과, 실패 0개 — REST 정렬, 동일 봉 OHLCV 병합, 새 봉 생성, 오래된 tick 무시, KST 일봉 경계, 로딩 중 tick 재적용, 주기 변경·재연결 요청 세대 격리
+- `cd tools/websocket-test-client && npm run build`: 성공, 84개 모듈 변환 및 production bundle 생성
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: `BUILD SUCCESSFUL`, 총 114개 중 111개 통과·선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- 실제 Toss·PostgreSQL 백엔드를 8082에, 검증용 Vite를 5174에 기동해 백엔드 직접 요청과 Vite 프록시 모두 실제 1분봉을 반환함을 확인했다. 검증용 두 프로세스는 종료했다.
+- 사용자에게 이미 실행 중이던 기존 5173 Vite 프로세스는 변경하거나 종료하지 않았다.
+
+## 검토
+
+- 최초 별도 검토에서 REST 로딩 중 먼저 반영한 WebSocket tick을 늦은 REST 응답이 덮어쓰고, 주기 변경 중 서로 다른 주기 데이터가 섞일 수 있는 경합을 필수 수정으로 지적했다.
+- 요청 세대·주기별 `CandleLoadBuffer`를 추가해 로딩 중 tick을 격리하고 REST 결과 위에 관측 시각순으로 재적용했다. 오래된 요청 응답은 최신 요청의 버퍼와 차트에 영향을 주지 않는다.
+- 로딩 중 tick 순서, 주기 변경 중 오래된 응답, 재연결 요청 교체를 재현하는 테스트를 추가했다.
+- 1차 재검토에서 요청 세대·주기 격리와 tick 재적용으로 기존 필수 지적이 해소됐으며 추가 필수 수정은 없었다.
+- 재검토자가 `npm test` 7개를 직접 실행해 모두 통과함을 확인했다. production build는 검토 샌드박스 제약으로 구현자의 성공 결과를 근거로 확인했다.
+- REST 진행 봉에 이미 포함된 체결과 로딩 중 WebSocket tick이 겹치면 volume을 중복 합산할 수 있다. 현재 테스트 도구는 최선 노력 표시로 유지하고, 정확한 거래량 동기화가 필요해지면 REST `asOf`/체결 cursor 또는 공급자 snapshot 경계를 설계한다.
+
+## 남은 작업
+
+- 사용자가 실제 브라우저에서 Native/SockJS 연결 후 장중 현재 봉이 움직이는지 시각적으로 확인
+- 화면 가격과 PriceOracle 체결 가격의 편차·만료·최소 수령량 보호 설계
