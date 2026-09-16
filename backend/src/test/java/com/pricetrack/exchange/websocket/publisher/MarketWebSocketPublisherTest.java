@@ -12,6 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.pricetrack.exchange.order.OrderSide;
+import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
+import com.pricetrack.exchange.market.model.MarketStatus;
+import com.pricetrack.exchange.market.model.PriceStatus;
 import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.websocket.event.PriceEventPayload;
 import com.pricetrack.exchange.websocket.event.TradeEventPayload;
@@ -25,12 +28,20 @@ class MarketWebSocketPublisherTest {
 
     @Test
     void mapsPriceToPublicPayload() {
-        publisher.publishPrice(new BigDecimal("75100"), new BigDecimal("0.13333333"));
+        Instant observedAt = Instant.parse("2026-09-16T01:23:45Z");
+        MarketPriceSnapshot snapshot = new MarketPriceSnapshot(
+                "mSEC", new BigDecimal("75100"), new BigDecimal("75000"),
+                new BigDecimal("100"), new BigDecimal("0.13333333"),
+                MarketStatus.OPEN, PriceStatus.LIVE, "TOSS", observedAt);
+        publisher.publishPrice(snapshot, new BigDecimal("12.5"));
 
         verify(eventPublisher).publishPublic(
                 eq(WebSocketDestinations.PRICE_TOPIC),
                 eq(WebSocketEventType.PRICE_UPDATED),
-                eq(new PriceEventPayload("mSEC", new BigDecimal("75100"), new BigDecimal("0.13333333"))));
+                eq(new PriceEventPayload(
+                        "mSEC", new BigDecimal("75100"), new BigDecimal("75000"),
+                        new BigDecimal("100"), new BigDecimal("0.13333333"), new BigDecimal("12.5"),
+                        MarketStatus.OPEN, PriceStatus.LIVE, "TOSS", observedAt, observedAt)));
     }
 
     @Test

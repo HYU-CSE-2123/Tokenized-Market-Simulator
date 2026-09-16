@@ -57,7 +57,7 @@ class TossPriceProviderTest {
     }
 
     @Test
-    void appliesNewerTradeAndPublishesChangedPrice() {
+    void appliesNewerTradeAndPublishesItsVolume() {
         TossMarketDataClient client = initialClient();
         MarketWebSocketPublisher events = mock(MarketWebSocketPublisher.class);
         TossPriceProvider provider = provider(client, events);
@@ -70,7 +70,21 @@ class TossPriceProviderTest {
         assertThat(provider.current().price()).isEqualByComparingTo("73000");
         assertThat(provider.current().previousClose()).isEqualByComparingTo("70000");
         assertThat(provider.current().change()).isEqualByComparingTo("3000");
-        verify(events).publishPrice(new BigDecimal("73000"), provider.current().changeRate());
+        verify(events).publishPrice(provider.current(), new BigDecimal("10"));
+    }
+
+    @Test
+    void publishesNewerTradeEvenWhenPriceIsUnchanged() {
+        TossMarketDataClient client = initialClient();
+        MarketWebSocketPublisher events = mock(MarketWebSocketPublisher.class);
+        TossPriceProvider provider = provider(client, events);
+        provider.loadInitialPrice();
+
+        provider.acceptTrade(new TossRealtimeProtocol.TossTrade(
+                "005930", new BigDecimal("72000"), new BigDecimal("7"),
+                Instant.parse("2026-09-14T00:30:01Z")));
+
+        verify(events).publishPrice(provider.current(), new BigDecimal("7"));
     }
 
     @Test

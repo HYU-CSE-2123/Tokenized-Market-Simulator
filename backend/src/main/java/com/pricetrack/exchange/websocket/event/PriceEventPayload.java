@@ -1,7 +1,22 @@
 package com.pricetrack.exchange.websocket.event;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
-/** 공개 가격 스트림의 종목·가격·직전 가격 대비 변동률이다. */
-public record PriceEventPayload(String symbol, BigDecimal price, BigDecimal changeRate) {
+import com.pricetrack.exchange.market.model.MarketStatus;
+import com.pricetrack.exchange.market.model.PriceStatus;
+
+/** 차트가 REST 재조회 없이 현재 봉을 갱신할 수 있는 공개 가격 tick이다. */
+public record PriceEventPayload(
+        String symbol,
+        BigDecimal price,
+        BigDecimal previousClose,
+        BigDecimal change,
+        BigDecimal changeRate,
+        BigDecimal volume,
+        MarketStatus marketStatus,
+        PriceStatus priceStatus,
+        String provider,
+        Instant observedAt,
+        Instant updatedAt) {
 }

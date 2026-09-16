@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 import org.springframework.stereotype.Component;
 
-import com.pricetrack.exchange.market.MarketPriceService;
+import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
 import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.websocket.event.PriceEventPayload;
 import com.pricetrack.exchange.websocket.event.TradeEventPayload;
@@ -21,11 +21,14 @@ public class MarketWebSocketPublisher {
     }
 
     /** Publishes the latest market price without requiring a DB transaction. */
-    public void publishPrice(BigDecimal price, BigDecimal changeRate) {
+    public void publishPrice(MarketPriceSnapshot snapshot, BigDecimal volume) {
         eventPublisher.publishPublic(
                 WebSocketDestinations.PRICE_TOPIC,
                 WebSocketEventType.PRICE_UPDATED,
-                new PriceEventPayload(MarketPriceService.SYMBOL, price, changeRate));
+                new PriceEventPayload(
+                        snapshot.symbol(), snapshot.price(), snapshot.previousClose(), snapshot.change(),
+                        snapshot.changeRate(), volume, snapshot.marketStatus(), snapshot.priceStatus(),
+                        snapshot.provider(), snapshot.observedAt(), snapshot.observedAt()));
     }
 
     /**

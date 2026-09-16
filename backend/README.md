@@ -154,8 +154,28 @@ Authorization: Bearer <access-token>
 
 이벤트 종류는 가격 갱신, 공개 체결, 온체인 주문 대기·성공·실패, 포트폴리오 갱신으로 정의돼 있습니다. 현재 가격과 공개 체결 이벤트가 실제 서비스에 연결돼 있으며, 사용자별 주문·포트폴리오 연결은 Phase 4.4 범위입니다.
 
-- `PRICE_UPDATED`: 시뮬레이터의 각 tick을 `/topic/markets/mSEC/price`로 즉시 발행
+- `PRICE_UPDATED`: 시뮬레이션 또는 Toss의 각 새 가격 tick을 `/topic/markets/mSEC/price`로 즉시 발행
 - `TRADE_EXECUTED`: 모의 거래 또는 온체인 정산으로 저장된 체결을 `/topic/markets/mSEC/trades`로 발행
+
+가격 이벤트의 `data`는 다음 형식이다. 기존 `symbol`, `price`, `changeRate`는 유지하며 차트와 상태 표시에 필요한 필드를 추가했다. `observedAt`은 서버 발행 시간이 아니라 공급자가 가격을 관측한 시각이고, `updatedAt`은 기존 클라이언트 호환을 위해 같은 값을 제공한다. Toss의 `volume`은 해당 체결 수량이며 시뮬레이션에서는 tick 하나를 `1`로 센다. 따라서 Toss는 가격이 직전과 같아도 거래량 반영을 위해 이벤트를 발행한다.
+
+```json
+{
+  "symbol": "mSEC",
+  "price": 75100,
+  "previousClose": 75000,
+  "change": 100,
+  "changeRate": 0.13333333,
+  "volume": 12.5,
+  "marketStatus": "OPEN",
+  "priceStatus": "LIVE",
+  "provider": "TOSS",
+  "observedAt": "2026-09-16T01:23:45Z",
+  "updatedAt": "2026-09-16T01:23:45Z"
+}
+```
+
+공통 envelope `version`은 계속 `1`이다. 기존 destination·event type·필드를 제거하지 않는 하위 호환 payload 확장이기 때문이다.
 
 공개 체결 payload에는 시장 정보만 포함하며 `userId`, `orderId`, `txHash`는 노출하지 않습니다. DB를 변경하는 체결 서비스가 발행을 요청하면 실제 메시지는 transaction commit 후에만 전송되고 rollback 시 폐기됩니다. 따라서 클라이언트가 아직 저장되지 않은 체결을 먼저 받지 않습니다.
 

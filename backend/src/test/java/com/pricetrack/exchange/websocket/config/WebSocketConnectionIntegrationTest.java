@@ -36,6 +36,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pricetrack.exchange.order.OrderSide;
 import com.pricetrack.exchange.order.Order;
 import com.pricetrack.exchange.order.OrderStatus;
+import com.pricetrack.exchange.market.provider.MarketPriceProvider;
+import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
 import com.pricetrack.exchange.trade.Trade;
 import com.pricetrack.exchange.wallet.WalletService;
 import com.pricetrack.exchange.websocket.event.WebSocketDestinations;
@@ -50,6 +52,7 @@ class WebSocketConnectionIntegrationTest {
     @Autowired UserRepository userRepository;
     @Autowired SimpMessagingTemplate messagingTemplate;
     @Autowired MarketWebSocketPublisher marketEvents;
+    @Autowired MarketPriceProvider marketPriceProvider;
     @Autowired UserWebSocketPublisher userEvents;
     @Autowired WalletService walletService;
     @Autowired ObjectMapper objectMapper;
@@ -68,16 +71,22 @@ class WebSocketConnectionIntegrationTest {
     void anonymousClientReceivesVersionedPriceEventOverNativeWebSocket() throws Exception {
         session = connect(nativeClient(), "ws://localhost:" + port + "/ws", null);
         CompletableFuture<String> received = subscribe(session, WebSocketDestinations.PRICE_TOPIC);
+        MarketPriceSnapshot snapshot = marketPriceProvider.current();
 
         String payload = sendUntilReceived(received, () ->
-                marketEvents.publishPrice(new BigDecimal("75100"), new BigDecimal("0.13333333")));
+                marketEvents.publishPrice(snapshot, BigDecimal.ONE));
         JsonNode event = objectMapper.readTree(payload);
         assertThat(event.path("version").asInt()).isEqualTo(1);
         assertThat(event.path("type").asText()).isEqualTo("PRICE_UPDATED");
         assertThat(event.path("eventId").asText()).isNotBlank();
         assertThat(event.path("occurredAt").asText()).isNotBlank();
         assertThat(event.path("data").path("symbol").asText()).isEqualTo("mSEC");
-        assertThat(event.path("data").path("price").decimalValue()).isEqualByComparingTo("75100");
+        assertThat(event.path("data").path("price").decimalValue())
+                .isEqualByComparingTo(snapshot.price());
+        assertThat(event.path("data").path("volume").decimalValue()).isEqualByComparingTo("1");
+        assertThat(event.path("data").path("observedAt").asText()).isNotBlank();
+        assertThat(event.path("data").path("updatedAt").asText())
+                .isEqualTo(event.path("data").path("observedAt").asText());
     }
 
     @Test

@@ -56,7 +56,7 @@ public class SimulatedPriceProvider implements MarketPriceProvider {
         MarketPriceSnapshot next = snapshot(nextPrice, previous.price(), change, changeRate, observedAt);
         current.set(next);
         candleProvider.record(next.price(), observedAt);
-        marketEvents.publishPrice(next.price(), next.changeRate());
+        marketEvents.publishPrice(next, BigDecimal.ONE);
     }
 
     private static MarketPriceSnapshot snapshot(

@@ -1135,3 +1135,45 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - Phase 4.7.2 가격 WebSocket 이벤트 v2에 관측 시각·가격/시장 상태 추가
 - Phase 4.7.3 브라우저 실시간 캔들 차트 구현
+
+---
+
+# Phase 4.7.2: 실시간 가격 WebSocket payload 확장 — 완료
+
+> 작성: 2026-09-16
+
+## 구현
+
+- 기존 `/topic/markets/mSEC/price`와 `PRICE_UPDATED`, `symbol`·`price`·`changeRate`를 유지하면서 `previousClose`, `change`, `volume`, `marketStatus`, `priceStatus`, `provider`, `observedAt`, `updatedAt`을 payload에 추가했다.
+- 가격 발행 경계가 개별 숫자 대신 `MarketPriceSnapshot`을 받아 REST 마켓 응답과 동일한 기준의 상태·관측 시각을 전달한다.
+- Toss 실시간 체결량을 tick `volume`으로 발행하고, 가격이 직전과 같은 새 체결도 차트 거래량 반영을 위해 발행한다.
+- 시뮬레이션은 매 tick의 `volume=1`을 발행하며 캔들 저장과 WebSocket 이벤트에 같은 가격·관측 시각을 사용한다.
+
+## 결정
+
+- 공통 envelope `version`은 1을 유지한다. destination, event type과 기존 payload 필드를 제거하지 않은 하위 호환 확장이기 때문이다.
+- `observedAt`은 공급자 가격 시각이고 `occurredAt`은 우리 서버의 이벤트 생성 시각이다. 차트 봉 구간은 `observedAt`으로 계산한다.
+- `updatedAt`은 기존 Android/REST 명명과의 호환을 위해 `observedAt`과 동일하게 제공한다.
+- Toss volume은 실제 해당 체결 수량이고 시뮬레이션 volume은 실제 거래량이 없는 관계로 tick 개수 1이다.
+
+## 검증
+
+- 공개 가격 payload가 스냅샷 전체와 tick volume을 정확히 변환하는 단위 테스트
+- 시뮬레이션이 동일 스냅샷과 `volume=1`을 캔들 저장·공개 이벤트에 전달하는 테스트
+- Toss가 가격 변경 체결과 동일 가격 신규 체결 모두 실제 volume으로 발행하며 같거나 오래된 관측 시각은 무시하는 테스트
+- JSON에서 기존 필드와 신규 상태·시각·volume, `observedAt=updatedAt`, envelope version 1을 검증
+- Native STOMP 실제 연결에서 확장 payload 수신 검증
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: `BUILD SUCCESSFUL`, 총 114개 중 111개 통과·선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- `cd tools/websocket-test-client && npm run build`: 성공, 기존 브라우저 클라이언트 호환 확인
+
+## 검토
+
+- 별도 검토자는 기준 커밋 `f4aa5ca` 대비 12개 변경 파일을 확인했으며 발견된 필수 수정은 없었다.
+- 기존 destination·event type·필드와 envelope version 1 호환, 신규 필드 매핑, Toss 동일 가격 신규 체결 발행, 시뮬레이션 `volume=1`, 문서 일치를 확인했다.
+- 검토자가 관련 5개 테스트 클래스를 직접 재실행해 `BUILD SUCCESSFUL`을 확인했다. 전체 테스트·브라우저 빌드와 실제 Toss 외부 연동은 구현자의 검증 결과를 근거로 확인했다.
+- Toss가 완전히 동일한 timestamp의 서로 다른 체결을 보낼 수 있는지는 장중 데이터로 후속 확인한다. 현재는 기존 중복·역행 방지 정책에 따라 관측 시각이 같거나 오래된 frame을 무시한다.
+
+## 남은 작업
+
+- Phase 4.7.3 브라우저에서 과거 REST 캔들과 실시간 WebSocket tick을 결합한 캔들 차트 구현
+- 장중 실제 Toss 체결 → 공개 WebSocket 확장 payload 수신 검증

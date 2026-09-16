@@ -7,8 +7,6 @@ import static org.mockito.Mockito.verify;
 import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
 import com.pricetrack.exchange.market.model.PriceStatus;
 import com.pricetrack.exchange.websocket.publisher.MarketWebSocketPublisher;
 
@@ -23,21 +21,18 @@ class SimulatedPriceProviderTest {
 
         provider.tick();
 
-        ArgumentCaptor<BigDecimal> price = ArgumentCaptor.forClass(BigDecimal.class);
-        ArgumentCaptor<BigDecimal> changeRate = ArgumentCaptor.forClass(BigDecimal.class);
-        verify(marketEvents).publishPrice(price.capture(), changeRate.capture());
+        verify(marketEvents).publishPrice(provider.current(), BigDecimal.ONE);
         verify(candles).record(org.mockito.ArgumentMatchers.eq(provider.current().price()),
                 org.mockito.ArgumentMatchers.eq(provider.current().observedAt()));
-        assertThat(price.getValue()).isEqualByComparingTo(provider.current().price());
-        assertThat(price.getValue()).isBetween(
+        assertThat(provider.current().price()).isBetween(
                 previous.multiply(new BigDecimal("0.997")),
                 previous.multiply(new BigDecimal("1.003")));
-        assertThat(changeRate.getValue()).isEqualByComparingTo(
-                price.getValue().subtract(previous)
+        assertThat(provider.current().changeRate()).isEqualByComparingTo(
+                provider.current().price().subtract(previous)
                         .divide(previous, 8, java.math.RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100)));
         assertThat(provider.current().previousClose()).isEqualByComparingTo(previous);
-        assertThat(provider.current().change()).isEqualByComparingTo(price.getValue().subtract(previous));
+        assertThat(provider.current().change()).isEqualByComparingTo(provider.current().price().subtract(previous));
         assertThat(provider.current().priceStatus()).isEqualTo(PriceStatus.SIMULATED);
         assertThat(provider.current().provider()).isEqualTo("SIMULATED");
     }

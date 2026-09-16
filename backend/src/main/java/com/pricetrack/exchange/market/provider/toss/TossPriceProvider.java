@@ -98,9 +98,8 @@ public class TossPriceProvider implements MarketPriceProvider {
                     "TOSS",
                     trade.observedAt());
             if (current.compareAndSet(previous, next)) {
-                if (trade.price().compareTo(previous.price()) != 0) {
-                    marketEvents.publishPrice(next.price(), next.changeRate());
-                }
+                // 같은 가격의 체결도 차트 거래량을 증가시키므로 모든 새 tick을 발행한다.
+                marketEvents.publishPrice(next, trade.volume());
                 return;
             }
         }
