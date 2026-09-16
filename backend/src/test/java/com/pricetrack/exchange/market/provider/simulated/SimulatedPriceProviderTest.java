@@ -17,7 +17,8 @@ class SimulatedPriceProviderTest {
     @Test
     void tickPublishesUpdatedPriceAndChangeRate() {
         MarketWebSocketPublisher marketEvents = mock(MarketWebSocketPublisher.class);
-        SimulatedPriceProvider provider = new SimulatedPriceProvider(marketEvents);
+        SimulatedCandleProvider candles = mock(SimulatedCandleProvider.class);
+        SimulatedPriceProvider provider = new SimulatedPriceProvider(marketEvents, candles);
         BigDecimal previous = provider.current().price();
 
         provider.tick();
@@ -25,6 +26,8 @@ class SimulatedPriceProviderTest {
         ArgumentCaptor<BigDecimal> price = ArgumentCaptor.forClass(BigDecimal.class);
         ArgumentCaptor<BigDecimal> changeRate = ArgumentCaptor.forClass(BigDecimal.class);
         verify(marketEvents).publishPrice(price.capture(), changeRate.capture());
+        verify(candles).record(org.mockito.ArgumentMatchers.eq(provider.current().price()),
+                org.mockito.ArgumentMatchers.eq(provider.current().observedAt()));
         assertThat(price.getValue()).isEqualByComparingTo(provider.current().price());
         assertThat(price.getValue()).isBetween(
                 previous.multiply(new BigDecimal("0.997")),

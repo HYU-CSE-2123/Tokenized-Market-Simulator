@@ -1092,3 +1092,46 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 장중 실제 Toss 체결 → 공개 WebSocket → PriceOracle 전체 흐름 검증
 - Android 전달용 API·WebSocket 연동 가이드와 최종 MVP 인수 검증
+
+---
+
+# Phase 4.7.1: 공급자 공통 캔들 REST API — 완료
+
+> 작성: 2026-09-16
+
+## 구현
+
+- `MarketCandleProvider`와 공통 캔들·페이지·주기 모델을 추가해 차트 소비자가 가격 공급자를 알지 않도록 했다.
+- `GET /api/markets/mSEC/candles`에서 `1m`·`1d`, 1~200개, 선택적 `before` 페이지네이션을 제공하고 시간 오름차순으로 반환한다.
+- Toss 모드는 공식 `/api/v1/candles`의 수정주가 OHLCV와 `nextBefore`를 검증·변환한다. 공식 1분봉 timestamp가 봉 종료 시각이므로 공통 `startedAt`은 1분을 빼서 반환한다.
+- 시뮬레이션은 원시 tick을 무한 저장하는 대신 `market_candles`의 현재 1분봉과 KST 일봉을 갱신한다. open은 첫 가격, high·low는 극값, close는 마지막 가격, volume은 가격 tick 개수다.
+- 캔들 주기·개수 오류는 HTTP 400 `INVALID_CANDLE_QUERY`, 다른 심볼은 기존 `UNSUPPORTED_SYMBOL`로 응답한다.
+
+## 결정
+
+- 기존 `price_ticks`는 온체인 Oracle 확정 이력이 중심이고 시뮬레이션 매 tick을 저장하지 않아 차트 원천으로 사용하지 않는다.
+- Toss 과거 차트는 외부 API를 사용하고 시뮬레이션만 로컬 캔들을 저장해 실제 체결 원본의 DB 폭증을 피한다.
+- 이번 단계는 REST 캔들 계약까지다. 실시간 가격 이벤트 v2와 브라우저 캔들 렌더링은 각각 다음 독립 단계로 진행한다.
+
+## 검증
+
+- Toss 1분봉의 시작 시각·오름차순·페이지 커서·진행 봉 판정과 잘못된 OHLCV 거부 테스트
+- 시뮬레이션 동일 구간 OHLCV·tick volume 갱신, 1분봉·일봉 두 행 유지, 시간순 반환과 다음 페이지 커서 테스트
+- 지원 심볼·주기·count 검증과 기존 가격 공급자·Spring 컨텍스트 회귀 테스트
+- 캔들 요청도 만료 토큰으로 401을 받으면 해당 토큰을 폐기하고 새 토큰으로 정확히 한 번 재시도하는 테스트
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: `BUILD SUCCESSFUL`, 총 113개 중 110개 통과·선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- 실제 Toss·PostgreSQL 설정으로 임시 서버를 기동해 `1m`·`1d` 각각 5개가 `TOSS` 공급자로 시간 오름차순 반환되는 것을 확인했다.
+- 서버 시작 시 PostgreSQL에 `market_candles` 테이블이 정상 생성되는 것을 확인했고 검증용 서버는 종료했다.
+
+## 검토
+
+- 최초 별도 검토에서 필수 수정은 없었고 캔들 401 재시도 전용 테스트 보강을 제안했다.
+- 제안 테스트를 추가하는 과정에서 내부 Toss 클라이언트를 `before=null`로 직접 호출하면 값 없는 `before` 쿼리 파라미터가 붙는 결함을 발견해, 이 경우 파라미터 자체를 생략하도록 수정했다. 공개 REST 경로는 누락된 `before`를 현재 시각으로 정규화한다.
+- 시뮬레이션 캔들의 조회 후 저장은 현재 단일 스케줄러 호출에는 안전하지만 향후 다중 writer로 확장할 때 PostgreSQL upsert 또는 행 잠금을 검토한다.
+- 1차 재검토에서 401 재시도 계약과 `before=null` URI 수정이 적절함을 확인했으며 추가 필수 수정은 없었다.
+- 재검토자는 관련 13개 테스트를 직접 재실행해 모두 통과함을 확인했다. 전체 테스트와 실제 Toss·PostgreSQL 연동은 구현자의 검증 결과를 근거로 확인했다.
+
+## 남은 작업
+
+- Phase 4.7.2 가격 WebSocket 이벤트 v2에 관측 시각·가격/시장 상태 추가
+- Phase 4.7.3 브라우저 실시간 캔들 차트 구현

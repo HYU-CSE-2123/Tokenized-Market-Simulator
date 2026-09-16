@@ -8,10 +8,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
 import com.pricetrack.exchange.market.model.MarketStatus;
 import com.pricetrack.exchange.market.model.PriceStatus;
+import com.pricetrack.exchange.market.model.MarketCandlePage;
 
 /** 마켓 API (기획서 §12.2). */
 @RestController
@@ -20,10 +23,13 @@ public class MarketController {
 
     private final MarketPriceService marketPriceService;
     private final PriceTickRepository priceTickRepository;
+    private final MarketCandleService candleService;
 
-    public MarketController(MarketPriceService marketPriceService, PriceTickRepository priceTickRepository) {
+    public MarketController(MarketPriceService marketPriceService, PriceTickRepository priceTickRepository,
+            MarketCandleService candleService) {
         this.marketPriceService = marketPriceService;
         this.priceTickRepository = priceTickRepository;
+        this.candleService = candleService;
     }
 
     public record MarketResponse(String symbol, String name, BigDecimal price,
@@ -57,6 +63,15 @@ public class MarketController {
                 snapshot.price(), snapshot.previousClose(), snapshot.change(),
                 snapshot.changeRate(), snapshot.marketStatus(), snapshot.priceStatus(),
                 snapshot.provider(), snapshot.observedAt(), snapshot.observedAt());
+    }
+
+    @GetMapping("/{symbol}/candles")
+    public MarketCandlePage candles(@PathVariable String symbol,
+            @RequestParam(defaultValue = "1m") String interval,
+            @RequestParam(defaultValue = "100") int count,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant before) {
+        return candleService.candles(symbol, interval, count, before);
     }
 
     public record PriceTickResponse(BigDecimal price, String source, Instant createdAt) {

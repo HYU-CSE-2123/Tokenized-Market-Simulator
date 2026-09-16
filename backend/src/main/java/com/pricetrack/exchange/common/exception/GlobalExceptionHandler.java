@@ -14,6 +14,7 @@ import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationExcepti
 import com.pricetrack.exchange.blockchain.support.OperatorNotReadyException;
 import com.pricetrack.exchange.market.MarketClosedException;
 import com.pricetrack.exchange.market.StalePriceException;
+import com.pricetrack.exchange.market.InvalidCandleQueryException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -90,6 +91,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> stalePrice(
             StalePriceException exception, HttpServletRequest request) {
         return error(HttpStatus.SERVICE_UNAVAILABLE, "PRICE_STALE", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidCandleQueryException.class)
+    public ResponseEntity<ApiErrorResponse> invalidCandleQuery(
+            InvalidCandleQueryException exception, HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_CANDLE_QUERY", exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

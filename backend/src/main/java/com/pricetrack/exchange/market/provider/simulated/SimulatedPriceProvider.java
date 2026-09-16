@@ -24,11 +24,14 @@ public class SimulatedPriceProvider implements MarketPriceProvider {
     private static final BigDecimal INITIAL_PRICE = new BigDecimal("75000");
 
     private final MarketWebSocketPublisher marketEvents;
+    private final SimulatedCandleProvider candleProvider;
     private final AtomicReference<MarketPriceSnapshot> current = new AtomicReference<>(snapshot(
             INITIAL_PRICE, INITIAL_PRICE, BigDecimal.ZERO, BigDecimal.ZERO));
 
-    public SimulatedPriceProvider(MarketWebSocketPublisher marketEvents) {
+    public SimulatedPriceProvider(MarketWebSocketPublisher marketEvents,
+            SimulatedCandleProvider candleProvider) {
         this.marketEvents = marketEvents;
+        this.candleProvider = candleProvider;
     }
 
     @Override
@@ -49,13 +52,21 @@ public class SimulatedPriceProvider implements MarketPriceProvider {
         BigDecimal changeRate = change
                 .divide(previous.price(), 8, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
-        MarketPriceSnapshot next = snapshot(nextPrice, previous.price(), change, changeRate);
+        Instant observedAt = Instant.now();
+        MarketPriceSnapshot next = snapshot(nextPrice, previous.price(), change, changeRate, observedAt);
         current.set(next);
+        candleProvider.record(next.price(), observedAt);
         marketEvents.publishPrice(next.price(), next.changeRate());
     }
 
     private static MarketPriceSnapshot snapshot(
             BigDecimal price, BigDecimal referencePrice, BigDecimal change, BigDecimal changeRate) {
+        return snapshot(price, referencePrice, change, changeRate, Instant.now());
+    }
+
+    private static MarketPriceSnapshot snapshot(
+            BigDecimal price, BigDecimal referencePrice, BigDecimal change, BigDecimal changeRate,
+            Instant observedAt) {
         return new MarketPriceSnapshot(
                 MarketPriceService.SYMBOL,
                 price,
@@ -65,6 +76,6 @@ public class SimulatedPriceProvider implements MarketPriceProvider {
                 MarketStatus.UNKNOWN,
                 PriceStatus.SIMULATED,
                 "SIMULATED",
-                Instant.now());
+                observedAt);
     }
 }

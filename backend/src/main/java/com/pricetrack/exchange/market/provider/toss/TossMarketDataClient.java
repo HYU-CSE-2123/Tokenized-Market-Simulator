@@ -2,6 +2,7 @@ package com.pricetrack.exchange.market.provider.toss;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -11,14 +12,23 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
+import com.pricetrack.exchange.market.model.CandleInterval;
+import com.pricetrack.exchange.market.model.MarketCandle;
+
 /** 토스증권 현재가 REST 응답을 검증해 공급자 내부 값으로 변환한다. */
 public class TossMarketDataClient {
     private final RestClient restClient;
     private final TossAuthClient authClient;
+    private final Clock clock;
 
     public TossMarketDataClient(RestClient restClient, TossAuthClient authClient) {
+        this(restClient, authClient, Clock.systemUTC());
+    }
+
+    TossMarketDataClient(RestClient restClient, TossAuthClient authClient, Clock clock) {
         this.restClient = restClient;
         this.authClient = authClient;
+        this.clock = clock;
     }
 
     public TossPrice currentPrice(String symbol) {
@@ -38,6 +48,75 @@ public class TossMarketDataClient {
         } catch (HttpClientErrorException.Unauthorized exception) {
             authClient.invalidate(token);
             return requestMarketReference(symbol, date, authClient.accessToken());
+        }
+    }
+
+    public TossCandlePage candles(String symbol, CandleInterval interval, int count, Instant before) {
+        String token = authClient.accessToken();
+        try {
+            return requestCandles(symbol, interval, count, before, token);
+        } catch (HttpClientErrorException.Unauthorized exception) {
+            authClient.invalidate(token);
+            return requestCandles(symbol, interval, count, before, authClient.accessToken());
+        }
+    }
+
+    private TossCandlePage requestCandles(String symbol, CandleInterval interval, int count,
+            Instant before, String token) {
+        try {
+            CandleEnvelope response = restClient.get()
+                    .uri(uriBuilder -> {
+                        var request = uriBuilder.path("/api/v1/candles")
+                                .queryParam("symbol", symbol).queryParam("interval", interval.value())
+                                .queryParam("count", count);
+                        if (before != null) request.queryParam("before", before);
+                        return request.queryParam("adjusted", true).build();
+                    })
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .retrieve().body(CandleEnvelope.class);
+            if (response == null || response.result() == null || response.result().candles() == null) {
+                throw new TossApiException("Toss candle response is empty.");
+            }
+            List<MarketCandle> converted = response.result().candles().stream()
+                    .map(candle -> convertCandle(candle, interval))
+                    .sorted(java.util.Comparator.comparing(MarketCandle::startedAt)).toList();
+            Instant nextBefore = response.result().nextBefore() == null ? null
+                    : OffsetDateTime.parse(response.result().nextBefore()).toInstant();
+            return new TossCandlePage(converted, nextBefore);
+        } catch (HttpClientErrorException.Unauthorized exception) {
+            throw exception;
+        } catch (TossApiException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new TossApiException("Failed to load Toss candles.", exception);
+        }
+    }
+
+    private MarketCandle convertCandle(Candle candle, CandleInterval interval) {
+        if (!"KRW".equals(candle.currency())) throw new TossApiException("Toss candle currency is not KRW.");
+        BigDecimal open = decimal(candle.openPrice());
+        BigDecimal high = decimal(candle.highPrice());
+        BigDecimal low = decimal(candle.lowPrice());
+        BigDecimal close = decimal(candle.closePrice());
+        BigDecimal volume = decimal(candle.volume());
+        if (open.signum() <= 0 || high.compareTo(open.max(close)) < 0
+                || low.signum() <= 0 || low.compareTo(open.min(close)) > 0 || volume.signum() < 0) {
+            throw new TossApiException("Toss candle OHLCV is invalid.");
+        }
+        OffsetDateTime timestamp = OffsetDateTime.parse(candle.timestamp());
+        Instant startedAt = interval == CandleInterval.ONE_MINUTE
+                ? timestamp.toInstant().minusSeconds(60) : timestamp.toInstant();
+        boolean closed = interval == CandleInterval.ONE_MINUTE
+                ? !clock.instant().isBefore(timestamp.toInstant())
+                : timestamp.toLocalDate().isBefore(LocalDate.now(clock.withZone(
+                        java.time.ZoneId.of("Asia/Seoul"))));
+        return new MarketCandle(startedAt, open, high, low, close, volume, closed);
+    }
+
+    private static BigDecimal decimal(String value) {
+        try { return new BigDecimal(value); }
+        catch (RuntimeException exception) {
+            throw new TossApiException("Toss candle decimal is invalid.", exception);
         }
     }
 
@@ -148,8 +227,10 @@ public class TossMarketDataClient {
     record Integrated(Session preMarket, Session regularMarket, Session afterMarket) {}
     record Session(String startTime, String endTime) {}
     record CandleEnvelope(CandlePage result) {}
-    record CandlePage(List<Candle> candles) {}
-    record Candle(String timestamp, String closePrice, String currency) {}
+    record CandlePage(List<Candle> candles, String nextBefore) {}
+    record Candle(String timestamp, String openPrice, String highPrice, String lowPrice,
+            String closePrice, String volume, String currency) {}
+    public record TossCandlePage(List<MarketCandle> candles, Instant nextBefore) {}
     public record MarketSession(Instant start, Instant end) {
         boolean contains(Instant instant) {
             return !instant.isBefore(start) && instant.isBefore(end);

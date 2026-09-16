@@ -26,7 +26,8 @@ class MarketControllerTest {
                 "mSEC", new BigDecimal("72000"), new BigDecimal("70000"),
                 new BigDecimal("2000"), new BigDecimal("2.85714200"),
                 MarketStatus.OPEN, PriceStatus.LIVE, "TOSS", observedAt));
-        MarketController controller = new MarketController(prices, mock(PriceTickRepository.class));
+        MarketController controller = new MarketController(prices, mock(PriceTickRepository.class),
+                mock(MarketCandleService.class));
 
         MarketController.MarketResponse response = controller.market("mSEC");
 

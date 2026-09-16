@@ -79,6 +79,19 @@ CREATE TABLE IF NOT EXISTS orders (
     updated_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS market_candles (
+    id BIGSERIAL PRIMARY KEY,
+    symbol VARCHAR(20) NOT NULL,
+    candle_interval VARCHAR(20) NOT NULL,
+    started_at TIMESTAMP NOT NULL,
+    open DECIMAL(30, 8) NOT NULL,
+    high DECIMAL(30, 8) NOT NULL,
+    low DECIMAL(30, 8) NOT NULL,
+    close DECIMAL(30, 8) NOT NULL,
+    volume DECIMAL(30, 8) NOT NULL,
+    CONSTRAINT uk_market_candles_bucket UNIQUE (symbol, candle_interval, started_at)
+);
+
 ALTER TABLE price_ticks ADD COLUMN IF NOT EXISTS blockchain_transaction_id BIGINT;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_price_ticks_blockchain_transaction_id
     ON price_ticks (blockchain_transaction_id);

@@ -39,6 +39,12 @@ public class TossPriceConfiguration {
     }
 
     @Bean
+    TossCandleProvider tossCandleProvider(TossMarketDataClient marketDataClient,
+            TossPriceProperties properties) {
+        return new TossCandleProvider(marketDataClient, properties);
+    }
+
+    @Bean
     TossRealtimeProtocol tossRealtimeProtocol(ObjectMapper objectMapper, TossPriceProperties properties) {
         return new TossRealtimeProtocol(objectMapper, properties.symbol());
     }
