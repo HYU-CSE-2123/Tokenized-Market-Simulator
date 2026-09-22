@@ -5,6 +5,7 @@ import { CandleLoadBuffer, applyPriceTick, normalizeCandles } from './candles.js
 import { MarketChart } from './market-chart.js';
 
 const api = new ApiClient();
+const CHART_COUNTS = { '1m': 100, '5m': 100, '15m': 50, '30m': 30, '1h': 20, '1d': 100 };
 let eventCount = 0;
 let chartInterval = '1m';
 let chartCandles = [];
@@ -138,7 +139,7 @@ async function loadChart() {
   setChartStatus('LOADING', `${interval} 캔들 불러오는 중`);
   elements['reload-chart'].disabled = true;
   try {
-    const result = await api.candles(interval, 100);
+    const result = await api.candles(interval, CHART_COUNTS[interval]);
     if (request !== chartRequest) return;
     const reconciled = chartLoadBuffer.resolve(load, normalizeCandles(result.body.candles));
     if (!reconciled) return;

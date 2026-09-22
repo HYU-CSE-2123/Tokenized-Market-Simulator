@@ -104,6 +104,7 @@ public class TossMarketDataClient {
             throw new TossApiException("Toss candle OHLCV is invalid.");
         }
         OffsetDateTime timestamp = OffsetDateTime.parse(candle.timestamp());
+        // Toss 1분봉 timestamp는 종료 경계다. 내부 모델과 실시간 tick은 시작 시각을 사용한다.
         Instant startedAt = interval == CandleInterval.ONE_MINUTE
                 ? timestamp.toInstant().minusSeconds(60) : timestamp.toInstant();
         boolean closed = interval == CandleInterval.ONE_MINUTE

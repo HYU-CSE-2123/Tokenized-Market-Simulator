@@ -22,7 +22,7 @@
 - 가격 소비 도메인이 공급자 구현을 직접 알지 않도록 `MarketPriceService`와 `MarketPriceProvider` 경계 적용
 - 실제 시세 연동 전 기본 공급자인 `SimulatedPriceProvider`와 공급자 공통 가격 스냅샷 모델 적용
 - `PRICE_PROVIDER=toss` 선택 시 토스증권 REST 초기 가격 이후 WebSocket으로 삼성전자 실시간 체결가 수신
-- 공급자 공통 `1m`·`1d` 캔들 API와 시뮬레이션 OHLCV 저장
+- 공급자 공통 `1m`·`5m`·`15m`·`30m`·`1h`·`1d` 캔들 API와 시뮬레이션 OHLCV 저장
 - 온체인 주문 대기·성공·실패와 포트폴리오 변경을 해당 사용자의 개인 queue에 발행
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
@@ -44,9 +44,20 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 | --- | --- | --- |
 | GET | `/api/markets/mSEC` | 현재가·전일 종가·시장 및 가격 상태 |
 | GET | `/api/markets/mSEC/ticks` | 기존 가격 기록 최대 100개 |
-| GET | `/api/markets/mSEC/candles?interval=1m&count=100` | 1분봉 또는 일봉 차트 |
+| GET | `/api/markets/mSEC/candles?interval=1m&count=100` | 1분~1시간봉 또는 일봉 차트 |
 
-캔들 `interval`은 `1m`, `1d`만 지원하고 `count`는 1~200입니다. `before`에 ISO-8601 시각을 넘기면 과거 페이지를 조회하며 응답의 `nextBefore`를 다음 요청에 그대로 사용합니다. 캔들은 차트가 바로 사용할 수 있도록 `startedAt` 오름차순으로 반환됩니다.
+캔들 `interval`은 `1m`, `5m`, `15m`, `30m`, `1h`, `1d`를 지원합니다. `before`에 ISO-8601 시각을 넘기면 과거 페이지를 조회하며 응답의 `nextBefore`를 다음 요청에 그대로 사용합니다. 캔들은 차트가 바로 사용할 수 있도록 `startedAt` 오름차순으로 반환됩니다.
+
+| 주기 | 최대 `count` | 생성 방식 |
+| --- | ---: | --- |
+| `1m` | 200 | 공급자 1분봉 |
+| `5m` | 100 | 1분봉 OHLCV 집계 |
+| `15m` | 50 | 1분봉 OHLCV 집계 |
+| `30m` | 30 | 1분봉 OHLCV 집계 |
+| `1h` | 20 | 1분봉 OHLCV 집계 |
+| `1d` | 200 | 공급자 일봉 |
+
+`count`를 생략하면 100과 해당 주기의 최대치 중 작은 값을 사용합니다. 상위 분봉의 시가·종가에는 구간의 첫·마지막 1분봉을, 고가·저가에는 구간 극값을, 거래량에는 합계를 사용합니다.
 
 ```json
 {
@@ -67,7 +78,8 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 ```
 
 - Toss 모드는 공식 수정주가 캔들 API의 가격과 거래량을 사용합니다.
-- 시뮬레이션 모드는 `market_candles`에 1분봉·일봉만 갱신하고 `volume`은 실제 거래량이 아닌 해당 구간의 가격 tick 개수입니다.
+- Toss 1분봉의 `timestamp`는 봉 종료 경계이므로 내부 `startedAt`에서는 60초를 빼 시작 시각으로 정규화합니다. 그래야 WebSocket 체결 tick과 같은 봉에 병합됩니다.
+- 시뮬레이션 모드는 `market_candles`에 1분봉·일봉만 갱신하고 상위 분봉은 조회 시 집계합니다. `volume`은 실제 거래량이 아닌 해당 구간의 가격 tick 개수입니다.
 - 잘못된 주기·개수는 HTTP 400 `INVALID_CANDLE_QUERY`, mSEC 이외 심볼은 `UNSUPPORTED_SYMBOL`입니다.
 
 ## 모의 거래 API

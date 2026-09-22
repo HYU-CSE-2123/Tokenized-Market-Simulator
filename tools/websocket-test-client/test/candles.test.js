@@ -41,6 +41,15 @@ test('uses KST midnight for daily candle buckets', () => {
   assert.equal(bucketTime(new Date('2026-09-16T15:00:00Z'), '1d'), 1789570800);
 });
 
+test('uses standard wall-clock boundaries for aggregated intraday candles', () => {
+  const observedAt = new Date('2026-09-22T01:47:23Z'); // KST 10:47:23
+
+  assert.equal(bucketTime(observedAt, '5m'), Date.parse('2026-09-22T01:45:00Z') / 1000);
+  assert.equal(bucketTime(observedAt, '15m'), Date.parse('2026-09-22T01:45:00Z') / 1000);
+  assert.equal(bucketTime(observedAt, '30m'), Date.parse('2026-09-22T01:30:00Z') / 1000);
+  assert.equal(bucketTime(observedAt, '1h'), Date.parse('2026-09-22T01:00:00Z') / 1000);
+});
+
 test('replays ticks received during REST loading in observed order', () => {
   const restSnapshot = normalizeCandles([candle('2026-09-16T00:00:00Z', '100')]);
   const result = applyBufferedTicks(restSnapshot, [

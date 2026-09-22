@@ -1,6 +1,13 @@
 const MINUTE_MS = 60_000;
 const DAY_MS = 86_400_000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const INTERVAL_MS = {
+  '1m': MINUTE_MS,
+  '5m': 5 * MINUTE_MS,
+  '15m': 15 * MINUTE_MS,
+  '30m': 30 * MINUTE_MS,
+  '1h': 60 * MINUTE_MS,
+};
 
 export function normalizeCandles(candles = []) {
   return candles.map((candle) => ({
@@ -79,7 +86,9 @@ export class CandleLoadBuffer {
 
 export function bucketTime(date, interval) {
   const instant = date.getTime();
-  if (interval === '1m') return Math.floor(instant / MINUTE_MS) * 60;
+  if (INTERVAL_MS[interval]) {
+    return Math.floor(instant / INTERVAL_MS[interval]) * (INTERVAL_MS[interval] / 1000);
+  }
   if (interval === '1d') {
     return Math.floor((instant + KST_OFFSET_MS) / DAY_MS) * 86_400 - KST_OFFSET_MS / 1000;
   }

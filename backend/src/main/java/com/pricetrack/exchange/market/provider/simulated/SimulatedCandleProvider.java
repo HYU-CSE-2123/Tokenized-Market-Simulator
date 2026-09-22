@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pricetrack.exchange.market.MarketCandleAggregator;
 import com.pricetrack.exchange.market.MarketCandleEntity;
 import com.pricetrack.exchange.market.MarketCandleRepository;
 import com.pricetrack.exchange.market.MarketPriceService;
@@ -58,6 +59,7 @@ public class SimulatedCandleProvider implements MarketCandleProvider {
     @Override
     @Transactional(readOnly = true)
     public MarketCandlePage candles(CandleInterval interval, int count, Instant before) {
+        if (interval.isAggregatedIntraday()) return aggregatedCandles(interval, count, before);
         List<MarketCandleEntity> entities = repository
                 .findBySymbolAndIntervalAndStartedAtLessThanEqualOrderByStartedAtDesc(
                         MarketPriceService.SYMBOL, interval, before, PageRequest.of(0, count + 1));
@@ -71,8 +73,28 @@ public class SimulatedCandleProvider implements MarketCandleProvider {
         return new MarketCandlePage(MarketPriceService.SYMBOL, interval, "SIMULATED", candles, nextBefore);
     }
 
+    private MarketCandlePage aggregatedCandles(CandleInterval interval, int count, Instant before) {
+        int sourceCount = (count + 1) * interval.minutes();
+        List<MarketCandleEntity> entities = repository
+                .findBySymbolAndIntervalAndStartedAtLessThanEqualOrderByStartedAtDesc(
+                        MarketPriceService.SYMBOL, CandleInterval.ONE_MINUTE, before,
+                        PageRequest.of(0, sourceCount));
+        List<MarketCandle> source = new ArrayList<>();
+        entities.forEach(entity -> source.add(new MarketCandle(entity.getStartedAt(), entity.getOpen(),
+                entity.getHigh(), entity.getLow(), entity.getClose(), entity.getVolume(), true)));
+        List<MarketCandle> aggregated = MarketCandleAggregator.aggregate(source, interval, Instant.now());
+        int from = Math.max(0, aggregated.size() - count);
+        // 시뮬레이션 원본은 시작 시각을 저장하므로 첫 반환 봉 직전 1분까지를 다음 상한으로 삼는다.
+        Instant nextBefore = from > 0 ? aggregated.get(from).startedAt().minusSeconds(60) : null;
+        return new MarketCandlePage(MarketPriceService.SYMBOL, interval, "SIMULATED",
+                aggregated.subList(from, aggregated.size()), nextBefore);
+    }
+
     static Instant bucket(Instant instant, CandleInterval interval) {
         if (interval == CandleInterval.ONE_MINUTE) return instant.truncatedTo(ChronoUnit.MINUTES);
-        return instant.atZone(KST).toLocalDate().atStartOfDay(KST).toInstant();
+        if (interval == CandleInterval.ONE_DAY) {
+            return instant.atZone(KST).toLocalDate().atStartOfDay(KST).toInstant();
+        }
+        return MarketCandleAggregator.bucket(instant, interval);
     }
 }

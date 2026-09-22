@@ -105,6 +105,7 @@ input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(92, 167, 255
 .chart-heading { margin-bottom: 12px; }
 .chart-actions, .interval-switch, .chart-meta { display: flex; align-items: center; gap: 9px; }
 .chart-actions { flex-wrap: wrap; justify-content: flex-end; }
+.interval-switch { flex-wrap: wrap; }
 .button.interval { min-width: 58px; padding: 8px 12px; }
 .button.interval.active { color: #041a17; border-color: var(--cyan); background: var(--cyan); }
 .chart-meta { justify-content: space-between; margin-bottom: 10px; color: var(--muted); font-size: 0.76rem; }

@@ -68,7 +68,7 @@ public class MarketController {
     @GetMapping("/{symbol}/candles")
     public MarketCandlePage candles(@PathVariable String symbol,
             @RequestParam(defaultValue = "1m") String interval,
-            @RequestParam(defaultValue = "100") int count,
+            @RequestParam(required = false) Integer count,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant before) {
         return candleService.candles(symbol, interval, count, before);

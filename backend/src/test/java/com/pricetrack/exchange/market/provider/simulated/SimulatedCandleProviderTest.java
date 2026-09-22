@@ -67,6 +67,29 @@ class SimulatedCandleProviderTest {
         assertThat(page.nextBefore()).isEqualTo(oldest);
     }
 
+    @Test
+    void aggregatesStoredMinuteCandlesForFiveMinuteRequests() {
+        MarketCandleRepository repository = mock(MarketCandleRepository.class);
+        when(repository.findBySymbolAndIntervalAndStartedAtLessThanEqualOrderByStartedAtDesc(
+                any(), any(), any(), any(Pageable.class)))
+                .thenReturn(java.util.List.of(
+                        candle(Instant.parse("2026-09-16T00:06:00Z"), "106"),
+                        candle(Instant.parse("2026-09-16T00:05:00Z"), "105"),
+                        candle(Instant.parse("2026-09-16T00:01:00Z"), "101"),
+                        candle(Instant.parse("2026-09-16T00:00:00Z"), "100")));
+        SimulatedCandleProvider provider = new SimulatedCandleProvider(repository);
+
+        MarketCandlePage page = provider.candles(CandleInterval.FIVE_MINUTES, 1,
+                Instant.parse("2026-09-16T00:10:00Z"));
+
+        assertThat(page.candles()).hasSize(1);
+        assertThat(page.candles().get(0).startedAt()).isEqualTo(Instant.parse("2026-09-16T00:05:00Z"));
+        assertThat(page.candles().get(0).open()).isEqualByComparingTo("105");
+        assertThat(page.candles().get(0).close()).isEqualByComparingTo("106");
+        assertThat(page.candles().get(0).volume()).isEqualByComparingTo("2");
+        assertThat(page.nextBefore()).isEqualTo(Instant.parse("2026-09-16T00:04:00Z"));
+    }
+
     private MarketCandleEntity candle(Instant startedAt, String price) {
         MarketCandleEntity candle = new MarketCandleEntity();
         candle.setSymbol("mSEC");
