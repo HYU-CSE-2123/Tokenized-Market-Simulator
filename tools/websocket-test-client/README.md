@@ -23,7 +23,7 @@ npm run dev
 브라우저에서 `http://127.0.0.1:5173`을 엽니다. 다른 백엔드 주소를 사용할 때는 실행 전에 `BACKEND_URL`을 지정합니다.
 
 ```powershell
-$env:BACKEND_URL = "http://127.0.0.1:8080"
+$env:BACKEND_URL = "http://127.0.0.1:8082"
 npm run dev
 ```
 
@@ -42,6 +42,8 @@ Vite 개발 프록시가 `/api`, `/ws`, `/ws-sockjs`를 백엔드에 전달하�
 9. JWT를 지우고 연결하면 공개 이벤트만 구독되는지 확인합니다.
 
 차트는 최초 로딩·주기 변경·WebSocket 재연결 때 REST 캔들을 다시 조회해 놓친 구간을 복구합니다. 현재 봉은 이벤트의 서버 발행 시각이 아니라 공급자의 `observedAt`으로 구간을 정하고, Toss에서는 실제 체결량을 누적하며 시뮬레이션에서는 tick 하나를 거래량 1로 표시합니다.
+
+API와 DB의 시각은 표준 UTC로 유지하며, 차트 시간축과 크로스헤어는 한국 시장에 맞춰 `Asia/Seoul`로 표시합니다.
 
 캔들 렌더링은 Apache-2.0의 `lightweight-charts`를 사용하며 라이선스가 요구하는 TradingView 저작자 로고와 링크를 차트에 유지합니다.
 

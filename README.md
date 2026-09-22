@@ -56,7 +56,7 @@ cd backend
 ```
 
 ```bash
-curl http://localhost:8080/api/health
+curl http://localhost:8082/api/health
 ```
 
 ### 4. WebSocket 브라우저 검증

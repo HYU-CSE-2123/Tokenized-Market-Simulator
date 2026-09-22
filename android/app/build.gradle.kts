@@ -17,8 +17,8 @@ android {
         versionName = "0.1.0"
 
         // 백엔드 베이스 URL (에뮬레이터에서 호스트는 10.0.2.2)
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
-        buildConfigField("String", "WS_URL", "\"http://10.0.2.2:8080/ws\"")
+        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8082/\"")
+        buildConfigField("String", "WS_URL", "\"http://10.0.2.2:8082/ws\"")
     }
 
     buildTypes {

@@ -1220,3 +1220,76 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 사용자가 실제 브라우저에서 Native/SockJS 연결 후 장중 현재 봉이 움직이는지 시각적으로 확인
 - 화면 가격과 PriceOracle 체결 가격의 편차·만료·최소 수령량 보호 설계
+
+---
+
+# 로컬 백엔드 기본 포트 8082 통일 — 완료
+
+> 작성: 2026-09-17
+
+## 구현
+
+- Windows TCP 제외 범위 `7982~8081`에 포함된 8080에서 Spring Boot가 bind에 실패해 기본 포트를 8082로 변경했다.
+- 실제 `backend/.env`, 공유용 `.env.example`, Spring fallback과 Docker `EXPOSE`를 8082로 맞췄다.
+- Vite 기본 프록시와 Android 에뮬레이터 REST·WebSocket 주소도 각각 `127.0.0.1:8082`, `10.0.2.2:8082`로 통일했다.
+- 루트·Android·테스트 웹·구조 설명 문서의 현재 실행 주소를 함께 갱신했다. 과거 검증 당시의 포트가 기록된 구현 로그는 역사적 사실이라 수정하지 않았다.
+
+## 결정
+
+- Docker·Hyper-V·WSL이 관리할 수 있는 Windows 제외 포트를 강제로 해제하지 않고, 예약 범위 밖 포트로 이동해 개발 환경 부작용을 피한다.
+- `SERVER_PORT`와 `BACKEND_URL` 환경 변수로 필요한 환경에서는 계속 다른 포트를 선택할 수 있다.
+
+## 검증
+
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: 총 114개 중 111개 통과, 선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- `cd tools/websocket-test-client && npm test`: 7개 통과, 실패 0개
+- `cd tools/websocket-test-client && npm run build`: 성공, 84개 모듈 변환 및 production bundle 생성
+- Docker의 PostgreSQL은 healthy, Anvil은 실행 중인 상태에서 백엔드를 실제 `127.0.0.1:8082`로 기동해 `GET /api/health`의 `UP` 응답과 8082 리스닝을 확인했다.
+- 임시 Vite 서버를 5174로 기동하고 `GET http://127.0.0.1:5174/api/health`가 8082 백엔드의 `UP` 응답을 전달하는 것을 확인했다. 검증용 백엔드와 Vite 프로세스는 종료했다.
+- `cd android && .\gradlew.bat :app:assembleDebug --no-daemon`: 로컬에 Android SDK 경로가 설정되거나 설치되어 있지 않아 컴파일 전 단계에서 중단됐다. Gradle 설정 해석까지는 진행됐으며, Android Studio SDK가 준비된 환경에서 재검증이 필요하다.
+
+## 검토
+
+- 별도 검토자가 승인된 8080→8082 변경의 11개 추적 파일과 실제 `.env`의 `SERVER_PORT`를 확인했으며, 현재 실행 경로의 포트가 일관되게 변경됐다고 판단했다.
+- 백엔드 테스트 XML 114개, 웹 테스트 7개와 production build, `git diff --check`, 실기동·프록시 검증 기록을 확인한 결과 `발견된 필수 수정 없음`으로 결론 냈다.
+- Android SDK가 준비된 환경에서 `assembleDebug`를 재검증해야 한다는 환경 제약은 남아 있지만, 이번 포트 설정에 대한 코드 결함 증거는 아니므로 필수 수정으로 분류하지 않았다.
+
+---
+
+# Toss 실제 시세 로딩·차트 한국 시간 표시 보강 — 완료
+
+> 작성: 2026-09-22
+
+## 구현
+
+- `backend/`에서 Gradle을 실행할 때의 `.env`뿐 아니라 저장소 루트에서 IntelliJ로 실행할 때의 `backend/.env`도 Spring config data로 선택적으로 불러오도록 했다.
+- 자동 테스트는 개발자의 실제 `.env`와 무관하게 `simulated` 공급자를 명시해 외부 Toss API와 비밀정보에 의존하지 않도록 격리했다.
+- API·DB·WebSocket timestamp는 UTC `Instant`로 유지하고, 브라우저 캔들 차트의 시간축과 크로스헤어만 `Asia/Seoul` 기준으로 표시한다.
+- 차트 시각 변환을 별도 순수 함수로 분리하고 UTC 09:00가 KST 18:00로 표시되는 테스트를 추가했다.
+
+## 결정
+
+- timestamp 자체에 9시간을 더하지 않는다. 동일 시점을 나타내는 UTC 원본을 유지하고 사용자 인터페이스에서만 시장 시간대로 변환해 저장·정렬·봉 구간 계산 오류를 피한다.
+- Toss 모드가 인증에 실패할 때 시뮬레이션으로 자동 대체하지 않는다. 실제 시세로 오인할 위험이 있으므로 기존 정책대로 서버 기동을 실패시킨다.
+- 시뮬레이션 과거 봉은 백엔드 실행 중 PostgreSQL에 생성된 구간만 존재하지만, Toss 과거 봉은 서버 기동 후 Toss 캔들 API에서 다시 조회한다.
+
+## 검증
+
+- `cd tools/websocket-test-client && npm test`: 9개 통과, 실패 0개. 기존 캔들 병합 7개와 KST 표시·잘못된 시간 거부 2개를 확인했다.
+- `cd tools/websocket-test-client && npm run build`: 성공, 85개 모듈 변환 및 production bundle 생성
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: `BUILD SUCCESSFUL`
+- 저장소 루트에서 백엔드를 재기동하자 `backend/.env`의 `PRICE_PROVIDER=toss`가 적용되어 Toss OAuth 토큰 발급 단계까지 진입했다.
+- Toss OAuth가 HTTP 403을 반환해 서버가 기동을 중단했다. 허용 IP 또는 자격 증명 설정을 Toss 개발자 콘솔에서 확인한 뒤 실제 `provider=TOSS`·캔들 응답·WebSocket 수신을 재검증해야 한다.
+- 사용자가 Toss 개발자 콘솔에 허용 IP를 추가한 뒤 재기동한 서버에서 `GET /api/health=UP`, `provider=TOSS`, `priceStatus=LIVE`를 확인했다.
+- 최근 Toss 1분봉 20개는 모두 1분 간격으로 연속됐고 실제 거래량을 포함했다. UTC `10:30~10:49`는 KST `19:30~19:49`로 대응한다.
+- 5초 간격으로 현재가를 재조회했을 때 `276500 → 277000`, `observedAt`은 `10:53:09.752Z → 10:53:14.723Z`로 전진해 Toss WebSocket 실시간 체결 반영을 확인했다.
+
+## 검토
+
+- 별도 검토자가 저장소 루트·`backend/` 실행 경로별 `.env` 탐색과 OS 환경변수 우선순위, 테스트의 `simulated` 격리, UTC 원본/KST 표시 분리를 확인했다.
+- 웹 테스트 9개와 백엔드 테스트를 독립 실행하고 문서 일치 여부를 점검한 결과 `발견된 필수 수정 없음`으로 결론 냈다.
+- Toss OAuth HTTP 403으로 실제 시세·캔들·WebSocket 검증이 남은 점은 외부 설정에 따른 검증 한계이며 필수 코드 수정으로 분류하지 않았다.
+
+## 남은 작업
+
+- 테스트 웹 개발 서버를 재시작한 뒤 브라우저 차트 축이 KST로 표시되고 현재 1분봉이 실시간으로 움직이는지 최종 육안 확인

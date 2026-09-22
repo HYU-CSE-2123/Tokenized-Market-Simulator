@@ -18,6 +18,8 @@ app:
     secret: test-secret-test-secret-test-secret-32bytes
     validity-ms: 3600000
   price:
+    # 개발자 로컬 .env의 실제 공급자 설정과 무관하게 자동 테스트는 외부 API를 호출하지 않는다.
+    provider: simulated
     update-interval-ms: 60000
     initial-delay-ms: 60000
   blockchain:

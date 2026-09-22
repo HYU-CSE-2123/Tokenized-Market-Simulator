@@ -32,4 +32,4 @@ Login / Signup → MainScreen(하단 탭): Market · Trade · Portfolio · Histo
 ```
 
 ## 백엔드 연결
-`app/build.gradle.kts` 의 `BASE_URL`/`WS_URL` 은 안드로이드 에뮬레이터 기준 `http://10.0.2.2:8080` (호스트의 localhost). 실기기는 PC 의 LAN IP 로 변경한다.
+`app/build.gradle.kts` 의 `BASE_URL`/`WS_URL` 은 안드로이드 에뮬레이터 기준 `http://10.0.2.2:8082` (호스트의 localhost). 실기기는 PC 의 LAN IP 로 변경한다.

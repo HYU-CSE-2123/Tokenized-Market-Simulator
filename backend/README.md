@@ -231,6 +231,7 @@ Copy-Item .env.example .env
 
 - `backend/.env`: 실제 로컬 값과 비밀정보를 저장하며 Git에서 제외됩니다.
 - `backend/.env.example`: 팀원이 공유하는 변수 목록이며 실제 비밀번호·개인키는 넣지 않습니다.
+- Spring 설정은 `backend/`에서 Gradle로 실행할 때의 `.env`와 저장소 루트에서 IntelliJ로 실행할 때의 `backend/.env`를 모두 선택적으로 탐색합니다.
 - OS 환경 변수가 같은 이름으로 설정돼 있으면 `.env`보다 OS 환경 변수가 우선합니다.
 - `JWT_SECRET`, `ADMIN_PASSWORD`, `OPERATOR_PRIVATE_KEY`는 `.env`에서 직접 입력하고 주석을 해제합니다.
 - `.env`가 없어도 기본값으로 기동할 수 있지만 관리자는 생성되지 않습니다.
@@ -274,6 +275,7 @@ TOSS_CLIENT_SECRET=토스증권-client-secret
 - 검증된 최신 체결만 스냅샷에 반영하며 과거·동일 시각 체결은 무시합니다. 가격이 바뀌면 기존 `/topic/markets/mSEC/price`로 앱에 전달하고 기존 Oracle 동기화도 최신 가격을 읽습니다.
 - Toss 시세 채널은 공급자 정책상 유실 가능한 최신값 우선 스트림입니다. 장 운영시간 판정, 지연·오래된 가격의 거래 차단과 Oracle 반영 정책은 후속 단계입니다.
 - 시작 시 국내 장 캘린더와 수정주가 일봉을 함께 조회해 전 영업일 종가를 기준 가격으로 사용합니다. 프리·정규·애프터 세션 중 하나면 `OPEN`, 그 외와 휴장일은 `CLOSED`입니다.
+- 과거 1분봉·일봉은 Toss 캔들 API에서 조회하므로 우리 백엔드가 꺼져 있던 구간도 서버 재기동 후 다시 불러올 수 있습니다.
 - 장중에는 마지막 관측 후 15초부터 `DEGRADED`, 60초부터 `STALE`이며 WebSocket이 재연결 중이어도 `DEGRADED`입니다. 장 마감·휴장 시 마지막 공식 가격은 시간 경과만으로 오래된 가격이 되지 않습니다.
 - 캘린더와 전일 종가는 매일 KST 00:05에 갱신하며 실패하면 마지막 정상 참조 데이터를 유지합니다.
 - `GET /api/markets/mSEC`는 `price`, `previousClose`, `change`, `changeRate`, `marketStatus`, `priceStatus`, `provider`, `observedAt`을 반환합니다. 기존 Android 호환용 `updatedAt`은 `observedAt`과 같은 값으로 유지합니다.

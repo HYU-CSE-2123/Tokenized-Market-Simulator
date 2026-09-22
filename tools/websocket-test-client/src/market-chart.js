@@ -1,4 +1,5 @@
 import { CandlestickSeries, ColorType, HistogramSeries, createChart } from 'lightweight-charts';
+import { formatChartAxisTime, formatChartTime } from './chart-time.js';
 
 export class MarketChart {
   #chart;
@@ -20,8 +21,13 @@ export class MarketChart {
         horzLines: { color: '#202a38' },
       },
       rightPriceScale: { borderColor: '#334155' },
-      timeScale: { borderColor: '#334155', timeVisible: true, secondsVisible: false },
-      localization: { locale: 'ko-KR' },
+      timeScale: {
+        borderColor: '#334155',
+        timeVisible: true,
+        secondsVisible: false,
+        tickMarkFormatter: formatChartAxisTime,
+      },
+      localization: { locale: 'ko-KR', timeFormatter: formatChartTime },
     });
     this.#candles = this.#chart.addSeries(CandlestickSeries, {
       upColor: '#ef4444', downColor: '#3b82f6', borderVisible: false,
