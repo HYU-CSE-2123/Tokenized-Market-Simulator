@@ -1,7 +1,9 @@
 import './style.css';
 import { ApiClient, ApiError } from './api.js';
 import { MarketSocket } from './websocket.js';
-import { CandleLoadBuffer, applyPriceTick, normalizeCandles } from './candles.js';
+import {
+  CandleHistoryCursor, CandleLoadBuffer, applyPriceTick, normalizeCandles, prependCandleHistory,
+} from './candles.js';
 import { MarketChart } from './market-chart.js';
 
 const api = new ApiClient();
@@ -11,11 +13,13 @@ let chartInterval = '1m';
 let chartCandles = [];
 let chartRequest = 0;
 const chartLoadBuffer = new CandleLoadBuffer();
+const chartHistory = new CandleHistoryCursor();
 
 const elements = Object.fromEntries(
   [...document.querySelectorAll('[id]')].map((element) => [element.id, element]),
 );
 const marketChart = new MarketChart(elements['market-chart']);
+marketChart.onNeedHistory(loadOlderCandles);
 
 const socket = new MarketSocket({
   onStatus: renderSocketStatus,
@@ -136,6 +140,7 @@ async function loadChart() {
   const request = ++chartRequest;
   const interval = chartInterval;
   const load = chartLoadBuffer.begin(interval);
+  chartHistory.reset(interval, null);
   setChartStatus('LOADING', `${interval} 캔들 불러오는 중`);
   elements['reload-chart'].disabled = true;
   try {
@@ -144,6 +149,7 @@ async function loadChart() {
     const reconciled = chartLoadBuffer.resolve(load, normalizeCandles(result.body.candles));
     if (!reconciled) return;
     chartCandles = reconciled.candles;
+    chartHistory.reset(interval, result.body.nextBefore);
     marketChart.setData(chartCandles);
     const receivedLiveTick = reconciled.tickCount > 0;
     setChartStatus(receivedLiveTick ? 'LIVE' : 'READY',
@@ -159,6 +165,33 @@ async function loadChart() {
     if (request === chartRequest) {
       elements['reload-chart'].disabled = false;
     }
+  }
+}
+
+async function loadOlderCandles() {
+  const load = chartHistory.begin(chartInterval);
+  if (!load) return;
+  let accepted = false;
+  setChartStatus('LOADING', `${load.interval} 이전 캔들 불러오는 중`);
+  try {
+    const result = await api.candles(load.interval, CHART_COUNTS[load.interval], load.before);
+    const history = normalizeCandles(result.body.candles);
+    const pageState = chartHistory.resolve(load, result.body.nextBefore);
+    if (!pageState) return;
+    accepted = true;
+    const merged = prependCandleHistory(chartCandles, history);
+    chartCandles = merged.candles;
+    marketChart.setData(chartCandles, {
+      prepended: merged.prepended,
+      preserveVisibleRange: true,
+    });
+    const detail = pageState.exhausted ? '가장 오래된 데이터까지 표시' : `총 ${chartCandles.length}개`;
+    setChartStatus('READY', `${result.body.provider} · ${detail}`);
+    elements['chart-updated'].textContent = merged.prepended > 0
+      ? `과거 봉 ${merged.prepended}개 추가` : '추가할 과거 봉이 없습니다';
+  } catch (error) {
+    if (!accepted && !chartHistory.reject(load)) return;
+    setChartStatus('ERROR', error.message || String(error));
   }
 }
 

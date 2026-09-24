@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CandleLoadBuffer, applyBufferedTicks, applyPriceTick, bucketTime, normalizeCandles,
+  CandleHistoryCursor, CandleLoadBuffer, applyBufferedTicks, applyPriceTick, bucketTime,
+  normalizeCandles, prependCandleHistory,
 } from '../src/candles.js';
 
 test('normalizes REST candles in chronological order', () => {
@@ -88,6 +89,54 @@ test('keeps reconnect ticks and rejects the stale reconnect response', () => {
   const latest = buffer.resolve(latestReconnect, []);
   assert.equal(latest.tickCount, 1);
   assert.equal(latest.candles[0].close, 102);
+});
+
+test('prepends older candles in order without replacing current realtime values', () => {
+  const current = normalizeCandles([
+    candle('2026-09-16T00:01:00Z', '101'),
+    candle('2026-09-16T00:02:00Z', '102'),
+  ]);
+  current[0] = { ...current[0], close: 105, closed: false };
+  const history = normalizeCandles([
+    candle('2026-09-16T00:00:00Z', '100'),
+    candle('2026-09-16T00:01:00Z', '999'),
+  ]);
+
+  const result = prependCandleHistory(current, history);
+
+  assert.equal(result.prepended, 1);
+  assert.deepEqual(result.candles.map(({ time }) => time), [1789516800, 1789516860, 1789516920]);
+  assert.equal(result.candles[1].close, 105);
+  assert.equal(result.candles[1].closed, false);
+});
+
+test('serializes history loads and stops when the cursor is exhausted', () => {
+  const cursor = new CandleHistoryCursor();
+  cursor.reset('5m', '2026-09-16T00:00:00Z');
+  const first = cursor.begin('5m');
+
+  assert.equal(first.before, '2026-09-16T00:00:00Z');
+  assert.equal(cursor.begin('5m'), null);
+  assert.deepEqual(cursor.resolve(first, '2026-09-15T23:00:00Z'), {
+    exhausted: false, nextBefore: '2026-09-15T23:00:00Z',
+  });
+
+  const second = cursor.begin('5m');
+  assert.equal(second.before, '2026-09-15T23:00:00Z');
+  assert.deepEqual(cursor.resolve(second, null), { exhausted: true, nextBefore: null });
+  assert.equal(cursor.begin('5m'), null);
+});
+
+test('rejects a stale history response after interval reset and allows retry after failure', () => {
+  const cursor = new CandleHistoryCursor();
+  cursor.reset('1m', '2026-09-16T00:00:00Z');
+  const stale = cursor.begin('1m');
+  cursor.reset('1h', '2026-09-15T00:00:00Z');
+
+  assert.equal(cursor.resolve(stale, '2026-09-14T00:00:00Z'), null);
+  const active = cursor.begin('1h');
+  assert.equal(cursor.reject(active), true);
+  assert.equal(cursor.begin('1h').before, '2026-09-15T00:00:00Z');
 });
 
 function candle(startedAt, price) {

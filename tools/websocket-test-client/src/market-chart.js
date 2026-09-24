@@ -6,6 +6,9 @@ export class MarketChart {
   #candles;
   #volume;
   #resizeObserver;
+  #historyIntent = false;
+  #historyListener = null;
+  #markHistoryIntent;
 
   constructor(container) {
     this.#chart = createChart(container, {
@@ -41,16 +44,41 @@ export class MarketChart {
     this.#volume.priceScale().applyOptions({ scaleMargins: { top: 0.78, bottom: 0 } });
     this.#resizeObserver = new ResizeObserver(() => this.#chart.timeScale().fitContent());
     this.#resizeObserver.observe(container);
+    this.#markHistoryIntent = () => { this.#historyIntent = true; };
+    container.addEventListener('wheel', this.#markHistoryIntent, { passive: true });
+    container.addEventListener('pointerdown', this.#markHistoryIntent, { passive: true });
+    container.addEventListener('touchstart', this.#markHistoryIntent, { passive: true });
   }
 
-  setData(candles) {
+  setData(candles, { prepended = 0, preserveVisibleRange = false } = {}) {
+    const visibleRange = preserveVisibleRange
+      ? this.#chart.timeScale().getVisibleLogicalRange() : null;
     this.#candles.setData(candles.map(({ time, open, high, low, close }) => (
       { time, open, high, low, close }
     )));
     this.#volume.setData(candles.map(({ time, volume, open, close }) => ({
       time, value: volume, color: close >= open ? '#ef444466' : '#3b82f666',
     })));
-    this.#chart.timeScale().fitContent();
+    if (visibleRange && prepended > 0) {
+      this.#chart.timeScale().setVisibleLogicalRange({
+        from: visibleRange.from + prepended,
+        to: visibleRange.to + prepended,
+      });
+    } else if (!preserveVisibleRange) {
+      this.#chart.timeScale().fitContent();
+    }
+  }
+
+  onNeedHistory(listener) {
+    if (this.#historyListener) {
+      this.#chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.#historyListener);
+    }
+    this.#historyListener = (range) => {
+      if (!this.#historyIntent || !range || range.from > 10) return;
+      this.#historyIntent = false;
+      listener();
+    };
+    this.#chart.timeScale().subscribeVisibleLogicalRangeChange(this.#historyListener);
   }
 
   update(candle) {
@@ -63,6 +91,9 @@ export class MarketChart {
 
   destroy() {
     this.#resizeObserver.disconnect();
+    if (this.#historyListener) {
+      this.#chart.timeScale().unsubscribeVisibleLogicalRangeChange(this.#historyListener);
+    }
     this.#chart.remove();
   }
 }

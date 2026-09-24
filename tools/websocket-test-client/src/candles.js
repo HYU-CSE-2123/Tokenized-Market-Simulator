@@ -21,6 +21,18 @@ export function normalizeCandles(candles = []) {
   })).sort((left, right) => left.time - right.time);
 }
 
+/** 과거 REST 페이지를 현재 실시간 상태 앞에 붙이고 동일 시각은 현재 값을 보존한다. */
+export function prependCandleHistory(current, history) {
+  const merged = new Map(history.map((candle) => [candle.time, candle]));
+  current.forEach((candle) => merged.set(candle.time, candle));
+  const candles = [...merged.values()].sort((left, right) => left.time - right.time);
+  const firstCurrentTime = current.at(0)?.time;
+  const prepended = firstCurrentTime === undefined
+    ? candles.length
+    : candles.filter(({ time }) => time < firstCurrentTime).length;
+  return { candles, prepended };
+}
+
 export function applyPriceTick(candles, tick, interval) {
   const observedAt = new Date(tick.observedAt);
   const price = number(tick.price, 'price');
@@ -81,6 +93,51 @@ export class CandleLoadBuffer {
 
   reject(load) {
     if (this.#active?.id === load.id) this.#active = null;
+  }
+}
+
+/** 주기별 과거 페이지 cursor와 중복 요청·오래된 응답을 통제한다. */
+export class CandleHistoryCursor {
+  #generation = 0;
+  #interval = null;
+  #nextBefore = null;
+  #loading = false;
+  #exhausted = true;
+
+  reset(interval, nextBefore) {
+    this.#generation += 1;
+    this.#interval = interval;
+    this.#nextBefore = nextBefore || null;
+    this.#loading = false;
+    this.#exhausted = !this.#nextBefore;
+  }
+
+  begin(interval) {
+    if (interval !== this.#interval || this.#loading || this.#exhausted) return null;
+    this.#loading = true;
+    return { generation: this.#generation, interval, before: this.#nextBefore };
+  }
+
+  resolve(load, nextBefore) {
+    if (!this.#matches(load)) return null;
+    this.#loading = false;
+    const cursor = nextBefore || null;
+    this.#exhausted = !cursor || cursor === load.before;
+    this.#nextBefore = this.#exhausted ? null : cursor;
+    return { exhausted: this.#exhausted, nextBefore: this.#nextBefore };
+  }
+
+  reject(load) {
+    if (!this.#matches(load)) return false;
+    this.#loading = false;
+    return true;
+  }
+
+  #matches(load) {
+    return Boolean(load)
+      && load.generation === this.#generation
+      && load.interval === this.#interval
+      && this.#loading;
   }
 }
 
