@@ -20,6 +20,9 @@
 - [`oracle-price-execution-design.md`](oracle-price-execution-design.md) — Toss 가격과 온체인 체결 가격의 시간차, 서명 가격 기반 Pull Oracle과 원자적 정산의 합의 방향
 - [`phase-6-3-acceptance.md`](phase-6-3-acceptance.md) — 실제 Toss·PostgreSQL·Anvil·웹 종단간 인수 체크리스트와 실행 결과
 - [`career-project-brief.md`](career-project-brief.md) — 자기소개서·이력서·면접 작성에 사용할 구현 사실, 성과와 미완료 범위
+- [`AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md`](AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md) — 사용자 작성 AI 확장 지침. AI Phase 번호는 거래소 Phase와 별개
+- [AI Phase 0 감사](../docs/ai/phase-0-baseline-audit.md) — 실제 인증·거래·조회 경계, 호환성 조사와 테스트 기준
+- [ADR-001 AI 실행 경계](../docs/ai/adr/ADR-001-ai-runtime-boundary.md) — 런타임 대안 비교와 추천안. 사용자 승인 대기
 
 ## 단일 출처(Source of Truth)
 

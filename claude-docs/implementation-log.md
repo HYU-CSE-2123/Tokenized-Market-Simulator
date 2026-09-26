@@ -1817,3 +1817,43 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 같은 환경에서 매도까지 수행하고 최종 잔고·체결가·온체인 transaction hash를 대조한다.
 - 백엔드 또는 RPC 중단 시 웹 재연결·REST 복구 표시와 주문 복구 결과를 수동 인수 항목으로 확인한다.
 - 위 항목이 끝난 뒤 Phase 6.3을 완료로 변경하고 별도 검토를 거쳐 Phase 6.4 Android 인수 문서를 작성한다.
+
+---
+
+# AI Phase 0: 코드베이스 감사 — 조사 완료 / 런타임 제안 승인 대기
+
+> 작성: 2026-09-27 / 조사 기준 커밋: `c6b0ec9`
+
+## 작업
+
+- 사용자 작성 `AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md` 전체와 기존 문서·소스·테스트를 대조했다. 사용자 지침 원문은 수정하지 않았다.
+- `docs/ai/phase-0-baseline-audit.md`에 기술 스택, JWT/소유권, 견적·주문·전송·복구·정산 흐름, 조회 Tool 후보와 금지 경계를 기록했다.
+- `docs/ai/adr/ADR-001-ai-runtime-boundary.md`에 내부 AI 모듈·별도 서비스·기존 Boot 업그레이드를 비교했다. 제품 코드·테스트 코드·의존성·DB·환경 파일은 변경하지 않았다.
+- 공통 문서 목록에 지침·감사·ADR 링크를 추가했다. 기존 거래소 Phase 6.3/6.4의 미완료 상태는 유지한다.
+
+## 결정과 제안
+
+- AI는 읽기 전용 운영 설명을 담당하며 기존 거래 의미와 보안 경계를 유지한다.
+- `REVIEW_REQUIRED`는 BlockchainTransaction 상태다. 주문 상태와 자산 잠금은 유지되며 현재 AI 진단 이벤트는 없다.
+- 견적은 `observedAt + 30초`까지 유효하다. 준비 완료 후 SIGNED 저장 전 전송 실패를 보상해도 소비된 견적을 다시 ISSUED로 바꾸지 않는다.
+- 공식 문서에서 확인한 Spring AI 지원 Boot 조합과 현재 3.3.4가 다르므로, 내부 AI 모듈과 얇은 공급자 어댑터를 대안으로 제안했다. 확정·구현하지 않았으며 사용자 승인이 필요하다.
+- pgvector는 향후 PG16 호환 설치·백업·볼륨 보존·extension 검증이 필요하다. 이번에는 실DB extension 상태를 확인하거나 변경하지 않았다.
+
+## 검증
+
+- backend: `.\gradlew.bat test --no-daemon --rerun-tasks` — 146개 중 143개 통과, 3개 skipped, 실패·오류 0.
+- skipped는 Anvil 통합 2개와 PostgreSQL 경합 통합 1개다. 이번 조사에서는 실제 DB·체인 변경 테스트를 재실행하지 않았으며 과거 통과 이력과 구분한다.
+- backend: `.\gradlew.bat dependencies --configuration runtimeClasspath --no-daemon` — 성공. Gradle 캐시 접근 제한 후 승인된 권한으로 재실행했다.
+- contracts: `forge test --summary` — 36개 통과.
+- tools/websocket-test-client: `npm test` — 30개 통과. `npm run build` — 성공(87 modules), 최초 샌드박스 접근 제한 후 승인된 권한으로 재실행했다.
+
+## 검토
+
+- 코드·테스트와 문서를 자체 대조했다. 조사 및 동작에 영향 없는 문서 작업이므로 공통 지침의 생략 허용에 따라 별도 검토 에이전트는 호출하지 않았다.
+- AI 기능·권한 필터·pgvector는 미구현이며 위 회귀 테스트 통과를 AI 검증 완료로 간주하지 않는다.
+
+## 남은 작업
+
+- 런타임 제안에 대한 사용자 검토와 승인.
+- 승인 후 AI Phase 1에서 코드 사실에 근거한 운영 지식 문서 9개 작성. embedding·Tool·Agent 구현은 후속 Phase로 남긴다.
+- Phase 2 전에 공급자·모델·임베딩 차원·비용 상한 및 pgvector 도입 방식을 별도로 확정한다.
