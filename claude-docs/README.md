@@ -19,6 +19,7 @@
 - [`ai-development-experience.md`](ai-development-experience.md) — 프로젝트 지식 관리·독립 검토를 통한 하네스 엔지니어링 적용 경험, 근거와 실제 검증 범위
 - [`oracle-price-execution-design.md`](oracle-price-execution-design.md) — Toss 가격과 온체인 체결 가격의 시간차, 서명 가격 기반 Pull Oracle과 원자적 정산의 합의 방향
 - [`phase-6-3-acceptance.md`](phase-6-3-acceptance.md) — 실제 Toss·PostgreSQL·Anvil·웹 종단간 인수 체크리스트와 실행 결과
+- [`career-project-brief.md`](career-project-brief.md) — 자기소개서·이력서·면접 작성에 사용할 구현 사실, 성과와 미완료 범위
 
 ## 단일 출처(Source of Truth)
 
