@@ -74,6 +74,12 @@ main { padding-bottom: 80px; }
 .trade-status.success { color: var(--cyan); border-color: rgba(62, 230, 194, 0.45); }
 .trade-status.error { color: var(--red); border-color: rgba(255, 111, 127, 0.45); }
 .trade-status.neutral { color: var(--muted); }
+.sync-status { margin: 12px 0 0; font-size: 0.86rem; }
+.sync-status.success { color: var(--cyan); }
+.sync-status.error { color: var(--red); }
+.sync-status.neutral { color: var(--muted); }
+.sync-details { margin-top: 10px; }
+.sync-details .rest-output { max-height: 260px; }
 label { display: grid; gap: 7px; color: var(--muted); font-size: 0.78rem; font-weight: 700; }
 input {
   width: 100%;

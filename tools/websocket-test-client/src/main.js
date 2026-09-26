@@ -9,6 +9,9 @@ import {
   friendlyTradeError, isCurrentOrder, normalizeQuote, orderFillPlaceholder, quoteUsability,
   remainingSeconds, shouldRenderOrder,
 } from './trade-quote.js';
+import {
+  latestOrder, RecoveryCoordinator, recoveryState, SESSION_EVENT_CHANNELS, tradeForOrder,
+} from './recovery.js';
 
 const api = new ApiClient();
 const CHART_COUNTS = { '1m': 100, '5m': 100, '15m': 50, '30m': 30, '1h': 20, '1d': 100 };
@@ -21,6 +24,7 @@ const chartHistory = new CandleHistoryCursor();
 const tradeQuotes = { BUY: null, SELL: null };
 let lastOrder = null;
 let restBusy = false;
+const recoveryCoordinator = new RecoveryCoordinator();
 
 const elements = Object.fromEntries(
   [...document.querySelectorAll('[id]')].map((element) => [element.id, element]),
@@ -58,6 +62,7 @@ elements['clear-events'].addEventListener('click', clearEvents);
 elements['clear-token'].addEventListener('click', () => {
   socket.disconnect();
   api.clearToken();
+  resetUserState();
   renderToken();
 });
 
@@ -69,6 +74,8 @@ async function authRequest(action) {
     const result = action === 'signup'
       ? await api.signup(loginId, password, nickname)
       : await api.login(loginId, password);
+    socket.disconnect();
+    resetUserState();
     api.setToken(result.body.accessToken);
     renderToken();
     return result;
@@ -182,11 +189,70 @@ function renderToken() {
   elements['token-value'].textContent = api.token || '없음';
 }
 
-function renderSocketStatus(status, detail) {
+function renderSocketStatus(status, detail, context = {}) {
   elements['socket-status'].textContent = detail ? `${status}: ${detail}` : status;
-  const style = status === 'CONNECTED' ? 'success' : status === 'ERROR' ? 'error' : 'neutral';
+  const style = status === 'CONNECTED' ? 'success'
+    : status === 'ERROR' || status === 'AUTH_EXPIRED' ? 'error' : 'neutral';
   elements['socket-status'].className = `badge ${style}`;
-  if (status === 'CONNECTED') loadChart();
+  if (status === 'CONNECTED') void recoverState(context.reconnected);
+  if (status === 'RECONNECTING' || status === 'DISCONNECTED') {
+    recoveryCoordinator.invalidate();
+    setRecoveryStatus('WAITING', status === 'RECONNECTING' ? '연결 복구 대기 중' : '연결되지 않음');
+  }
+  if (status === 'AUTH_EXPIRED') {
+    recoveryCoordinator.invalidate();
+    api.clearToken();
+    resetUserState();
+    renderToken();
+    setRecoveryStatus('ERROR', '인증 만료 · 다시 로그인하세요.');
+  }
+}
+
+async function recoverState(reconnected = false) {
+  const run = recoveryCoordinator.begin();
+  setRecoveryStatus('SYNCING', reconnected ? '재연결 후 최신 상태 복구 중' : '초기 상태 동기화 중');
+  const requests = [
+    ['market', api.market()],
+    ['chart', loadChart({ throwOnError: true })],
+  ];
+  if (api.token) {
+    requests.push(['orders', api.orders()], ['trades', api.trades()], ['portfolio', api.portfolio()]);
+  }
+  const settled = await Promise.allSettled(requests.map(([, request]) => request));
+  if (!run.isCurrent()) return;
+  const entries = settled.map((result, index) => ({ name: requests[index][0], ...result }));
+  const snapshots = {};
+  entries.forEach((entry) => {
+    snapshots[entry.name] = entry.status === 'fulfilled'
+      ? entry.value?.body ?? '완료'
+      : { error: entry.reason?.message || String(entry.reason) };
+  });
+  const market = entries.find((entry) => entry.name === 'market' && entry.status === 'fulfilled');
+  if (market) renderMarket(market.value.body);
+  const orders = entries.find((entry) => entry.name === 'orders' && entry.status === 'fulfilled')?.value.body;
+  const trades = entries.find((entry) => entry.name === 'trades' && entry.status === 'fulfilled')?.value.body;
+  const order = latestOrder(orders);
+  if (order && renderOrder(order) && order.status === 'FILLED') {
+    renderRecoveredTrade(tradeForOrder(trades, order.orderId), order.orderId);
+  }
+  const summary = recoveryState(entries);
+  setRecoveryStatus(summary.state, summary.detail);
+  elements['sync-output'].textContent = JSON.stringify(snapshots, null, 2);
+  const authenticationFailure = entries.some((entry) => (
+    entry.status === 'rejected' && (entry.reason?.status === 401 || entry.reason?.status === 403)
+  ));
+  if (authenticationFailure) {
+    socket.disconnect();
+    api.clearToken();
+    renderToken();
+    renderSocketStatus('AUTH_EXPIRED', 'REST 인증이 만료되었습니다. 다시 로그인하세요.');
+  }
+}
+
+function setRecoveryStatus(state, detail) {
+  elements['sync-status'].textContent = `${state} · ${detail}`;
+  const style = state === 'READY' ? 'success' : state === 'ERROR' ? 'error' : 'neutral';
+  elements['sync-status'].className = `sync-status ${style}`;
 }
 
 function renderEvent(channel, event) {
@@ -218,7 +284,7 @@ function renderEvent(channel, event) {
   while (container.children.length > 100) container.lastElementChild.remove();
 }
 
-async function loadChart() {
+async function loadChart({ throwOnError = false } = {}) {
   const request = ++chartRequest;
   const interval = chartInterval;
   const load = chartLoadBuffer.begin(interval);
@@ -243,6 +309,7 @@ async function loadChart() {
     if (request !== chartRequest) return;
     chartLoadBuffer.reject(load);
     setChartStatus('ERROR', error.message || String(error));
+    if (throwOnError) throw error;
   } finally {
     if (request === chartRequest) {
       elements['reload-chart'].disabled = false;
@@ -393,16 +460,20 @@ async function renderFinalTrade(orderId) {
   try {
     const result = await api.trades();
     const trade = result.body.find((item) => item.orderId === orderId);
-    if (!trade || !isCurrentOrder(lastOrder, orderId)) return;
-    elements['last-fill-price'].textContent = `최종 체결 ${formatNumber(trade.price, '원')} · 수수료 ${formatNumber(trade.fee, 'mKRW')}`;
+    renderRecoveredTrade(trade, orderId);
   } catch (error) {
     if (!isCurrentOrder(lastOrder, orderId)) return;
     elements['last-fill-price'].textContent = `체결 조회 실패 · ${error.message || error}`;
   }
 }
 
+function renderRecoveredTrade(trade, orderId) {
+  if (!trade || !isCurrentOrder(lastOrder, orderId)) return;
+  elements['last-fill-price'].textContent = `최종 체결 ${formatNumber(trade.price, '원')} · 수수료 ${formatNumber(trade.fee, 'mKRW')}`;
+}
+
 function clearEvents() {
-  ['price', 'trade', 'order', 'portfolio'].forEach((channel) => {
+  SESSION_EVENT_CHANNELS.forEach((channel) => {
     const container = elements[`${channel}-events`];
     container.replaceChildren();
     container.classList.add('empty');
@@ -410,6 +481,20 @@ function clearEvents() {
   eventCount = 0;
   elements['event-count'].textContent = '0 events received';
   elements['last-event'].textContent = '—';
+}
+
+function resetUserState() {
+  clearEvents();
+  lastOrder = null;
+  tradeQuotes.BUY = null;
+  tradeQuotes.SELL = null;
+  renderQuote('BUY');
+  renderQuote('SELL');
+  elements['last-order-status'].textContent = '—';
+  elements['last-order-detail'].textContent = '주문 전';
+  elements['last-fill-price'].textContent = '최종 체결 가격 —';
+  elements['sync-output'].textContent = '새 인증으로 다시 연결하면 최신 상태를 동기화합니다.';
+  setRecoveryStatus('WAITING', 'WebSocket 연결 대기');
 }
 
 function requiredAmount(id) {
