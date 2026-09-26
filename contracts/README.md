@@ -56,7 +56,7 @@ observedAt <= block.timestamp + 2초
 block.timestamp <= validUntil
 ```
 
-같은 트랜잭션의 이후 동작이 실패하면 가격 기록과 `quoteId` 사용 처리도 함께 rollback된다. 현재 Phase 5.2-A에서는 검증 기능만 추가됐으며, `ExchangeVault.buy/sell`이 보고서를 소비하는 원자적 거래 경로는 Phase 5.2-B에서 연결한다. 기존 `updatePrice()`는 백엔드 전환 전 호환을 위해 임시 유지한다.
+`ExchangeVault.buy/sell`은 금액만 받는 기존 경로를 제공하지 않으며, 서명 보고서와 서명을 필수로 받는다. Vault는 `side`, `executor`, `inputAmount`, `minimumOutput`을 확인하고 같은 트랜잭션에서 Oracle 보고서를 소비한 가격으로 정산한다. 최소 수령량·유동성·토큰 전송 등 후속 동작이 실패하면 가격 기록과 `quoteId` 사용 처리도 함께 rollback된다. 기존 `updatePrice()`는 Phase 5.3 백엔드 전환 전 호환을 위해 임시 유지하지만 서명 거래의 가격 증명으로 사용되지 않는다.
 
 ## 로컬 시나리오 검증
 
@@ -65,7 +65,7 @@ anvil                       # 별도 터미널, 로컬체인 실행
 forge script script/Scenario.s.sol --rpc-url local --broadcast
 ```
 
-`Deploy.s.sol` 은 컨트랙트 배포와 주소 출력만 수행한다. `Scenario.s.sol` 은 기획서 §0.5 검증용으로, Anvil 기본 테스트 계정을 사용해 배포→매수→가격변경→매도 흐름을 한 번에 실행한다.
+`Deploy.s.sol` 은 컨트랙트 배포와 주소 출력만 수행한다. `Scenario.s.sol` 은 Anvil 기본 테스트 계정과 고정 테스트 서명 키를 사용해 배포→75,000원 서명 매수→80,000원 서명 매도 흐름을 한 번에 실행한다.
 
 ## 면책
 

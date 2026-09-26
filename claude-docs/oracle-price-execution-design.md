@@ -197,12 +197,12 @@ signer: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7
 - 가격 서명자와 거래 운영자 권한 분리 설계
 - 테스트 벡터로 Java와 Solidity가 동일 digest를 계산하는지 검증
 
-### Phase 5.2 — 컨트랙트 검증과 원자적 정산 — 진행 중
+### Phase 5.2 — 컨트랙트 검증과 원자적 정산 — 완료
 
 - Phase 5.2-A 완료: `PriceOracle` 서명 검증·freshness·승인 가격 기록
-- `ExchangeVault`의 검증 가격 기반 매수·매도
+- Phase 5.2-B 완료: `ExchangeVault`의 검증 가격 기반 매수·매도
 - 동일 트랜잭션 원자성, replay와 잘못된 서명 방어
-- Foundry 단위·fuzz 테스트와 배포 스크립트 갱신
+- Foundry 단위·fuzz 테스트와 시나리오 스크립트 갱신
 
 ### Phase 5.3 — 백엔드 가격 보고서와 주문 연동
 
@@ -246,3 +246,13 @@ block.timestamp <= validUntil
 - `priceObservedAt`은 외부 시장 관측 시각, 기존 `updatedAt`은 온체인 반영 블록 시각으로 분리한다.
 - 기존 소유자 `updatePrice()`는 Phase 5.3 백엔드 전환 전 호환을 위해 유지하며 블록 시각을 관측 시각으로 기록한다.
 - Phase 5.2-A만으로는 거래가 원자화되지 않는다. Vault 연결은 Phase 5.2-B 범위다.
+
+## 11. Phase 5.2-B 구현 결과
+
+- 기존 `buy(uint256)`와 `sell(uint256)`을 제거해 저장 가격만으로 거래할 수 있는 우회 경로를 없앴다.
+- 새 매수·매도는 EIP-712 `PriceReport`와 서명을 받고 `side`, `executor == msg.sender`, 0이 아닌 `inputAmount`와 `minimumOutput`을 먼저 검증한다.
+- Vault가 `PriceOracle.consumePriceReport()`에서 반환한 서명 가격을 즉시 견적과 정산에 사용하므로 이전 저장 가격과 보고서 가격이 달라도 보고서 가격으로 체결된다.
+- `quoteBuyAtPrice`와 `quoteSellAtPrice`를 추가해 백엔드가 보고서 가격과 현재 수수료를 기준으로 최소 수령량을 계산할 수 있다. 기존 `quoteBuy/quoteSell`은 마지막 Oracle 가격을 이용하는 참고 견적으로 남겼다.
+- 실제 결과가 `minimumOutput`보다 작으면 거래를 거부한다. 수수료 변경, 유동성 부족, 전송 실패 등 보고서 소비 이후 오류도 전체 트랜잭션을 되돌려 Oracle 가격과 `usedQuoteIds`를 복구한다.
+- `Scenario.s.sol`은 레거시 관리자 가격 변경 대신 75,000원 매수 보고서와 80,000원 매도 보고서를 각각 서명해 가격 상승 왕복 거래를 검증한다.
+- 백엔드의 기존 금액 기반 ABI 호출은 아직 새 함수 계약으로 전환되지 않았으며 Phase 5.3에서 보고서 발급·서명·인코딩과 함께 변경한다.

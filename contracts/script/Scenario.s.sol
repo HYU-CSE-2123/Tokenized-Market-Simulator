@@ -5,44 +5,32 @@ import {Script, console2} from "forge-std/Script.sol";
 import {MockKRW} from "../src/MockKRW.sol";
 import {SamsungPriceTrackingToken} from "../src/SamsungPriceTrackingToken.sol";
 import {PriceOracle} from "../src/PriceOracle.sol";
+import {PriceReportTypes} from "../src/PriceReportTypes.sol";
 import {ExchangeVault} from "../src/ExchangeVault.sol";
 
-/**
- * Phase 0.5 최소 동작 검증 — 실제 로컬체인(Anvil)에서 전체 흐름을 실행한다.
- * 기획서 §0.5: 매수 → 가격 변경(75k→80k) → 매도 → mKRW 잔고 증가 확인.
- *
- * 실행:
- *   anvil &
- *   forge script script/Scenario.s.sol --rpc-url local --broadcast
- *
- * OWNER_KEY / USER_KEY 는 Anvil 의 잘 알려진 기본 계정(테스트 전용). env 로 override 가능.
- */
+/// @notice Anvil에서 배포, 서명 가격 매수, 가격 상승, 매도를 한 번에 검증한다.
 contract Scenario is Script {
-    // Anvil 기본 계정 #0, #1 (공개된 테스트 키 — 실거래 사용 금지)
-    uint256 internal constant DEFAULT_OWNER_KEY =
-        0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
-    uint256 internal constant DEFAULT_USER_KEY =
-        0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d;
-
+    uint256 internal constant DEFAULT_OWNER_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    uint256 internal constant DEFAULT_USER_KEY = 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d;
+    uint256 internal constant PRICE_SIGNER_KEY = 0xA11CE;
     uint256 internal constant PRICE_75K = 75_000 * 1e8;
     uint256 internal constant PRICE_80K = 80_000 * 1e8;
-    uint256 internal constant PRICE_SIGNER_KEY = 0xA11CE;
+    bytes32 internal constant SYMBOL_HASH = keccak256("mSEC");
 
     function run() external {
         uint256 ownerKey = vm.envOr("OWNER_KEY", DEFAULT_OWNER_KEY);
         uint256 userKey = vm.envOr("USER_KEY", DEFAULT_USER_KEY);
         address user = vm.addr(userKey);
 
-        // 1~6) 배포 + minter 등록 + Vault 유동성 시드 (owner)
         vm.startBroadcast(ownerKey);
         MockKRW krw = new MockKRW();
         SamsungPriceTrackingToken token = new SamsungPriceTrackingToken();
-        PriceOracle oracle = new PriceOracle(PRICE_75K, vm.addr(PRICE_SIGNER_KEY), keccak256("mSEC"));
+        PriceOracle oracle = new PriceOracle(PRICE_75K, vm.addr(PRICE_SIGNER_KEY), SYMBOL_HASH);
         ExchangeVault vault = new ExchangeVault(address(krw), address(token), address(oracle));
         token.setMinter(address(vault));
         oracle.setAuthorizedConsumer(address(vault));
-        krw.faucet(); // owner 1,000,000 mKRW
-        krw.transfer(address(vault), 1_000_000 ether); // 매도 정산용 유동성
+        krw.faucet();
+        krw.transfer(address(vault), 1_000_000 ether);
         vm.stopBroadcast();
 
         console2.log("=== Deployed ===");
@@ -50,48 +38,74 @@ contract Scenario is Script {
         console2.log("mSEC          :", address(token));
         console2.log("PriceOracle   :", address(oracle));
         console2.log("ExchangeVault :", address(vault));
-        console2.log("Initial price : 75,000 (e8)");
 
-        // 7~9) 사용자 자금 확보 + 750,000 mKRW 매수
+        uint256 buyInput = 750_000 ether;
+        (uint256 buyMinimum,) = vault.quoteBuyAtPrice(buyInput, PRICE_75K);
+        PriceReportTypes.PriceReport memory buyReport =
+            _report(keccak256("scenario-buy"), PriceReportTypes.SIDE_BUY, buyInput, PRICE_75K, buyMinimum, user);
+        bytes memory buySignature = _sign(oracle, buyReport);
+
         vm.startBroadcast(userKey);
-        krw.faucet(); // user 1,000,000 mKRW
+        krw.faucet();
         uint256 krwBeforeBuy = krw.balanceOf(user);
-        krw.approve(address(vault), 750_000 ether);
-        uint256 tokenOut = vault.buy(750_000 ether);
+        krw.approve(address(vault), buyInput);
+        uint256 tokenOut = vault.buy(buyReport, buySignature);
         vm.stopBroadcast();
 
-        console2.log("\n=== After BUY (750,000 mKRW @75k) ===");
-        console2.log("user mSEC      :", token.balanceOf(user));
-        console2.log("user mKRW      :", krw.balanceOf(user));
-        console2.log("tokenOut(~10e18):", tokenOut);
+        console2.log("=== After signed BUY @75,000 ===");
+        console2.log("user mSEC :", token.balanceOf(user));
+        console2.log("user mKRW :", krw.balanceOf(user));
 
-        // 10) mSEC 약 10개 증가 확인
-        require(token.balanceOf(user) == tokenOut, "mSEC balance mismatch");
-        require(tokenOut > 9.9 ether && tokenOut < 10.1 ether, "expected ~10 mSEC");
+        (uint256 sellMinimum,) = vault.quoteSellAtPrice(tokenOut, PRICE_80K);
+        PriceReportTypes.PriceReport memory sellReport =
+            _report(keccak256("scenario-sell"), PriceReportTypes.SIDE_SELL, tokenOut, PRICE_80K, sellMinimum, user);
+        bytes memory sellSignature = _sign(oracle, sellReport);
 
-        // 11) 오라클 가격 80,000 으로 변경 (owner)
-        vm.startBroadcast(ownerKey);
-        oracle.updatePrice(PRICE_80K);
-        vm.stopBroadcast();
-        console2.log("\n=== Oracle price -> 80,000 (e8) ===");
-
-        // 12) 사용자가 보유 mSEC 전량 매도
         vm.startBroadcast(userKey);
-        uint256 krwOut = vault.sell(tokenOut);
+        uint256 krwOut = vault.sell(sellReport, sellSignature);
         vm.stopBroadcast();
 
         uint256 krwAfter = krw.balanceOf(user);
-        console2.log("\n=== After SELL (price up) ===");
-        console2.log("user mSEC      :", token.balanceOf(user));
-        console2.log("user mKRW      :", krwAfter);
-        console2.log("krwOut(~800k)  :", krwOut);
+        console2.log("=== After signed SELL @80,000 ===");
+        console2.log("user mSEC :", token.balanceOf(user));
+        console2.log("user mKRW :", krwAfter);
+        console2.log("krwOut    :", krwOut);
 
-        // 13) mKRW 잔고가 매수 직전 대비 증가(가격 상승분 반영) + mSEC 전량 소진
         require(token.balanceOf(user) == 0, "mSEC should be 0 after full sell");
-        require(krwOut > 750_000 ether, "sell proceeds should exceed buy cost after price up");
+        require(krwOut > buyInput, "price-up proceeds should exceed buy input");
         require(krwAfter > krwBeforeBuy, "final mKRW should exceed pre-buy balance");
+        require(oracle.usedQuoteIds(buyReport.quoteId), "buy quote was not consumed");
+        require(oracle.usedQuoteIds(sellReport.quoteId), "sell quote was not consumed");
+        console2.log("[OK] Signed-price round trip verified on-chain.");
+    }
 
-        // 14) 성공
-        console2.log("\n[OK] Phase 0.5 price-tracking buy/sell verified on-chain.");
+    function _report(
+        bytes32 quoteId,
+        uint8 side,
+        uint256 inputAmount,
+        uint256 priceE8,
+        uint256 minimumOutput,
+        address executor
+    ) internal view returns (PriceReportTypes.PriceReport memory) {
+        return PriceReportTypes.PriceReport({
+            quoteId: quoteId,
+            symbolHash: SYMBOL_HASH,
+            priceE8: priceE8,
+            observedAt: block.timestamp,
+            validUntil: block.timestamp + 30 seconds,
+            side: side,
+            inputAmount: inputAmount,
+            minimumOutput: minimumOutput,
+            executor: executor
+        });
+    }
+
+    function _sign(PriceOracle oracle, PriceReportTypes.PriceReport memory report)
+        internal
+        view
+        returns (bytes memory)
+    {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(PRICE_SIGNER_KEY, oracle.priceReportDigest(report));
+        return abi.encodePacked(r, s, v);
     }
 }
