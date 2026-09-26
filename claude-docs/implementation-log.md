@@ -1574,3 +1574,47 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - Phase 5.3-C에서 주문 요청에 사용자 소유 `quoteId`를 필수화하고 견적 소비와 주문 준비를 하나의 흐름으로 연결한다.
 - `buy/sell(PriceReport,bytes)` tuple/bytes ABI 인코딩·전송, receipt 정산과 실패 복구를 연결하고 레거시 `updatePrice()` 동기화를 제거한다.
 - 실제 PostgreSQL 동시 소비와 Anvil 서명 거래 종단간 검증을 Phase 5.3-C/5.4에서 수행한다.
+
+---
+
+# Phase 5.3-C: quoteId 주문과 서명 가격 온체인 전송 — 완료
+
+> 작성: 2026-09-26
+
+## 구현
+
+- 온체인 매수·매도 요청에 `quoteId`를 받아 서버가 사용자 소유 `price_quotes`의 보고서와 서명을 복원하도록 주문 계약을 전환했다.
+- 견적 행 잠금과 소유권·상태·만료·방향·입력량 검증을 주문·자산 변경보다 먼저 수행하고, 주문 생성·입력 자산 잠금·견적 소비와 주문 ID 연결을 하나의 독립 DB 트랜잭션으로 커밋한다.
+- web3j calldata를 기존 `buy/sell(uint256)`에서 9필드 `PriceReport` 정적 tuple과 65바이트 서명을 받는 `buy/sell(PriceReport,bytes)`로 교체했다.
+- RPC 처리 전 `SIGNED` 기록이 만들어지지 않은 실패는 주문을 `FAILED`로 바꾸고 잠금을 해제한다. `SIGNED` 저장 뒤 응답이 유실된 경우에는 주문과 잠금을 유지해 기존 raw transaction 복구가 처리한다.
+- 주기적인 `BlockchainPriceSyncService`와 `BLOCKCHAIN_PRICE_SYNC_*` 설정을 제거했다. 과거 `UPDATE_PRICE` 미완료 기록의 reconciliation 호환은 유지한다.
+- 브라우저 테스트 클라이언트가 매수·매도 전에 견적 API를 호출하고 받은 `quoteId`로 주문하도록 변경했다. 모의 거래 응답의 null `quoteId`는 기존 즉시 거래 흐름에서 그대로 허용된다.
+
+## 결정
+
+- 클라이언트는 계속 서명 원문이나 executor를 받지 않으며 불투명한 `quoteId`만 주문에 전달한다.
+- 잔고 부족은 주문 실패 이력을 남기되 견적을 소비하지 않는다. 주문에 정상 연결된 견적은 RPC·receipt 실패 후에도 재사용하지 않고 새로 발급한다.
+- `SIGNED` 저장 여부를 DB/RPC 경계의 복구 기준으로 사용한다. 서명 원문이 있으면 동일 nonce·raw transaction을 복구하고, 없으면 체인 제출 가능성이 없으므로 DB 잠금을 보상한다.
+- Solidity의 관리자 `updatePrice()` 함수와 과거 시스템 거래 정산 코드는 이번 백엔드 전환에서 삭제하지 않는다. 신규 가격 제출 scheduler와 저장 가격 기반 거래 경로만 제거했다.
+
+## 검증
+
+- 최신 tuple 함수 selector, 65바이트 서명 길이, 사용자 견적 소비와 주문 연결을 단위·H2 통합 테스트로 확인했다.
+- RPC 실패 전에는 주문 실패·잠금 해제·견적 소비 유지, `SIGNED` 저장 후에는 복구 가능한 주문·잠금·raw transaction 유지가 되는 분기를 검증했다.
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: 총 145개, 실패 0개, 선택적 Anvil 테스트 2개 skipped
+- `cd contracts && forge test -vv`: 36개 통과, 실패 0개
+- `cd tools/websocket-test-client && npm run build`: Vite production build 성공
+- 임시 Anvil에 최신 컨트랙트를 배포하고 별도 가격 서명자와 운영자 mKRW allowance를 구성한 뒤 선택 통합 테스트 2개를 실행했다. 실제 보고서 발급·EIP-712 서명·tuple ABI broadcast·Vault 체결·receipt 정산과 web3j 읽기 모두 통과했다.
+- 첫 Anvil 실행에서 테스트 전용 설정에 `PRICE_SIGNER_PRIVATE_KEY` 매핑이 없어 기동이 실패한 점을 확인하고 `src/test/resources/application.yml`을 운영 설정과 동일하게 보완한 뒤 재실행해 통과했다.
+- Docker daemon 접근 권한이 없어 실제 PostgreSQL 두 트랜잭션 경쟁 검증은 이번 검증에서 실행하지 못했다.
+
+## 검토
+
+- 별도 검토자는 거래·DB 트랜잭션 경계, `SIGNED` 전후 장애 분기, replay, tuple ABI, 모의 거래, 키 분리와 레거시 가격 제출 제거를 확인했으며 코드 필수 결함은 발견하지 않았다.
+- 최초 검토에서 `oracle-price-execution-design.md`의 Phase 5.3-B 당시 설명이 현재형으로 남아 Phase 5.3-C 완료 상태와 충돌하는 문서 1건을 필수 수정으로 지적했다. 과거형으로 수정했고 재검토에서 `필수 수정 없음`과 `git diff --check` 통과를 확인했다.
+- 검토 후 Anvil 실행 가능성을 확보해 실제 통합 테스트를 추가로 수행했고 테스트 설정의 signer 환경 변수 매핑 누락을 수정했다. 이 후속 변경도 최종 재검토 범위에 포함한다.
+
+## 남은 작업
+
+- 실제 PostgreSQL에서 같은 `quoteId`를 동시에 소비하는 두 트랜잭션 중 하나만 성공하는지 확인한다.
+- Phase 5.4에서 브라우저에 서명 가격·관측/만료 시각·최종 온체인 체결 가격과 만료·replay 실패 시연을 추가한다.

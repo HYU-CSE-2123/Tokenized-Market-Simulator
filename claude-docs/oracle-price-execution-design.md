@@ -208,8 +208,8 @@ signer: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7
 
 - Phase 5.3-A 완료: Toss를 포함한 선택 공급자 스냅샷 기반 가격 보고서 생성·서명과 기동 검증
 - Phase 5.3-B 완료: 인증 사용자별 견적 영속화와 안전한 견적 응답, 일회성 소비 기반
-- 주문 요청 계약 확장
-- web3j 인코딩·전송·receipt 정산과 실패 복구
+- Phase 5.3-C 완료: 주문 요청 `quoteId` 계약과 DB 보고서 복원
+- Phase 5.3-C 완료: web3j tuple/bytes 인코딩·전송과 RPC 단계별 실패 복구
 - 서명 키 환경 설정과 비밀정보 관리
 
 ### Phase 5.4 — 웹 종단간 검증
@@ -275,4 +275,14 @@ block.timestamp <= validUntil
 - 소비 시 사용자 소유권, `ISSUED` 상태, `now <= validUntil`, 거래 방향과 정수 단위 입력량 일치를 검사하고 주문 ID에 연결한다.
 - repository의 `PESSIMISTIC_WRITE` 잠금으로 같은 `quoteId`에 대한 동시 소비를 직렬화한다. 먼저 소비한 요청만 `CONSUMED`가 되고 나머지는 거부된다.
 - 만료를 발견하면 `EXPIRED`로 기록한다. 다른 사용자의 견적은 존재 여부를 노출하지 않도록 동일한 not-found로 응답한다.
-- 현재 주문 API와 web3j 전송은 아직 견적을 소비하지 않는다. 중간 상태에서 기존 주문을 깨뜨리지 않고 Phase 5.3-C에서 `quoteId` 필수화와 새 ABI 전송을 동시에 적용한다.
+- Phase 5.3-B 완료 당시에는 주문 API와 web3j 전송이 아직 견적을 소비하지 않았으며, 이 연결은 아래 Phase 5.3-C에서 `quoteId` 필수화와 새 ABI 전환으로 완료했다.
+
+## 14. Phase 5.3-C 구현 결과
+
+- 온체인 주문은 클라이언트가 제출한 `quoteId`로 사용자 소유 견적을 잠가 검증하며, 서명 원문과 executor는 계속 서버 DB 내부에만 둔다.
+- 견적 검증 뒤 주문 생성, 입력 자산 잠금, 견적 `CONSUMED`와 주문 ID 연결을 하나의 DB 트랜잭션으로 커밋한다. 잔고 부족은 견적을 소비하지 않는다.
+- web3j는 Solidity와 동일한 9필드 정적 tuple과 65바이트 동적 서명을 인코딩해 `buy/sell(PriceReport,bytes)`만 호출한다.
+- RPC 실패 전에 `SIGNED` 원문이 없으면 주문을 실패 처리하고 잠금을 해제한다. `SIGNED`가 저장된 뒤 응답을 잃으면 주문·잠금을 유지하고 동일 raw transaction 복구에 맡긴다.
+- 주문에 연결된 견적은 RPC 또는 receipt 실패 후에도 재사용하지 않고 새 견적을 발급받는다.
+- 주기적인 `PriceOracle.updatePrice` 제출 서비스와 설정은 제거했다. 과거 `UPDATE_PRICE` 기록의 복구 호환 코드는 유지하지만 신규 거래 가격은 오직 주문별 서명 보고서에서 결정된다.
+- 브라우저 테스트 도구도 매수·매도 전에 견적을 발급받고 응답 `quoteId`로 주문하도록 전환했다.

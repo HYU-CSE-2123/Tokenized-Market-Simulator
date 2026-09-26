@@ -33,7 +33,7 @@ class OrderMarketPolicyTest {
     void closedMarketRejectsBuyBeforeAnyOrderSideEffect() {
         when(prices.requireTradableSnapshot()).thenThrow(new MarketClosedException());
 
-        assertThatThrownBy(() -> service.buy(1L, "mSEC", new BigDecimal("100000")))
+        assertThatThrownBy(() -> service.buy(1L, "mSEC", new BigDecimal("100000"), null))
                 .isInstanceOf(MarketClosedException.class);
 
         verifyNoInteractions(orders, trades, wallet, onchain);
@@ -43,7 +43,7 @@ class OrderMarketPolicyTest {
     void stalePriceRejectsSellBeforeAnyOrderSideEffect() {
         when(prices.requireTradableSnapshot()).thenThrow(new StalePriceException());
 
-        assertThatThrownBy(() -> service.sell(1L, "mSEC", BigDecimal.ONE))
+        assertThatThrownBy(() -> service.sell(1L, "mSEC", BigDecimal.ONE, null))
                 .isInstanceOf(StalePriceException.class);
 
         verifyNoInteractions(orders, trades, wallet, onchain);

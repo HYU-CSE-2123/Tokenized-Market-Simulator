@@ -55,17 +55,31 @@ export class ApiClient {
     return this.#request('/api/orders');
   }
 
-  buy(krwAmount) {
-    return this.#request('/api/orders/buy', {
+  quoteBuy(krwAmount) {
+    return this.#request('/api/quotes/buy', {
       method: 'POST',
       body: JSON.stringify({ symbol: 'mSEC', krwAmount }),
     });
   }
 
-  sell(tokenAmount) {
-    return this.#request('/api/orders/sell', {
+  quoteSell(tokenAmount) {
+    return this.#request('/api/quotes/sell', {
       method: 'POST',
       body: JSON.stringify({ symbol: 'mSEC', tokenAmount }),
+    });
+  }
+
+  buy(krwAmount, quoteId = null) {
+    return this.#request('/api/orders/buy', {
+      method: 'POST',
+      body: JSON.stringify({ symbol: 'mSEC', krwAmount, quoteId }),
+    });
+  }
+
+  sell(tokenAmount, quoteId = null) {
+    return this.#request('/api/orders/sell', {
+      method: 'POST',
+      body: JSON.stringify({ symbol: 'mSEC', tokenAmount, quoteId }),
     });
   }
 

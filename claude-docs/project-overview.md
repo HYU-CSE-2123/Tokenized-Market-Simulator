@@ -65,17 +65,19 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - Phase 5.2-B 완료: `ExchangeVault`의 무서명 거래 경로를 제거하고 주문 방향·실행자·입력량·최소 수령량이 결합된 서명 가격 소비와 매수·매도 정산을 단일 트랜잭션으로 원자화
 - Phase 5.3-A 완료: 백엔드가 5초 이내 시장 스냅샷과 Vault 명시 가격 견적으로 30초 유효 보고서를 만들고 전용 키로 EIP-712 서명하며 기동 시 온체인 서명자 일치를 검사하는 기반 구현
 - Phase 5.3-B 완료: 서명 견적을 인증 사용자에게 귀속해 `price_quotes`에 저장하고 소유권·방향·입력량·만료·일회성 소비를 DB 잠금으로 검증하며 비밀 필드를 제외한 견적 API 제공
+- Phase 5.3-C 완료: 주문의 `quoteId`로 서버 DB 보고서·서명을 복원하고 주문 생성·자산 잠금·견적 소비를 원자화했으며 web3j를 `buy/sell(PriceReport,bytes)` ABI로 전환
+- 주기적 `updatePrice` 제출은 제거하고, RPC 장애는 `SIGNED` 저장 전 주문 실패·잠금 해제와 저장 후 동일 raw transaction 복구로 구분
 - IntelliJ의 저장소 루트 실행에서도 `backend/.env`를 읽도록 보강하고, 브라우저 차트 시간축은 UTC 원본을 유지한 채 한국 시간으로 표시
 - Windows 예약 포트 범위와 충돌한 8080 대신 로컬 백엔드 기본 포트를 8082로 통일하고 웹 프록시·Android 주소도 같은 포트를 사용
-- 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기·주문 정산·오라클 갱신 선택 테스트 별도 통과
+- 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기와 EIP-712 서명 견적·tuple ABI 주문 정산 선택 테스트 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
 ## 다음 개발 후보
 
-Phase 3, Phase 4와 실제 Toss 가격 공급자, 장·가격 가용성 정책, 공급자 공통 캔들 API 및 과거 탐색이 가능한 브라우저 실시간 차트까지 구현했습니다. Phase 5.1에서 주문별 서명 가격 계약을 확정하고 Phase 5.2-A/B에서 `PriceOracle` 검증과 `ExchangeVault` 원자적 정산을 구현했으며 Phase 5.3-A/B에서 백엔드 보고서 발급·서명과 사용자별 견적 소유권을 추가했습니다. 다음은 Phase 5.3-C에서 주문 요청의 `quoteId`를 필수화하고 web3j 전송을 새 Vault ABI로 전환하는 단계입니다. Android 구현은 별도 담당 범위로 최후순위에 둡니다.
+Phase 3, Phase 4와 실제 Toss 가격 공급자, 장·가격 가용성 정책, 공급자 공통 캔들 API 및 과거 탐색이 가능한 브라우저 실시간 차트까지 구현했습니다. Phase 5.1에서 주문별 서명 가격 계약을 확정하고 Phase 5.2-A/B에서 `PriceOracle` 검증과 `ExchangeVault` 원자적 정산을 구현했으며 Phase 5.3-A/B/C에서 발급·서명·사용자 소유 견적과 실제 주문 전송을 연결했습니다. 다음은 Phase 5.4에서 PostgreSQL·Toss·Anvil과 브라우저를 포함한 종단간 시연을 완성하는 단계입니다. Android 구현은 별도 담당 범위로 최후순위에 둡니다.
 
 ## 핵심 설계 원칙
 
 - 컨트랙트 트랜잭션은 비동기이므로 주문 상태를 `REQUESTED → PENDING_ONCHAIN → FILLED/FAILED`로 분리합니다.
 - DB 기록과 온체인 결과의 불일치는 `blockchain_transactions` 및 reconciliation 작업으로 다룹니다.
-- MVP 체결 가격은 견적 요청 시점이 아니라 실제 실행 시점의 오라클 가격을 따릅니다.
+- 온체인 체결 가격은 사용자가 확인한 30초 유효 서명 견적의 가격이며 Vault가 같은 트랜잭션에서 서명·만료·재사용을 검증합니다.

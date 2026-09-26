@@ -34,8 +34,16 @@ elements.market.addEventListener('click', () => runRest(() => api.market(), rend
 elements.faucet.addEventListener('click', () => runRest(() => api.faucet()));
 elements.portfolio.addEventListener('click', () => runRest(() => api.portfolio()));
 elements.orders.addEventListener('click', () => runRest(() => api.orders()));
-elements.buy.addEventListener('click', () => runRest(() => api.buy(requiredAmount('buy-amount'))));
-elements.sell.addEventListener('click', () => runRest(() => api.sell(requiredAmount('sell-amount'))));
+elements.buy.addEventListener('click', () => runRest(async () => {
+  const amount = requiredAmount('buy-amount');
+  const quote = await api.quoteBuy(amount);
+  return api.buy(amount, quote.quoteId);
+}));
+elements.sell.addEventListener('click', () => runRest(async () => {
+  const amount = requiredAmount('sell-amount');
+  const quote = await api.quoteSell(amount);
+  return api.sell(amount, quote.quoteId);
+}));
 elements.connect.addEventListener('click', connectSocket);
 elements.disconnect.addEventListener('click', () => socket.disconnect());
 elements['reload-chart'].addEventListener('click', loadChart);

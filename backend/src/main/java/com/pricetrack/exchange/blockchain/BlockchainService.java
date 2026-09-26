@@ -3,8 +3,8 @@ package com.pricetrack.exchange.blockchain;
 import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
 import com.pricetrack.exchange.blockchain.contract.ContractGateway;
 import com.pricetrack.exchange.blockchain.oracle.PriceReport;
+import com.pricetrack.exchange.blockchain.oracle.SignedPriceReport;
 import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationException;
-import com.pricetrack.exchange.blockchain.support.OperatorNotReadyException;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -146,38 +146,13 @@ public class BlockchainService {
         return contracts.encodeUpdatePrice(priceE8);
     }
 
-    /** 운영자의 mKRW 잔고와 Vault allowance를 확인한 후 매수 견적을 반환한다. */
-    public BuyReadiness buyReadiness(BigInteger krwAmount) {
-        requirePositive(krwAmount);
-        Map<String, String> addresses = configuredContracts();
-        String operator = operatorAddress();
-        BigInteger balance = contracts.balanceOf(addresses.get("MockKRW"), operator);
-        BigInteger allowance = contracts.allowance(addresses.get("MockKRW"), operator,
-                addresses.get("ExchangeVault"));
-        if (balance.compareTo(krwAmount) < 0) {
-            throw new OperatorNotReadyException("운영자 온체인 mKRW 잔고가 부족합니다.");
-        }
-        if (allowance.compareTo(krwAmount) < 0) {
-            throw new OperatorNotReadyException("운영자 mKRW의 ExchangeVault allowance가 부족합니다.");
-        }
-        return new BuyReadiness(contracts.quoteBuy(addresses.get("ExchangeVault"), krwAmount),
-                addresses.get("ExchangeVault"));
-    }
+    public String encodeBuy(SignedPriceReport report) { return contracts.encodeBuy(report); }
+    public String encodeSell(SignedPriceReport report) { return contracts.encodeSell(report); }
 
-    /** 운영자의 mSEC 잔고를 확인한 후 매도 견적을 반환한다. */
-    public SellReadiness sellReadiness(BigInteger tokenAmount) {
-        requirePositive(tokenAmount);
-        Map<String, String> addresses = configuredContracts();
-        BigInteger balance = contracts.balanceOf(addresses.get("mSEC"), operatorAddress());
-        if (balance.compareTo(tokenAmount) < 0) {
-            throw new OperatorNotReadyException("운영자 온체인 mSEC 잔고가 부족합니다.");
-        }
-        return new SellReadiness(contracts.quoteSell(addresses.get("ExchangeVault"), tokenAmount),
-                addresses.get("ExchangeVault"));
+    public String exchangeVaultAddress() {
+        requireEnabled();
+        return configuredContracts().get("ExchangeVault");
     }
-
-    public String encodeBuy(BigInteger amount) { return contracts.encodeBuy(amount); }
-    public String encodeSell(BigInteger amount) { return contracts.encodeSell(amount); }
 
     private Map<String, String> configuredContracts() {
         Map<String, String> addresses = new LinkedHashMap<>();
@@ -222,6 +197,4 @@ public class BlockchainService {
 
     public record ContractSnapshot(ContractGateway.OraclePrice oracle, BigInteger feeBps,
             BigInteger operatorKrwBalance, BigInteger operatorMsecBalance, BigInteger vaultAllowance) {}
-    public record BuyReadiness(ContractGateway.Quote quote, String vaultAddress) {}
-    public record SellReadiness(ContractGateway.Quote quote, String vaultAddress) {}
 }

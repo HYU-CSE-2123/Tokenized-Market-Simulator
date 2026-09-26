@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.pricetrack.exchange.auth.AuthenticatedUser;
-import com.pricetrack.exchange.blockchain.BlockchainService;
 import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
 import com.pricetrack.exchange.blockchain.config.PriceReportProperties;
 import com.pricetrack.exchange.blockchain.oracle.PriceReport;
@@ -26,11 +25,10 @@ class QuoteControllerTest {
     void signedQuoteResponseExposesClientFieldsButNotSignatureOrExecutor() throws Exception {
         MarketPriceService market = mock(MarketPriceService.class);
         TradeCalculator calculator = mock(TradeCalculator.class);
-        BlockchainService blockchain = mock(BlockchainService.class);
         PriceQuoteService quotes = mock(PriceQuoteService.class);
         QuoteController controller = new QuoteController(market, calculator,
                 new BlockchainProperties(true, "rpc", "", "", "", "", ""),
-                new PriceReportProperties(true, "secret-key-must-not-appear"), blockchain, quotes);
+                new PriceReportProperties(true, "secret-key-must-not-appear"), quotes);
         BigDecimal input = new BigDecimal("100000");
         when(quotes.issue(7L, "mSEC", PriceReport.Side.BUY, input)).thenReturn(quote());
 

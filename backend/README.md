@@ -13,11 +13,10 @@
 - 사용자별 mKRW·mSEC DB 잔고와 mKRW faucet
 - 블록체인 비활성화 시 DB 기반 즉시 매수·매도, 주문·체결 내역 및 포트폴리오
 - 선택적으로 활성화하는 web3j RPC 연결과 읽기 전용 컨트랙트 조회
-- 블록체인 활성화 시 운영자 지갑의 buy/sell 서명·전송, receipt polling과 자동 체결
-- 가격 시뮬레이터의 최신 가격을 `PriceOracle.updatePrice`로 동기화하고 `PriceUpdated` 이벤트를 가격 이력으로 저장
+- 블록체인 활성화 시 사용자 소유 `quoteId`로 DB 보고서·서명을 복원해 운영자 지갑의 buy/sell 전송, receipt polling과 자동 체결
 - 최신 시장 스냅샷과 Vault 명시 가격 견적으로 30초 유효 EIP-712 가격 보고서를 발급·전용 키로 서명하는 기반
 - 활성화된 온체인 모드에서 서명 견적을 로그인 사용자에게 귀속해 DB에 저장하고 API에는 서명·executor를 제외한 안전한 메타데이터만 반환
-- 블록체인 활성화 시 Oracle과 Vault를 직접 조회하는 온체인 매수·매도 견적
+- 서명 가격과 Vault 수수료로 최소 수령량을 고정하는 온체인 매수·매도 견적
 - 일반 WebSocket `/ws`와 브라우저 호환 SockJS `/ws-sockjs`, STOMP JWT 인증과 공개·개인 구독 통제
 - 버전 있는 WebSocket 이벤트 envelope와 DB commit 이후에만 전송되는 공개·개인 이벤트 발행 기반
 - 1초 주기 모의 가격과 모의·온체인 체결 결과를 공통 envelope로 공개 WebSocket topic에 발행
@@ -28,7 +27,7 @@
 - 온체인 주문 대기·성공·실패와 포트폴리오 변경을 해당 사용자의 개인 queue에 발행
 - Google 로그인과 이메일 인증을 위한 nullable 사용자 컬럼 준비
 
-Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. Phase 3은 온체인 조회·주문·정산·복구와 오라클 가격 동기화까지 구현됐습니다.
+Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. 온체인 주문은 사용자별 서명 견적, 비동기 전송·정산과 장애 복구까지 구현됐습니다.
 
 ## 인증 API
 
@@ -99,7 +98,7 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 모든 거래 API에는 Bearer JWT가 필요합니다. 수수료는 컨트랙트와 동일한 0.1%입니다.
 
 - `BLOCKCHAIN_ENABLED=false`: DB에서 즉시 체결하며 성공 주문은 `FILLED`
-- `BLOCKCHAIN_ENABLED=true`: 입력 잔고를 잠그고 실제 트랜잭션을 전송한 뒤 HTTP 202와 `PENDING_ONCHAIN` 반환, scheduler가 이후 `FILLED/FAILED` 확정
+- `BLOCKCHAIN_ENABLED=true`: 먼저 `/api/quotes/buy|sell`에서 받은 `quoteId`를 주문에 함께 보내며, 입력 잔고를 잠그고 실제 트랜잭션을 전송한 뒤 HTTP 202와 `PENDING_ONCHAIN` 반환
 
 성공 receipt는 Vault의 이벤트, 운영자 주소와 주문 입력값까지 일치해야 `FILLED` 처리됩니다. receipt는 성공했지만 이벤트가 이상하면 자산 잠금을 유지하고 blockchain transaction을 `REVIEW_REQUIRED`로 격리합니다.
 
@@ -260,7 +259,7 @@ cd backend
 
 ### 가격 보고서 서명 설정
 
-Phase 5.3-A의 가격 보고서 발급 기능은 기본적으로 비활성화되어 기존 주문 경로에 영향을 주지 않는다. 활성화할 때는 거래 전송 키와 다른 가격 전용 키를 설정한다.
+온체인 주문은 서명 가격 보고서만 허용한다. 활성화할 때는 거래 전송 키와 다른 가격 전용 키를 설정한다.
 
 ```properties
 PRICE_REPORT_SIGNING_ENABLED=true
@@ -269,11 +268,11 @@ PRICE_SIGNER_PRIVATE_KEY=<PriceOracle.priceSigner 주소의 개인키>
 
 활성화 상태로 서버가 시작되면 전용 키에서 파생한 주소와 온체인 `PriceOracle.priceSigner()`를 비교한다. 키가 없거나 형식이 잘못됐거나 주소가 다르면 서버 기동을 중단한다. 개인키는 API 응답·로그·문서에 기록하지 않는다.
 
-발급기는 선택된 가격 공급자의 스냅샷이 5초 이내인지 검사하고, Vault의 `quoteBuyAtPrice` 또는 `quoteSellAtPrice` 결과를 `minimumOutput`으로 고정한다. 보고서는 관측 시각부터 정확히 30초 동안 유효하며 현재 단계에서는 아직 REST 견적이나 주문 전송 경로에 노출되지 않는다.
+발급기는 선택된 가격 공급자의 스냅샷이 5초 이내인지 검사하고, Vault의 `quoteBuyAtPrice` 또는 `quoteSellAtPrice` 결과를 `minimumOutput`으로 고정한다. 보고서는 관측 시각부터 정확히 30초 동안 유효하다.
 
 Phase 5.3-B부터 위 두 설정과 `BLOCKCHAIN_ENABLED=true`가 모두 적용되면 `POST /api/quotes/buy`, `POST /api/quotes/sell`이 로그인 사용자 소유의 서명 견적을 발급한다. 응답에는 `quoteId`, `minimumOutputAmount`, `observedAt`, `validUntil`, `status`가 추가되며 개인 서명과 온체인 executor는 서버 내부 `price_quotes`에만 저장한다. 기능이 비활성화된 모의·기존 견적 응답에는 새 nullable 필드를 직렬화하지 않는다.
 
-`price_quotes` 상태는 `ISSUED → CONSUMED` 또는 `ISSUED → EXPIRED`다. 소비 서비스는 사용자·방향·입력량·만료를 확인하고 DB 비관적 잠금으로 동일 견적의 동시 재사용을 막는다. 실제 주문 요청에서 `quoteId`를 필수로 받고 새 Vault ABI로 보내는 연결은 Phase 5.3-C에서 활성화한다.
+`price_quotes` 상태는 `ISSUED → CONSUMED` 또는 `ISSUED → EXPIRED`다. 소비 서비스는 사용자·방향·입력량·만료를 확인하고 DB 비관적 잠금으로 동일 견적의 동시 재사용을 막는다. 온체인 주문 요청은 `quoteId`를 필수로 받고 서버가 DB의 원본 보고서와 서명을 읽어 `buy/sell(PriceReport,bytes)`를 호출한다. 모의 거래에서는 `quoteId` 없이 기존 즉시 거래가 유지된다.
 
 ### 가격 공급자 선택
 
@@ -303,7 +302,7 @@ TOSS_CLIENT_SECRET=토스증권-client-secret
 - `toss` 모드는 기동 완료 시 REST로 첫 가격을 확보합니다. 자격 증명 누락, 인증 실패, 허용 IP 오류 또는 잘못된 시세 응답이 있으면 기동을 실패시켜 모의 가격을 실제 가격으로 오인하지 않게 합니다.
 - REST 초기 가격 확보 후 Toss WebSocket에서 `trade:kr:005930`을 구독합니다. 구독 ACK를 확인한 연결만 정상으로 간주하고 60초마다 `PING`을 전송합니다.
 - 연결이 끊기면 1초부터 최대 30초까지 지수 백오프와 jitter를 적용해 새 토큰으로 재연결하고 전체 구독을 다시 선언합니다.
-- 검증된 최신 체결만 스냅샷에 반영하며 과거·동일 시각 체결은 무시합니다. 가격이 바뀌면 기존 `/topic/markets/mSEC/price`로 앱에 전달하고 기존 Oracle 동기화도 최신 가격을 읽습니다.
+- 검증된 최신 체결만 스냅샷에 반영하며 과거·동일 시각 체결은 무시합니다. 가격이 바뀌면 기존 `/topic/markets/mSEC/price`로 앱에 전달하며 주문별 서명 견적 발급기가 최신 스냅샷을 읽습니다.
 - Toss 시세 채널은 공급자 정책상 유실 가능한 최신값 우선 스트림입니다. 장 운영시간 판정, 지연·오래된 가격의 거래 차단과 Oracle 반영 정책은 후속 단계입니다.
 - 시작 시 국내 장 캘린더와 수정주가 일봉을 함께 조회해 전 영업일 종가를 기준 가격으로 사용합니다. 프리·정규·애프터 세션 중 하나면 `OPEN`, 그 외와 휴장일은 `CLOSED`입니다.
 - 과거 1분봉·일봉은 Toss 캔들 API에서 조회하므로 우리 백엔드가 꺼져 있던 구간도 서버 재기동 후 다시 불러올 수 있습니다.
@@ -311,7 +310,7 @@ TOSS_CLIENT_SECRET=토스증권-client-secret
 - 캘린더와 전일 종가는 매일 KST 00:05에 갱신하며 실패하면 마지막 정상 참조 데이터를 유지합니다.
 - `GET /api/markets/mSEC`는 `price`, `previousClose`, `change`, `changeRate`, `marketStatus`, `priceStatus`, `provider`, `observedAt`을 반환합니다. 기존 Android 호환용 `updatedAt`은 `observedAt`과 같은 값으로 유지합니다.
 - Toss 모드에서는 `CLOSED`이면 HTTP 409 `MARKET_CLOSED`, 장중 `STALE`이면 HTTP 503 `PRICE_STALE`로 매수·매도를 주문 생성 전에 거부합니다. `DEGRADED`는 60초 유예 범위라 거래할 수 있고 시뮬레이션 모드는 24시간 거래할 수 있습니다.
-- `CLOSED`·`STALE` 가격은 PriceOracle에도 새로 제출하지 않습니다. 이미 제출된 온체인 주문과 가격 트랜잭션의 receipt 정산은 계속 처리합니다.
+- `CLOSED`·`STALE` 가격으로는 새 서명 견적과 주문을 만들지 않습니다. 이미 제출된 온체인 주문의 receipt 정산은 계속 처리합니다.
 - 장이 닫혀도 마켓·견적·포트폴리오·주문 및 체결 내역 조회는 계속 사용할 수 있습니다.
 
 `TOSS_CLIENT_SECRET`은 실제 `.env` 또는 배포 환경 Secret에만 저장하고 저장소에는 커밋하지 않습니다.
@@ -322,9 +321,7 @@ TOSS_CLIENT_SECRET=토스증권-client-secret
 
 receipt 처리 설정은 `BLOCKCHAIN_RECEIPT_POLL_INTERVAL_MS`(기본 1000), `BLOCKCHAIN_RECEIPT_INITIAL_DELAY_MS`(기본 1000), `BLOCKCHAIN_REQUIRED_CONFIRMATIONS`(기본 1)입니다. 서버 재시작 후 `SIGNED` 기록은 체인 존재 여부를 확인하고, 필요하면 저장된 동일 raw transaction을 재전송합니다.
 
-가격 동기화 설정은 `BLOCKCHAIN_PRICE_SYNC_ENABLED`(기본 false), `BLOCKCHAIN_PRICE_SYNC_INTERVAL_MS`(기본 3000), `BLOCKCHAIN_PRICE_SYNC_INITIAL_DELAY_MS`(기본 3000)입니다. 블록체인 기능과 가격 동기화를 모두 명시적으로 활성화하면 백엔드가 최신 모의 가격을 Oracle에 전송합니다. 이전 가격 갱신이 처리 중이면 새 트랜잭션을 계속 만들지 않고, 완료된 뒤 그 시점의 최신 가격만 전송합니다. 확정된 `PriceUpdated` 이벤트는 `price_ticks`에 `ONCHAIN_ORACLE` 출처로 한 번만 저장됩니다.
-
-로컬 기본값인 3초 주기는 학습·시연용입니다. 장시간 서버를 켜둘 때는 트랜잭션 수가 빠르게 늘 수 있으므로 주기를 늘리거나 `BLOCKCHAIN_PRICE_SYNC_ENABLED=false`로 중지할 수 있습니다.
+Phase 5.3-C부터 백엔드는 주기적인 `PriceOracle.updatePrice` 트랜잭션을 생성하지 않습니다. 체결 가격은 각 주문에 결합된 30초 유효 EIP-712 보고서에서 결정되며, 과거 `UPDATE_PRICE` DB 기록은 재시작 복구 호환을 위해 reconciliation이 계속 읽을 수 있습니다.
 
 ### 초기 관리자 계정
 

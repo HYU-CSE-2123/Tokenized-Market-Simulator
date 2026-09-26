@@ -1,12 +1,10 @@
 package com.pricetrack.exchange.order;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 
 import org.springframework.stereotype.Service;
 
 import com.pricetrack.exchange.blockchain.BlockchainService;
-import com.pricetrack.exchange.blockchain.support.TokenUnits;
 import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionSender;
 import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionType;
 
@@ -31,25 +29,36 @@ public class OnchainOrderService {
         this.orderRepository = orderRepository;
     }
 
-    /** mKRW를 잠그고 Vault.buy를 제출한 뒤 PENDING_ONCHAIN 주문을 반환한다. */
-    public Order buy(Long userId, BigDecimal krwAmount) {
-        BigInteger amountWei = TokenUnits.toWei(krwAmount);
-        BlockchainService.BuyReadiness readiness = blockchainService.buyReadiness(amountWei);
-        BigDecimal expected = TokenUnits.fromWei(readiness.quote().outputAmount());
-        Order order = preparationService.prepare(userId, OrderSide.BUY, krwAmount, expected);
-        transactionSender.submit(order.getId(), BlockchainTransactionType.BUY,
-                readiness.vaultAddress(), blockchainService.encodeBuy(amountWei));
-        return reload(order.getId());
+    /** 사용자 견적을 소비하고 mKRW를 잠근 뒤 서명 보고서 기반 Vault.buy를 제출한다. */
+    public Order buy(Long userId, BigDecimal krwAmount, String quoteId) {
+        return submit(userId, OrderSide.BUY, krwAmount, quoteId);
     }
 
-    /** mSEC를 잠그고 Vault.sell을 제출한 뒤 PENDING_ONCHAIN 주문을 반환한다. */
-    public Order sell(Long userId, BigDecimal tokenAmount) {
-        BigInteger amountWei = TokenUnits.toWei(tokenAmount);
-        BlockchainService.SellReadiness readiness = blockchainService.sellReadiness(amountWei);
-        BigDecimal expected = TokenUnits.fromWei(readiness.quote().outputAmount());
-        Order order = preparationService.prepare(userId, OrderSide.SELL, tokenAmount, expected);
-        transactionSender.submit(order.getId(), BlockchainTransactionType.SELL,
-                readiness.vaultAddress(), blockchainService.encodeSell(amountWei));
+    /** 사용자 견적을 소비하고 mSEC를 잠근 뒤 서명 보고서 기반 Vault.sell을 제출한다. */
+    public Order sell(Long userId, BigDecimal tokenAmount, String quoteId) {
+        return submit(userId, OrderSide.SELL, tokenAmount, quoteId);
+    }
+
+    private Order submit(Long userId, OrderSide side, BigDecimal input, String quoteId) {
+        var prepared = preparationService.prepare(userId, side, input, quoteId);
+        Order order = prepared.order();
+        var signed = prepared.signedReport();
+        try {
+            BlockchainTransactionType type = side == OrderSide.BUY
+                    ? BlockchainTransactionType.BUY : BlockchainTransactionType.SELL;
+            String calldata = side == OrderSide.BUY
+                    ? blockchainService.encodeBuy(signed) : blockchainService.encodeSell(signed);
+            transactionSender.submit(order.getId(), type,
+                    blockchainService.exchangeVaultAddress(), calldata);
+        } catch (RuntimeException exception) {
+            // SIGNED 저장 전 실패만 보상하고, 저장 후 장애는 동일 raw transaction 복구에 맡긴다.
+            try {
+                preparationService.failIfNotSigned(order.getId(), exception.getMessage());
+            } catch (RuntimeException compensationFailure) {
+                exception.addSuppressed(compensationFailure);
+            }
+            throw exception;
+        }
         return reload(order.getId());
     }
 

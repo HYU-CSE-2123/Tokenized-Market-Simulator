@@ -1,5 +1,8 @@
 package com.pricetrack.exchange.blockchain.contract;
 
+import com.pricetrack.exchange.blockchain.oracle.PriceReport;
+import com.pricetrack.exchange.blockchain.oracle.SignedPriceReport;
+
 import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationException;
 
 import java.io.IOException;
@@ -10,8 +13,12 @@ import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.DynamicBytes;
 import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.StaticStruct;
 import org.web3j.abi.datatypes.Type;
+import org.web3j.abi.datatypes.generated.Bytes32;
+import org.web3j.abi.datatypes.generated.Uint8;
 import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
@@ -92,16 +99,46 @@ public class ContractGateway {
         return quoteAtPrice(vault, "quoteSellAtPrice", tokenAmount, priceE8);
     }
 
-    /** 서명·전송 계층이 사용할 Vault.buy calldata를 생성한다. */
-    public String encodeBuy(BigInteger krwAmount) {
-        return FunctionEncoder.encode(new Function("buy", List.of(new Uint256(krwAmount)),
+    /** 서명·전송 계층이 사용할 Vault.buy(PriceReport,bytes) calldata를 생성한다. */
+    public String encodeBuy(SignedPriceReport signed) {
+        return FunctionEncoder.encode(new Function("buy", List.of(
+                        new PriceReportStruct(signed.report()), signature(signed.signature())),
                 List.of(new TypeReference<Uint256>() {})));
     }
 
-    /** 서명·전송 계층이 사용할 Vault.sell calldata를 생성한다. */
-    public String encodeSell(BigInteger tokenAmount) {
-        return FunctionEncoder.encode(new Function("sell", List.of(new Uint256(tokenAmount)),
+    /** 서명·전송 계층이 사용할 Vault.sell(PriceReport,bytes) calldata를 생성한다. */
+    public String encodeSell(SignedPriceReport signed) {
+        return FunctionEncoder.encode(new Function("sell", List.of(
+                        new PriceReportStruct(signed.report()), signature(signed.signature())),
                 List.of(new TypeReference<Uint256>() {})));
+    }
+
+    private DynamicBytes signature(String value) {
+        byte[] bytes = Numeric.hexStringToByteArray(value);
+        if (bytes.length != 65) throw new IllegalArgumentException("가격 보고서 서명은 65바이트여야 합니다.");
+        return new DynamicBytes(bytes);
+    }
+
+    /** Solidity PriceReport tuple과 필드 순서·정수 폭이 동일한 정적 ABI 구조체다. */
+    static final class PriceReportStruct extends StaticStruct {
+        PriceReportStruct(PriceReport report) {
+            super(
+                    bytes32(report.quoteId(), "quoteId"),
+                    bytes32(report.symbolHash(), "symbolHash"),
+                    new Uint256(report.priceE8()),
+                    new Uint256(report.observedAt()),
+                    new Uint256(report.validUntil()),
+                    new Uint8(BigInteger.valueOf(report.side().code())),
+                    new Uint256(report.inputAmount()),
+                    new Uint256(report.minimumOutput()),
+                    new Address(report.executor()));
+        }
+
+        private static Bytes32 bytes32(String value, String field) {
+            byte[] bytes = Numeric.hexStringToByteArray(value);
+            if (bytes.length != 32) throw new IllegalArgumentException(field + "는 32바이트여야 합니다.");
+            return new Bytes32(bytes);
+        }
     }
 
     /** 서명·전송 계층이 사용할 ERC-20 approve calldata를 생성한다. */

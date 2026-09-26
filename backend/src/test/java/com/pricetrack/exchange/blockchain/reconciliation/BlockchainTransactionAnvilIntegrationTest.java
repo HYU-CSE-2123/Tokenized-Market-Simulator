@@ -1,19 +1,15 @@
 package com.pricetrack.exchange.blockchain.reconciliation;
 
 import com.pricetrack.exchange.blockchain.BlockchainService;
-import com.pricetrack.exchange.blockchain.support.PriceUnits;
 import com.pricetrack.exchange.blockchain.transaction.BlockchainTransaction;
 import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionRepository;
-import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionSender;
 import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionStatus;
-import com.pricetrack.exchange.blockchain.transaction.BlockchainTransactionType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
-import java.math.BigInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -30,10 +26,15 @@ import com.pricetrack.exchange.wallet.UserBalance;
 import com.pricetrack.exchange.wallet.UserBalanceRepository;
 import com.pricetrack.exchange.wallet.WalletService;
 import com.pricetrack.exchange.trade.TradeRepository;
-import com.pricetrack.exchange.market.PriceTickRepository;
+import com.pricetrack.exchange.quote.PriceQuote;
+import com.pricetrack.exchange.quote.PriceQuoteService;
+import com.pricetrack.exchange.blockchain.oracle.PriceReport;
 
 /** 실제 Anvil에 buy를 서명·전송하고 DB의 비동기 주문 상태를 확인한다. */
-@SpringBootTest(properties = "app.blockchain.enabled=true")
+@SpringBootTest(properties = {
+        "app.blockchain.enabled=true",
+        "app.blockchain.price-report.enabled=true"
+})
 @EnabledIfEnvironmentVariable(named = "BLOCKCHAIN_INTEGRATION_TESTS", matches = "true")
 class BlockchainTransactionAnvilIntegrationTest {
     @Autowired OnchainOrderService orderService;
@@ -43,9 +44,7 @@ class BlockchainTransactionAnvilIntegrationTest {
     @Autowired OrderRepository orderRepository;
     @Autowired TradeRepository tradeRepository;
     @Autowired Web3j web3j;
-    @Autowired BlockchainTransactionSender transactionSender;
-    @Autowired BlockchainService blockchainService;
-    @Autowired PriceTickRepository priceTickRepository;
+    @Autowired PriceQuoteService priceQuoteService;
 
     @Test
     void signsBroadcastsAndSettlesBuyTransaction() throws Exception {
@@ -55,7 +54,9 @@ class BlockchainTransactionAnvilIntegrationTest {
         balanceRepository.save(krw);
         balanceRepository.save(new UserBalance(userId, WalletService.TOKEN_SYMBOL));
 
-        Order order = orderService.buy(userId, new BigDecimal("1000"));
+        PriceQuote quote = priceQuoteService.issue(userId, WalletService.TOKEN_SYMBOL,
+                PriceReport.Side.BUY, new BigDecimal("1000"));
+        Order order = orderService.buy(userId, new BigDecimal("1000"), quote.getQuoteId());
         BlockchainTransaction transaction = transactionRepository.findByOrderId(order.getId()).orElseThrow();
         TransactionReceipt receipt = waitForReceipt(order.getTxHash());
         reconciliationService.reconcilePendingTransactions();
@@ -74,20 +75,6 @@ class BlockchainTransactionAnvilIntegrationTest {
         assertThat(confirmed.getRawTransaction()).startsWith("0x");
         assertThat(tradeRepository.existsByOrderId(order.getId())).isTrue();
         assertThat(receipt.isStatusOK()).isTrue();
-    }
-
-    @Test
-    void updatesOracleAndStoresConfirmedPriceTick() throws Exception {
-        BigInteger target = blockchainService.oraclePrice().priceE8().add(BigInteger.valueOf(12_300_000));
-        var submission = transactionSender.submitSystem(BlockchainTransactionType.UPDATE_PRICE,
-                blockchainService.oracleAddress(), blockchainService.encodeUpdatePrice(target), target);
-        waitForReceipt(submission.txHash());
-        reconciliationService.reconcilePendingTransactions();
-
-        BlockchainTransaction transaction = transactionRepository.findByTxHash(submission.txHash()).orElseThrow();
-        assertThat(transaction.getStatus()).isEqualTo(BlockchainTransactionStatus.CONFIRMED);
-        assertThat(blockchainService.oraclePrice().priceE8()).isEqualTo(target);
-        assertThat(priceTickRepository.existsByBlockchainTransactionId(transaction.getId())).isTrue();
     }
 
     private TransactionReceipt waitForReceipt(String txHash) throws Exception {

@@ -51,10 +51,10 @@ public class OrderService {
     }
 
     @Transactional(noRollbackFor = InsufficientBalanceException.class)
-    public Order buy(Long userId, String symbol, BigDecimal krwAmount) {
+    public Order buy(Long userId, String symbol, BigDecimal krwAmount, String quoteId) {
         validateSymbol(symbol);
         MarketPriceSnapshot snapshot = marketPriceService.requireTradableSnapshot();
-        if (blockchainProperties.enabled()) return onchainOrderService.buy(userId, krwAmount);
+        if (blockchainProperties.enabled()) return onchainOrderService.buy(userId, krwAmount, quoteId);
         BigDecimal price = snapshot.price();
         TradeCalculator.BuyCalculation calculation = tradeCalculator.buy(krwAmount, price);
         UserBalance krw = walletService.getForUpdate(userId, WalletService.KRW_SYMBOL);
@@ -69,10 +69,10 @@ public class OrderService {
     }
 
     @Transactional(noRollbackFor = InsufficientBalanceException.class)
-    public Order sell(Long userId, String symbol, BigDecimal tokenAmount) {
+    public Order sell(Long userId, String symbol, BigDecimal tokenAmount, String quoteId) {
         validateSymbol(symbol);
         MarketPriceSnapshot snapshot = marketPriceService.requireTradableSnapshot();
-        if (blockchainProperties.enabled()) return onchainOrderService.sell(userId, tokenAmount);
+        if (blockchainProperties.enabled()) return onchainOrderService.sell(userId, tokenAmount, quoteId);
         BigDecimal price = snapshot.price();
         TradeCalculator.SellCalculation calculation = tradeCalculator.sell(tokenAmount, price);
         UserBalance krw = walletService.getForUpdate(userId, WalletService.KRW_SYMBOL);

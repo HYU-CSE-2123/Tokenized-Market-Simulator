@@ -14,6 +14,8 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.crypto.Hash;
+import com.pricetrack.exchange.blockchain.oracle.PriceReport;
+import com.pricetrack.exchange.blockchain.oracle.SignedPriceReport;
 
 /** ABI 반환값 디코딩과 쓰기 함수 selector 인코딩을 RPC mock으로 검증한다. */
 class ContractGatewayTest {
@@ -67,9 +69,18 @@ class ContractGatewayTest {
 
     @Test
     void encodesWriteFunctionSelectors() {
-        assertThat(gateway.encodeBuy(BigInteger.ONE)).startsWith(selector("buy(uint256)"));
-        assertThat(gateway.encodeSell(BigInteger.ONE)).startsWith(selector("sell(uint256)"));
+        SignedPriceReport report = signedReport();
+        String tuple = "(bytes32,bytes32,uint256,uint256,uint256,uint8,uint256,uint256,address)";
+        assertThat(gateway.encodeBuy(report)).startsWith(selector("buy(" + tuple + ",bytes)"));
+        assertThat(gateway.encodeSell(report)).startsWith(selector("sell(" + tuple + ",bytes)"));
         assertThat(gateway.encodeApprove(address(), BigInteger.TEN)).startsWith(selector("approve(address,uint256)"));
+    }
+
+    @Test
+    void rejectsInvalidSignatureLength() {
+        SignedPriceReport invalid = new SignedPriceReport(signedReport().report(), "0x12", BigInteger.ZERO);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> gateway.encodeBuy(invalid))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("65바이트");
     }
 
     private String selector(String signature) {
@@ -90,5 +101,12 @@ class ContractGatewayTest {
 
     private String address() {
         return "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+    }
+
+    private SignedPriceReport signedReport() {
+        PriceReport report = new PriceReport("0x" + "11".repeat(32), "0x" + "22".repeat(32),
+                BigInteger.valueOf(7_530_000_000_000L), BigInteger.valueOf(100), BigInteger.valueOf(130),
+                PriceReport.Side.BUY, BigInteger.valueOf(1000), BigInteger.valueOf(999), address());
+        return new SignedPriceReport(report, "0x" + "aa".repeat(65), BigInteger.ONE);
     }
 }

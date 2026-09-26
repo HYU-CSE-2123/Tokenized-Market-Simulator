@@ -2,12 +2,12 @@ package com.pricetrack.exchange.quote;
 
 import com.pricetrack.exchange.auth.AuthenticatedUser;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.pricetrack.exchange.blockchain.BlockchainService;
 import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
 import com.pricetrack.exchange.blockchain.config.PriceReportProperties;
 import com.pricetrack.exchange.blockchain.oracle.PriceReport;
 import com.pricetrack.exchange.blockchain.support.PriceUnits;
 import com.pricetrack.exchange.blockchain.support.TokenUnits;
+import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationException;
 import com.pricetrack.exchange.market.MarketPriceService;
 
 import java.math.BigDecimal;
@@ -34,17 +34,15 @@ public class QuoteController {
     private final TradeCalculator tradeCalculator;
     private final BlockchainProperties blockchainProperties;
     private final PriceReportProperties priceReportProperties;
-    private final BlockchainService blockchainService;
     private final PriceQuoteService priceQuoteService;
 
     public QuoteController(MarketPriceService marketPriceService, TradeCalculator tradeCalculator,
             BlockchainProperties blockchainProperties, PriceReportProperties priceReportProperties,
-            BlockchainService blockchainService, PriceQuoteService priceQuoteService) {
+            PriceQuoteService priceQuoteService) {
         this.marketPriceService = marketPriceService;
         this.tradeCalculator = tradeCalculator;
         this.blockchainProperties = blockchainProperties;
         this.priceReportProperties = priceReportProperties;
-        this.blockchainService = blockchainService;
         this.priceQuoteService = priceQuoteService;
     }
 
@@ -75,13 +73,7 @@ public class QuoteController {
                     request.krwAmount(), TokenUnits.fromWei(quote.getFee()), output,
                     quote.getQuoteId(), output, quote.getObservedAt(), quote.getValidUntil(), quote.getStatus());
         }
-        if (blockchainProperties.enabled()) {
-            var quote = blockchainService.quoteBuy(TokenUnits.toWei(request.krwAmount()));
-            BigDecimal price = PriceUnits.fromPriceE8(blockchainService.oraclePrice().priceE8());
-            return new BuyQuoteResponse(request.symbol(), "BUY", price, request.krwAmount(),
-                    TokenUnits.fromWei(quote.fee()), TokenUnits.fromWei(quote.outputAmount()),
-                    null, null, null, null, null);
-        }
+        requireSignedQuotesForBlockchain();
         BigDecimal price = marketPriceService.currentPrice();
         TradeCalculator.BuyCalculation calculation = tradeCalculator.buy(request.krwAmount(), price);
         return new BuyQuoteResponse(request.symbol(), "BUY", price, request.krwAmount(),
@@ -99,13 +91,7 @@ public class QuoteController {
                     request.tokenAmount(), TokenUnits.fromWei(quote.getFee()), output,
                     quote.getQuoteId(), output, quote.getObservedAt(), quote.getValidUntil(), quote.getStatus());
         }
-        if (blockchainProperties.enabled()) {
-            var quote = blockchainService.quoteSell(TokenUnits.toWei(request.tokenAmount()));
-            BigDecimal price = PriceUnits.fromPriceE8(blockchainService.oraclePrice().priceE8());
-            return new SellQuoteResponse(request.symbol(), "SELL", price, request.tokenAmount(),
-                    TokenUnits.fromWei(quote.fee()), TokenUnits.fromWei(quote.outputAmount()),
-                    null, null, null, null, null);
-        }
+        requireSignedQuotesForBlockchain();
         BigDecimal price = marketPriceService.currentPrice();
         TradeCalculator.SellCalculation calculation = tradeCalculator.sell(request.tokenAmount(), price);
         return new SellQuoteResponse(request.symbol(), "SELL", price, request.tokenAmount(),
@@ -114,5 +100,12 @@ public class QuoteController {
 
     private boolean signedQuotesEnabled() {
         return blockchainProperties.enabled() && priceReportProperties.enabled();
+    }
+
+    private void requireSignedQuotesForBlockchain() {
+        if (blockchainProperties.enabled()) {
+            throw new BlockchainConfigurationException(
+                    "온체인 견적에는 PRICE_REPORT_SIGNING_ENABLED=true 설정이 필요합니다.");
+        }
     }
 }

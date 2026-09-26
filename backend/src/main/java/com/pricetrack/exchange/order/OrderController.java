@@ -32,9 +32,11 @@ public class OrderController {
     }
 
     public record BuyRequest(@NotBlank String symbol,
-            @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal krwAmount) {}
+            @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal krwAmount,
+            String quoteId) {}
     public record SellRequest(@NotBlank String symbol,
-            @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal tokenAmount) {}
+            @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal tokenAmount,
+            String quoteId) {}
     public record OrderResponse(Long orderId, String symbol, OrderSide side, BigDecimal inputAmount,
             BigDecimal outputAmount, OrderStatus status, String txHash, Instant createdAt) {
         static OrderResponse from(Order order) {
@@ -47,7 +49,7 @@ public class OrderController {
     public ResponseEntity<OrderResponse> buy(@AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody BuyRequest request) {
         OrderResponse response = OrderResponse.from(
-                orderService.buy(user.userId(), request.symbol(), request.krwAmount()));
+                orderService.buy(user.userId(), request.symbol(), request.krwAmount(), request.quoteId()));
         return response.status() == OrderStatus.PENDING_ONCHAIN
                 ? ResponseEntity.accepted().body(response) : ResponseEntity.ok(response);
     }
@@ -56,7 +58,7 @@ public class OrderController {
     public ResponseEntity<OrderResponse> sell(@AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody SellRequest request) {
         OrderResponse response = OrderResponse.from(
-                orderService.sell(user.userId(), request.symbol(), request.tokenAmount()));
+                orderService.sell(user.userId(), request.symbol(), request.tokenAmount(), request.quoteId()));
         return response.status() == OrderStatus.PENDING_ONCHAIN
                 ? ResponseEntity.accepted().body(response) : ResponseEntity.ok(response);
     }
