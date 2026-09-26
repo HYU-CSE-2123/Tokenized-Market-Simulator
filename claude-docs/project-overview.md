@@ -67,6 +67,7 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - Phase 5.3-B 완료: 서명 견적을 인증 사용자에게 귀속해 `price_quotes`에 저장하고 소유권·방향·입력량·만료·일회성 소비를 DB 잠금으로 검증하며 비밀 필드를 제외한 견적 API 제공
 - Phase 5.3-C 완료: 주문의 `quoteId`로 서버 DB 보고서·서명을 복원하고 주문 생성·자산 잠금·견적 소비를 원자화했으며 web3j를 `buy/sell(PriceReport,bytes)` ABI로 전환
 - Phase 5.4 완료: 브라우저 검증 도구에서 견적 발급과 주문 확정을 분리하고 서명 가격·수수료·최소 수령량·만료·주문 상태·최종 온체인 체결가를 표시하며 실제 PostgreSQL 동시 소비를 검증
+- Phase 6.1 완료: 웹 기준 클라이언트에서 Android MVP의 인증·시장·차트·faucet·포트폴리오·견적·주문·주문 내역·체결 내역 기능과 백엔드 계약의 대응을 완성
 - 주기적 `updatePrice` 제출은 제거하고, RPC 장애는 `SIGNED` 저장 전 주문 실패·잠금 해제와 저장 후 동일 raw transaction 복구로 구분
 - IntelliJ의 저장소 루트 실행에서도 `backend/.env`를 읽도록 보강하고, 브라우저 차트 시간축은 UTC 원본을 유지한 채 한국 시간으로 표시
 - Windows 예약 포트 범위와 충돌한 8080 대신 로컬 백엔드 기본 포트를 8082로 통일하고 웹 프록시·Android 주소도 같은 포트를 사용
@@ -79,7 +80,7 @@ Phase 3, Phase 4와 실제 Toss 가격 공급자, 장·가격 가용성 정책, 
 
 Android 담당자가 별도 거래 로직을 설계하지 않고 검증된 계약을 그대로 적용할 수 있도록 다음 Phase를 먼저 수행합니다.
 
-- Phase 6.1: 웹에서 인증·시장·차트·견적·주문·체결·포트폴리오·내역 등 Android MVP 대응 기능의 누락을 점검하고 완성
+- Phase 6.1 완료: 웹에서 인증·시장·차트·견적·주문·체결·포트폴리오·내역 등 Android MVP 대응 기능의 누락을 점검하고 완성
 - Phase 6.2: WebSocket 재연결 후 REST 재동기화, 이벤트 유실·중복·역순, 견적 만료·재사용, 잔고·휴장·stale·RPC 장애 처리 검증
 - Phase 6.3: 실제 Toss·Spring Boot·PostgreSQL·Anvil·웹을 연결한 정상/실패 종단간 인수 테스트
 - Phase 6.4: REST·WebSocket 계약, JSON 예제, 상태 전이, 오류 처리, 에뮬레이터 주소와 체크리스트를 Android 담당자에게 전달

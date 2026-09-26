@@ -41,6 +41,7 @@ elements.market.addEventListener('click', () => runRest(() => api.market(), rend
 elements.faucet.addEventListener('click', () => runRest(() => api.faucet()));
 elements.portfolio.addEventListener('click', () => runRest(() => api.portfolio()));
 elements.orders.addEventListener('click', () => runRest(() => api.orders()));
+elements.trades.addEventListener('click', () => runRest(() => api.trades()));
 elements['quote-buy'].addEventListener('click', () => issueQuote('BUY'));
 elements['quote-sell'].addEventListener('click', () => issueQuote('SELL'));
 elements.buy.addEventListener('click', () => executeQuote('BUY'));

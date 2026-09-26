@@ -1699,3 +1699,38 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 ## 다음 작업
 
 - Phase 6.1을 시작하기 전에 현재 웹 기능과 Android MVP 요구 기능의 차이를 코드·API 기준으로 조사하고 구현 범위와 테스트 계획을 사용자에게 설명해 승인받는다.
+
+---
+
+# Phase 6.1: 웹 MVP 기능 대조와 완성 — 완료
+
+> 작성: 2026-09-27
+
+## 구현
+
+- Android MVP가 요구하는 인증, 내 정보, 시장·차트, faucet, 포트폴리오, 견적·주문, 주문 상태·내역과 체결 내역을 현재 REST·WebSocket 및 웹 기능과 대조했다.
+- 기존 웹은 대부분을 이미 제공했으며, API 클라이언트 내부에서만 사용하던 `GET /api/trades`를 사용자가 직접 확인할 수 있도록 `체결 내역 조회` 버튼을 추가했다.
+- 웹 README에 Android 사용자 기능과 웹 검증 위치, 실제 백엔드 REST·WebSocket 계약의 대응표를 추가했다.
+
+## 결정
+
+- Phase 6.1에서는 백엔드·DB·컨트랙트 계약을 변경하지 않는다. 현재 MVP에 필요한 조회·거래 API가 모두 존재한다.
+- 웹은 제품 프론트엔드가 아니라 Android 구현자가 동일한 요청 순서와 상태 전이를 확인하는 실행 가능한 기준 클라이언트다.
+- 기존 Android 스캐폴딩의 이메일 로그인, `quoteId` 없는 주문과 오래된 DTO는 지금 수정하지 않고 Phase 6.4 인수 패키지에서 현재 계약으로 명확히 교체하도록 안내한다.
+- WebSocket 재연결 후 REST 자동 복구와 장애 시나리오는 Phase 6.2로 분리한다.
+
+## 검증
+
+- `cd tools/websocket-test-client && npm test`: 20개 통과, 실패 0개
+- `cd tools/websocket-test-client && npm run build`: Vite production build 성공
+- `git diff --check`: 통과
+
+## 검토
+
+- 별도 검토자가 체결 내역 버튼과 기존 `ApiClient.trades()` 연결, Android MVP 대응표와 Phase 범위, 백엔드·DB·컨트랙트 무변경을 확인했으며 코드 필수 결함은 발견하지 않았다.
+- 최초 검토에서 완료 로그의 검증·검토 항목이 미래형 placeholder로 남은 문서 불일치를 필수 수정으로 지적해 실제 결과로 교체했다.
+- 검토자는 `npm test` 20개와 `git diff --check`를 독립 확인했다. 격리 계정의 상위 경로 접근 제한으로 production build를 재실행하지 못해 구현자의 성공 결과와 구분해 확인했다.
+
+## 다음 작업
+
+- Phase 6.2에서 WebSocket 재연결 후 시장·주문·포트폴리오·체결 상태를 REST로 재동기화하고 오류·장애 시나리오를 검증한다.

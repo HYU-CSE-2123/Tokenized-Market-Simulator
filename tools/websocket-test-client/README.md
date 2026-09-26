@@ -45,6 +45,22 @@ Vite 개발 프록시가 `/api`, `/ws`, `/ws-sockjs`를 백엔드에 전달하�
 12. 연결을 끊고 SockJS `/ws-sockjs`를 선택해 같은 흐름을 확인합니다.
 13. JWT를 지우고 연결하면 공개 이벤트만 구독되는지 확인합니다.
 
+## Android MVP 대응표
+
+| Android 사용자 기능 | 웹 검증 위치 | 백엔드 계약 |
+| --- | --- | --- |
+| 회원가입·로그인 | 계정 입력과 회원가입·로그인 버튼 | `POST /api/auth/signup`, `POST /api/auth/login` |
+| 내 정보 | `내 정보` 버튼 | `GET /api/me` |
+| 시장 상태·현재가 | 시장 상태와 현재 가격 카드 | `GET /api/markets/mSEC` |
+| 실시간·과거 차트 | 차트 주기 전환과 과거 탐색 | 캔들 REST + `/topic/markets/mSEC/price` |
+| 테스트 원화 충전 | `mKRW Faucet` 버튼 | `POST /api/wallet/faucet` |
+| 포트폴리오 | `포트폴리오 조회`와 개인 이벤트 | `GET /api/portfolio`, `/user/queue/portfolio` |
+| 매수·매도 | 견적 카드와 주문 확정 | 견적 API → `quoteId` 주문 API |
+| 주문 상태·내역 | `LAST ORDER`, `주문 조회`, 개인 이벤트 | `GET /api/orders`, `/user/queue/orders` |
+| 체결 내역 | `체결 내역 조회`, 공개 체결 이벤트 | `GET /api/trades`, `/topic/markets/mSEC/trades` |
+
+위 표의 모든 기능을 웹에서 먼저 검증한 뒤 동일한 계약을 Android에 적용합니다. WebSocket 재연결 후 REST 자동 재동기화와 장애 시나리오는 Phase 6.2 범위입니다.
+
 서명 견적은 30초 동안만 유효합니다. 만료된 견적, 이미 소비한 견적, 바뀐 입력량은 기존 견적을 조용히 재사용하지 않고 오류와 재견적 안내를 표시합니다. 실제 Toss 공급자를 사용하는 경우 휴장·오래된 가격 정책에 따라 신규 견적이 차단될 수 있으므로 정상 체결 시연은 장중에 수행합니다.
 
 차트는 최초 로딩·주기 변경·WebSocket 재연결 때 REST 캔들을 다시 조회해 놓친 구간을 복구합니다. 왼쪽 끝으로 이동하면 응답의 `nextBefore`로 이전 페이지를 요청해 중복을 제거한 뒤 앞에 추가하며, 보고 있던 화면 위치는 유지합니다. 더 과거 데이터가 없거나 cursor가 전진하지 않으면 추가 요청을 중단합니다. 현재 봉은 이벤트의 서버 발행 시각이 아니라 공급자의 `observedAt`으로 선택한 주기의 벽시계 구간을 정하고, Toss에서는 실제 체결량을 누적하며 시뮬레이션에서는 tick 하나를 거래량 1로 표시합니다.
