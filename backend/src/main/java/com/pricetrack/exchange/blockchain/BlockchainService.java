@@ -2,6 +2,7 @@ package com.pricetrack.exchange.blockchain;
 
 import com.pricetrack.exchange.blockchain.config.BlockchainProperties;
 import com.pricetrack.exchange.blockchain.contract.ContractGateway;
+import com.pricetrack.exchange.blockchain.oracle.PriceReport;
 import com.pricetrack.exchange.blockchain.support.BlockchainConfigurationException;
 import com.pricetrack.exchange.blockchain.support.OperatorNotReadyException;
 
@@ -65,6 +66,16 @@ public class BlockchainService {
         }
     }
 
+    /** EIP-712 domain에 사용할 실제 연결 체인의 ID를 조회한다. */
+    public BigInteger chainId() {
+        requireEnabled();
+        try {
+            return web3j.ethChainId().send().getChainId();
+        } catch (IOException exception) {
+            throw new BlockchainConfigurationException("체인 ID 조회에 실패했습니다.", exception);
+        }
+    }
+
     /** 개인키를 노출하지 않고 서명 주체의 공개 주소만 파생한다. */
     public String operatorAddress() {
         String privateKey = required("OPERATOR_PRIVATE_KEY", properties.operatorPrivateKey());
@@ -112,6 +123,22 @@ public class BlockchainService {
     public String oracleAddress() {
         requireEnabled();
         return configuredContracts().get("PriceOracle");
+    }
+
+    public String oraclePriceSigner() {
+        requireEnabled();
+        return contracts.priceSigner(configuredContracts().get("PriceOracle"));
+    }
+
+    /** 서명 가격과 현재 Vault 수수료로 보고서의 정확한 최소 수령량을 조회한다. */
+    public ContractGateway.Quote quoteAtPrice(PriceReport.Side side, BigInteger inputAmount, BigInteger priceE8) {
+        requirePositive(inputAmount);
+        if (side == null) throw new IllegalArgumentException("거래 방향이 필요합니다.");
+        if (priceE8 == null || priceE8.signum() <= 0) throw new IllegalArgumentException("가격은 0보다 커야 합니다.");
+        String vault = configuredContracts().get("ExchangeVault");
+        return side == PriceReport.Side.BUY
+                ? contracts.quoteBuyAtPrice(vault, inputAmount, priceE8)
+                : contracts.quoteSellAtPrice(vault, inputAmount, priceE8);
     }
 
     public String encodeUpdatePrice(BigInteger priceE8) {

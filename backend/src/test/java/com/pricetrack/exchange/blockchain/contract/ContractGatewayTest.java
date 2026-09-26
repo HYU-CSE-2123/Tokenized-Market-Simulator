@@ -51,6 +51,21 @@ class ContractGatewayTest {
     }
 
     @Test
+    void decodesPriceSignerAddress() throws Exception {
+        respond("0x" + "0".repeat(24) + address().substring(2).toLowerCase());
+        assertThat(gateway.priceSigner(address())).isEqualToIgnoringCase(address());
+    }
+
+    @Test
+    void decodesAtPriceQuoteTuple() throws Exception {
+        respond(uints(BigInteger.valueOf(999), BigInteger.ONE));
+        ContractGateway.Quote result = gateway.quoteBuyAtPrice(
+                address(), BigInteger.valueOf(1000), BigInteger.valueOf(75_000).multiply(BigInteger.TEN.pow(8)));
+        assertThat(result.outputAmount()).isEqualTo("999");
+        assertThat(result.fee()).isEqualTo("1");
+    }
+
+    @Test
     void encodesWriteFunctionSelectors() {
         assertThat(gateway.encodeBuy(BigInteger.ONE)).startsWith(selector("buy(uint256)"));
         assertThat(gateway.encodeSell(BigInteger.ONE)).startsWith(selector("sell(uint256)"));

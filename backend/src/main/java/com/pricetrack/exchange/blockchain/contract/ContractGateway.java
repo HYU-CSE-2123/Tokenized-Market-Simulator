@@ -60,6 +60,16 @@ public class ContractGateway {
         return address;
     }
 
+    /** Oracle에 등록된 EIP-712 가격 보고서 서명자 주소를 조회한다. */
+    public String priceSigner(String oracle) {
+        List<Type> values = call(oracle, new Function("priceSigner", emptyList(),
+                List.of(new TypeReference<Address>() {})));
+        if (values.size() != 1 || !(values.getFirst().getValue() instanceof String address)) {
+            throw new BlockchainConfigurationException("priceSigner() 반환값 ABI가 예상과 다릅니다.");
+        }
+        return address;
+    }
+
     /** Oracle의 priceE8과 마지막 갱신 블록 시각을 조회한다. */
     public OraclePrice getPrice(String oracle) {
         List<Type> values = call(oracle, new Function("getPrice", emptyList(), List.of(
@@ -71,6 +81,16 @@ public class ContractGateway {
     public Quote quoteBuy(String vault, BigInteger krwAmount) { return quote(vault, "quoteBuy", krwAmount); }
     /** 상태를 변경하지 않고 sell 실행 예상 출력량과 수수료를 조회한다. */
     public Quote quoteSell(String vault, BigInteger tokenAmount) { return quote(vault, "quoteSell", tokenAmount); }
+
+    /** 서명 보고서의 가격으로 매수 최소 수령량과 수수료를 계산한다. */
+    public Quote quoteBuyAtPrice(String vault, BigInteger krwAmount, BigInteger priceE8) {
+        return quoteAtPrice(vault, "quoteBuyAtPrice", krwAmount, priceE8);
+    }
+
+    /** 서명 보고서의 가격으로 매도 최소 수령량과 수수료를 계산한다. */
+    public Quote quoteSellAtPrice(String vault, BigInteger tokenAmount, BigInteger priceE8) {
+        return quoteAtPrice(vault, "quoteSellAtPrice", tokenAmount, priceE8);
+    }
 
     /** 서명·전송 계층이 사용할 Vault.buy calldata를 생성한다. */
     public String encodeBuy(BigInteger krwAmount) {
@@ -99,6 +119,13 @@ public class ContractGateway {
     private Quote quote(String vault, String method, BigInteger amount) {
         List<Type> values = call(vault, new Function(method, List.of(new Uint256(amount)), List.of(
                 new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {})));
+        return new Quote(asUint(values, 0), asUint(values, 1));
+    }
+
+    private Quote quoteAtPrice(String vault, String method, BigInteger amount, BigInteger priceE8) {
+        List<Type> values = call(vault, new Function(method,
+                List.of(new Uint256(amount), new Uint256(priceE8)), List.of(
+                        new TypeReference<Uint256>() {}, new TypeReference<Uint256>() {})));
         return new Quote(asUint(values, 0), asUint(values, 1));
     }
 

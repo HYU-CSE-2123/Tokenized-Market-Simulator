@@ -204,9 +204,9 @@ signer: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7
 - 동일 트랜잭션 원자성, replay와 잘못된 서명 방어
 - Foundry 단위·fuzz 테스트와 시나리오 스크립트 갱신
 
-### Phase 5.3 — 백엔드 가격 보고서와 주문 연동
+### Phase 5.3 — 백엔드 가격 보고서와 주문 연동 — 진행 중
 
-- Toss 스냅샷 기반 가격 보고서 생성·서명
+- Phase 5.3-A 완료: Toss를 포함한 선택 공급자 스냅샷 기반 가격 보고서 생성·서명과 기동 검증
 - 견적 응답과 주문 요청 계약 확장
 - web3j 인코딩·전송·receipt 정산과 실패 복구
 - 서명 키 환경 설정과 비밀정보 관리
@@ -256,3 +256,12 @@ block.timestamp <= validUntil
 - 실제 결과가 `minimumOutput`보다 작으면 거래를 거부한다. 수수료 변경, 유동성 부족, 전송 실패 등 보고서 소비 이후 오류도 전체 트랜잭션을 되돌려 Oracle 가격과 `usedQuoteIds`를 복구한다.
 - `Scenario.s.sol`은 레거시 관리자 가격 변경 대신 75,000원 매수 보고서와 80,000원 매도 보고서를 각각 서명해 가격 상승 왕복 거래를 검증한다.
 - 백엔드의 기존 금액 기반 ABI 호출은 아직 새 함수 계약으로 전환되지 않았으며 Phase 5.3에서 보고서 발급·서명·인코딩과 함께 변경한다.
+
+## 12. Phase 5.3-A 구현 결과
+
+- `PriceReportIssuer`는 거래 가능한 단일 시장 스냅샷을 읽고 관측 시각이 현재보다 5초를 초과해 오래되지 않았으며 2초를 초과해 미래가 아닌지 검사한다.
+- 보고서 가격은 1e8 단위로 변환하고 Vault의 `quoteBuyAtPrice`·`quoteSellAtPrice`를 호출해 현재 온체인 수수료까지 반영한 정확한 결과를 `minimumOutput`으로 고정한다.
+- `quoteId`는 무작위 UUID를 해시한 bytes32이며, `validUntil = observedAt + 30초`, `executor`는 백엔드 운영자 지갑 주소다.
+- EIP-712 domain에는 RPC에서 조회한 실제 chain ID와 설정된 PriceOracle 주소를 사용한다.
+- `PRICE_SIGNER_PRIVATE_KEY`는 운영자 거래 키와 분리되며, `PRICE_REPORT_SIGNING_ENABLED=true`일 때 서버 기동 과정에서 파생 주소와 온체인 `priceSigner()`가 같은지 확인한다.
+- 현재 발급기는 내부 서비스 기반만 제공한다. API 노출, 사용자별 견적 소유권과 주문 소비는 Phase 5.3-B, 새 tuple/bytes 거래 ABI 전송은 Phase 5.3-C 범위다.

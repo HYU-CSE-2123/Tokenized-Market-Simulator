@@ -15,6 +15,7 @@
 - 선택적으로 활성화하는 web3j RPC 연결과 읽기 전용 컨트랙트 조회
 - 블록체인 활성화 시 운영자 지갑의 buy/sell 서명·전송, receipt polling과 자동 체결
 - 가격 시뮬레이터의 최신 가격을 `PriceOracle.updatePrice`로 동기화하고 `PriceUpdated` 이벤트를 가격 이력으로 저장
+- 최신 시장 스냅샷과 Vault 명시 가격 견적으로 30초 유효 EIP-712 가격 보고서를 발급·전용 키로 서명하는 기반
 - 블록체인 활성화 시 Oracle과 Vault를 직접 조회하는 온체인 매수·매도 견적
 - 일반 WebSocket `/ws`와 브라우저 호환 SockJS `/ws-sockjs`, STOMP JWT 인증과 공개·개인 구독 통제
 - 버전 있는 WebSocket 이벤트 envelope와 DB commit 이후에만 전송되는 공개·개인 이벤트 발행 기반
@@ -245,7 +246,7 @@ Copy-Item .env.example .env
 - `backend/.env.example`: 팀원이 공유하는 변수 목록이며 실제 비밀번호·개인키는 넣지 않습니다.
 - Spring 설정은 `backend/`에서 Gradle로 실행할 때의 `.env`와 저장소 루트에서 IntelliJ로 실행할 때의 `backend/.env`를 모두 선택적으로 탐색합니다.
 - OS 환경 변수가 같은 이름으로 설정돼 있으면 `.env`보다 OS 환경 변수가 우선합니다.
-- `JWT_SECRET`, `ADMIN_PASSWORD`, `OPERATOR_PRIVATE_KEY`는 `.env`에서 직접 입력하고 주석을 해제합니다.
+- `JWT_SECRET`, `ADMIN_PASSWORD`, `OPERATOR_PRIVATE_KEY`, `PRICE_SIGNER_PRIVATE_KEY`는 `.env`에서 직접 입력하고 주석을 해제합니다.
 - `.env`가 없어도 기본값으로 기동할 수 있지만 관리자는 생성되지 않습니다.
 
 ```powershell
@@ -254,7 +255,20 @@ cd backend
 .\gradlew.bat bootRun
 ```
 
-주요 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `WEBSOCKET_ALLOWED_ORIGINS`, `BLOCKCHAIN_ENABLED`, `RPC_URL`, `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS`, `OPERATOR_PRIVATE_KEY`.
+주요 환경 변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `WEBSOCKET_ALLOWED_ORIGINS`, `BLOCKCHAIN_ENABLED`, `RPC_URL`, `MOCK_KRW_ADDRESS`, `MSEC_ADDRESS`, `PRICE_ORACLE_ADDRESS`, `EXCHANGE_VAULT_ADDRESS`, `OPERATOR_PRIVATE_KEY`, `PRICE_REPORT_SIGNING_ENABLED`, `PRICE_SIGNER_PRIVATE_KEY`.
+
+### 가격 보고서 서명 설정
+
+Phase 5.3-A의 가격 보고서 발급 기능은 기본적으로 비활성화되어 기존 주문 경로에 영향을 주지 않는다. 활성화할 때는 거래 전송 키와 다른 가격 전용 키를 설정한다.
+
+```properties
+PRICE_REPORT_SIGNING_ENABLED=true
+PRICE_SIGNER_PRIVATE_KEY=<PriceOracle.priceSigner 주소의 개인키>
+```
+
+활성화 상태로 서버가 시작되면 전용 키에서 파생한 주소와 온체인 `PriceOracle.priceSigner()`를 비교한다. 키가 없거나 형식이 잘못됐거나 주소가 다르면 서버 기동을 중단한다. 개인키는 API 응답·로그·문서에 기록하지 않는다.
+
+발급기는 선택된 가격 공급자의 스냅샷이 5초 이내인지 검사하고, Vault의 `quoteBuyAtPrice` 또는 `quoteSellAtPrice` 결과를 `minimumOutput`으로 고정한다. 보고서는 관측 시각부터 정확히 30초 동안 유효하며 현재 단계에서는 아직 REST 견적이나 주문 전송 경로에 노출되지 않는다.
 
 ### 가격 공급자 선택
 

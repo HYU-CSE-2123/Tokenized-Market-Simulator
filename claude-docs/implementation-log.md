@@ -1493,3 +1493,43 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - Phase 5.3에서 Toss 가격 보고서 발급·서명, 주문 API와 web3j tuple/bytes 인코딩, receipt 정산 경로를 새 ABI로 전환한다.
 - 실제 Anvil broadcast 종단간 검증은 백엔드 전환과 새 배포가 함께 가능한 Phase 5.3에서 수행한다.
+
+---
+
+# Phase 5.3-A: 백엔드 가격 보고서 발급·서명 기반 — 완료
+
+> 작성: 2026-09-26
+
+## 구현
+
+- `PriceReportIssuer`가 선택된 시장 공급자의 단일 스냅샷을 읽고 5초 신선도와 2초 미래 오차를 검사한다.
+- 스냅샷 가격을 `priceE8`로 변환하고 Vault의 명시 가격 견적을 호출해 현재 수수료가 반영된 출력량을 `minimumOutput`으로 사용한다.
+- 무작위 일회용 `quoteId`, 관측 시각부터 30초 만료, 거래 방향·입력량·운영자 executor가 결합된 `PriceReport`를 생성한다.
+- 실제 RPC chain ID와 PriceOracle 주소로 EIP-712 digest를 만들고 `PRICE_SIGNER_PRIVATE_KEY` 전용 키로 65바이트 서명을 생성한다.
+- `PRICE_REPORT_SIGNING_ENABLED=true`이면 기동 시 전용 키 주소와 온체인 `PriceOracle.priceSigner()`가 일치하는지 검사한다.
+- `ContractGateway`와 `BlockchainService`에 `priceSigner`, chain ID, `quoteBuyAtPrice`·`quoteSellAtPrice` 조회 경계를 추가했다.
+
+## 결정
+
+- 가격 서명 키는 자금을 이동하는 `OPERATOR_PRIVATE_KEY`와 분리한다.
+- 최소 수령량을 Java에서 수수료 공식으로 재구현하지 않고 Vault view 함수를 호출해 컨트랙트 수수료 설정과 항상 일치시킨다.
+- 서명 기능은 기본 비활성화하여 Phase 5.3-B/C 전 기존 주문 경로를 바꾸지 않는다. 활성화하면 설정 오류를 요청 시점이 아니라 서버 기동 시 차단한다.
+- 현재 단계는 내부 발급 서비스까지만 제공하며 REST API, DB 견적 소유권, 기존 주문 ABI는 변경하지 않는다.
+
+## 검증
+
+- 정확히 5초 된 가격과 2초 미래 경계 허용, 6초 경과·3초 미래·다른 종목·0 출력 거부를 검증했다.
+- 보고서의 가격·관측/만료 시각·최소 수령량·executor와 65바이트 서명, 전용 키 누락·형식·온체인 주소 불일치를 검증했다.
+- `cd backend && .\\gradlew.bat test --no-daemon`: 총 136개 중 133개 통과, 실패 0개, 선택적 Anvil 테스트 3개 skipped
+
+## 검토
+
+- 별도 검토에서 구현·테스트·설정·문서와 untracked 신규 파일까지 확인했으며 `발견된 필수 수정 없음`으로 결론 났다.
+- 검토자는 최신 XML 결과의 136개 중 133개 통과·실패 0개·Anvil 3개 skipped와 `git diff --check` 통과를 확인했다. 독립 Gradle 재실행은 기존 테스트 결과 파일 잠금으로 시작 전 중단되어 구현자의 최종 전체 테스트 결과를 교차 확인했다.
+- 생성 서명에서 signer 주소를 직접 복구하는 통합 단위 테스트가 비차단 제안으로 남았다. 현재 공통 EIP-712 벡터와 키 주소·65바이트 서명 테스트가 있으며, 실제 서명 소비는 Phase 5.3-C Anvil 종단간 검증에서 추가 확인한다.
+
+## 남은 작업
+
+- Phase 5.3-B에서 사용자별 견적 소유권·일회성 상태와 REST 견적/주문 계약을 확장한다.
+- Phase 5.3-C에서 `buy/sell(PriceReport,bytes)` ABI 인코딩·전송과 receipt 정산을 연결하고 기존 `updatePrice()` 동기화 경로를 제거한다.
+- 실제 Anvil과 Toss를 함께 사용하는 서명 보고서 종단간 검증은 Phase 5.3-C/5.4에서 수행한다.
