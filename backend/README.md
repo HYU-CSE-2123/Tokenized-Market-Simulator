@@ -274,6 +274,13 @@ Phase 5.3-B부터 위 두 설정과 `BLOCKCHAIN_ENABLED=true`가 모두 적용�
 
 `price_quotes` 상태는 `ISSUED → CONSUMED` 또는 `ISSUED → EXPIRED`다. 소비 서비스는 사용자·방향·입력량·만료를 확인하고 DB 비관적 잠금으로 동일 견적의 동시 재사용을 막는다. 온체인 주문 요청은 `quoteId`를 필수로 받고 서버가 DB의 원본 보고서와 서명을 읽어 `buy/sell(PriceReport,bytes)`를 호출한다. 모의 거래에서는 `quoteId` 없이 기존 즉시 거래가 유지된다.
 
+실제 PostgreSQL 행 잠금의 동시 소비 검증은 실행 중인 로컬 DB를 대상으로 선택 실행한다. 테스트가 사용하는 고정 견적 행만 생성한 뒤 삭제하며 기존 사용자·주문 데이터는 지우지 않는다.
+
+```powershell
+$env:POSTGRES_INTEGRATION_TESTS = "true"
+.\gradlew.bat test --no-daemon --rerun-tasks --tests com.pricetrack.exchange.quote.PriceQuotePostgresConcurrencyIntegrationTest
+```
+
 ### 가격 공급자 선택
 
 기본값인 `PRICE_PROVIDER=simulated`는 기존 1초 주기 모의 가격을 사용하며 토스증권 자격 증명이 필요하지 않습니다. 실제 삼성전자 초기 가격을 조회하려면 다음 값을 설정합니다.

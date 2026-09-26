@@ -44,12 +44,28 @@
           <button id="orders" class="button" type="button">주문 조회</button>
         </div>
 
-        <div class="trade-grid">
-          <label>매수 mKRW<input id="buy-amount" type="number" min="0" step="any" value="100000" /></label>
-          <button id="buy" class="button buy" type="button">mSEC 매수</button>
-          <label>매도 mSEC<input id="sell-amount" type="number" min="0" step="any" value="1" /></label>
-          <button id="sell" class="button sell" type="button">mSEC 매도</button>
+        <div class="trade-workspace">
+          <article class="trade-card buy-card">
+            <h3>mSEC 매수</h3>
+            <label>사용할 mKRW<input id="buy-amount" type="number" min="0" step="any" value="100000" /></label>
+            <div class="button-row">
+              <button id="quote-buy" class="button" type="button">매수 견적 받기</button>
+              <button id="buy" class="button buy" type="button" disabled>견적대로 매수</button>
+            </div>
+            <div id="buy-quote" class="quote-card empty" data-empty="아직 발급한 매수 견적이 없습니다."></div>
+          </article>
+          <article class="trade-card sell-card">
+            <h3>mSEC 매도</h3>
+            <label>판매할 mSEC<input id="sell-amount" type="number" min="0" step="any" value="1" /></label>
+            <div class="button-row">
+              <button id="quote-sell" class="button" type="button">매도 견적 받기</button>
+              <button id="sell" class="button sell" type="button" disabled>견적대로 매도</button>
+            </div>
+            <div id="sell-quote" class="quote-card empty" data-empty="아직 발급한 매도 견적이 없습니다."></div>
+          </article>
         </div>
+
+        <div id="trade-status" class="trade-status neutral">견적을 발급받은 뒤 주문을 실행하세요.</div>
 
         <details class="token-details">
           <summary>현재 JWT 확인</summary>
@@ -88,6 +104,12 @@
           <p>LAST EVENT</p>
           <strong id="last-event">—</strong>
           <span id="event-count">0 events received</span>
+        </article>
+        <article class="metric-card order-card">
+          <p>LAST ORDER</p>
+          <strong id="last-order-status">—</strong>
+          <span id="last-order-detail">주문 전</span>
+          <span id="last-fill-price">최종 체결 가격 —</span>
         </article>
       </section>
 

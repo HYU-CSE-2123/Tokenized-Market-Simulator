@@ -55,6 +55,10 @@ export class ApiClient {
     return this.#request('/api/orders');
   }
 
+  trades() {
+    return this.#request('/api/trades');
+  }
+
   quoteBuy(krwAmount) {
     return this.#request('/api/quotes/buy', {
       method: 'POST',

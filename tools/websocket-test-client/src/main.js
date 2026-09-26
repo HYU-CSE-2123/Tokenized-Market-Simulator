@@ -5,6 +5,10 @@ import {
   CandleHistoryCursor, CandleLoadBuffer, applyPriceTick, normalizeCandles, prependCandleHistory,
 } from './candles.js';
 import { MarketChart } from './market-chart.js';
+import {
+  friendlyTradeError, isCurrentOrder, normalizeQuote, orderFillPlaceholder, quoteUsability,
+  remainingSeconds, shouldRenderOrder,
+} from './trade-quote.js';
 
 const api = new ApiClient();
 const CHART_COUNTS = { '1m': 100, '5m': 100, '15m': 50, '30m': 30, '1h': 20, '1d': 100 };
@@ -14,6 +18,9 @@ let chartCandles = [];
 let chartRequest = 0;
 const chartLoadBuffer = new CandleLoadBuffer();
 const chartHistory = new CandleHistoryCursor();
+const tradeQuotes = { BUY: null, SELL: null };
+let lastOrder = null;
+let restBusy = false;
 
 const elements = Object.fromEntries(
   [...document.querySelectorAll('[id]')].map((element) => [element.id, element]),
@@ -34,16 +41,12 @@ elements.market.addEventListener('click', () => runRest(() => api.market(), rend
 elements.faucet.addEventListener('click', () => runRest(() => api.faucet()));
 elements.portfolio.addEventListener('click', () => runRest(() => api.portfolio()));
 elements.orders.addEventListener('click', () => runRest(() => api.orders()));
-elements.buy.addEventListener('click', () => runRest(async () => {
-  const amount = requiredAmount('buy-amount');
-  const quote = await api.quoteBuy(amount);
-  return api.buy(amount, quote.quoteId);
-}));
-elements.sell.addEventListener('click', () => runRest(async () => {
-  const amount = requiredAmount('sell-amount');
-  const quote = await api.quoteSell(amount);
-  return api.sell(amount, quote.quoteId);
-}));
+elements['quote-buy'].addEventListener('click', () => issueQuote('BUY'));
+elements['quote-sell'].addEventListener('click', () => issueQuote('SELL'));
+elements.buy.addEventListener('click', () => executeQuote('BUY'));
+elements.sell.addEventListener('click', () => executeQuote('SELL'));
+elements['buy-amount'].addEventListener('input', () => syncQuoteState('BUY'));
+elements['sell-amount'].addEventListener('input', () => syncQuoteState('SELL'));
 elements.connect.addEventListener('click', connectSocket);
 elements.disconnect.addEventListener('click', () => socket.disconnect());
 elements['reload-chart'].addEventListener('click', loadChart);
@@ -71,7 +74,8 @@ async function authRequest(action) {
   });
 }
 
-async function runRest(request, onSuccess) {
+async function runRest(request, onSuccess, onError) {
+  restBusy = true;
   setButtonsDisabled(true);
   try {
     const result = await request();
@@ -82,7 +86,72 @@ async function runRest(request, onSuccess) {
       ? { status: error.status, message: error.message, body: error.body }
       : { message: error.message || String(error) };
     elements['rest-output'].textContent = JSON.stringify(output, null, 2);
+    onError?.(error);
   } finally {
+    restBusy = false;
+    setButtonsDisabled(false);
+  }
+}
+
+async function issueQuote(side) {
+  let amount;
+  try {
+    amount = requiredAmount(side === 'BUY' ? 'buy-amount' : 'sell-amount');
+  } catch (error) {
+    setTradeStatus('ERROR', error.message);
+    return;
+  }
+  setTradeStatus('LOADING', `${side === 'BUY' ? '매수' : '매도'} 견적 발급 중`);
+  await runRest(async () => {
+    const result = side === 'BUY' ? await api.quoteBuy(amount) : await api.quoteSell(amount);
+    tradeQuotes[side] = normalizeQuote(side, amount, result.body);
+    renderQuote(side);
+    setTradeStatus('READY', '견적 내용을 확인하고 주문을 실행하세요.');
+    return result;
+  }, null, (error) => {
+    setTradeStatus('ERROR', friendlyTradeError(error.body, error.message));
+  });
+}
+
+async function executeQuote(side) {
+  const amountId = side === 'BUY' ? 'buy-amount' : 'sell-amount';
+  let amount;
+  try {
+    amount = requiredAmount(amountId);
+  } catch (error) {
+    setTradeStatus('ERROR', error.message);
+    return;
+  }
+  const quote = tradeQuotes[side];
+  const usability = quoteUsability(quote, amount);
+  if (!usability.usable) {
+    setTradeStatus('ERROR', `${usability.reason} 새 견적을 발급받으세요.`);
+    renderQuote(side);
+    return;
+  }
+  setTradeStatus('LOADING', '주문을 준비하고 온체인 트랜잭션을 전송하는 중입니다.');
+  restBusy = true;
+  setButtonsDisabled(true);
+  try {
+    const result = side === 'BUY'
+      ? await api.buy(amount, quote.quoteId) : await api.sell(amount, quote.quoteId);
+    tradeQuotes[side] = null;
+    renderQuote(side);
+    renderOrder(result.body);
+    elements['rest-output'].textContent = JSON.stringify(result, null, 2);
+  } catch (error) {
+    const body = error instanceof ApiError ? error.body : null;
+    const message = friendlyTradeError(body, error.message || String(error));
+    setTradeStatus('ERROR', message);
+    elements['rest-output'].textContent = JSON.stringify({
+      status: error.status, code: body?.code, message, body,
+    }, null, 2);
+    if (body?.code === 'PRICE_QUOTE_UNAVAILABLE' || body?.code === 'PRICE_QUOTE_NOT_FOUND') {
+      tradeQuotes[side] = null;
+      renderQuote(side);
+    }
+  } finally {
+    restBusy = false;
     setButtonsDisabled(false);
   }
 }
@@ -128,6 +197,10 @@ function renderEvent(channel, event) {
     elements['change-rate'].textContent = `${formatNumber(event.data?.changeRate, '%')} · ${displayTime(event.data?.observedAt)}`;
     renderPriceHealth(event.data);
     updateChart(event.data);
+  }
+  if (channel === 'order') {
+    const rendered = renderOrder(event.data);
+    if (rendered && event.data?.status === 'FILLED') void renderFinalTrade(event.data.orderId);
   }
 
   const container = elements[`${channel}-events`];
@@ -254,6 +327,79 @@ function summaryText(channel, data = {}) {
   return '';
 }
 
+function renderQuote(side) {
+  const quote = tradeQuotes[side];
+  const lower = side.toLowerCase();
+  const container = elements[`${lower}-quote`];
+  if (!quote) {
+    container.replaceChildren();
+    container.classList.add('empty');
+    syncQuoteState(side);
+    return;
+  }
+  container.classList.remove('empty');
+  const seconds = remainingSeconds(quote);
+  const outputUnit = side === 'BUY' ? 'mSEC' : 'mKRW';
+  const rows = [
+    ['서명 가격', formatNumber(quote.price, '원')],
+    ['수수료', formatNumber(quote.fee, side === 'BUY' ? 'mKRW' : 'mKRW')],
+    ['예상 수령량', formatNumber(quote.output, outputUnit)],
+    ['최소 수령량', formatNumber(quote.minimumOutput, outputUnit)],
+    ['관측 시각', quote.observedAt ? displayDateTime(quote.observedAt) : '모의 가격'],
+    ['남은 시간', seconds === null ? '모의 거래 · 만료 없음' : `${seconds}초`],
+    ['quoteId', quote.quoteId || '모의 거래 · 서버 서명 없음'],
+  ];
+  container.replaceChildren(...rows.map(([label, value]) => {
+    const row = document.createElement('div');
+    const key = document.createElement('span');
+    const data = document.createElement(label === 'quoteId' ? 'code' : 'strong');
+    key.textContent = label;
+    data.textContent = value;
+    row.append(key, data);
+    return row;
+  }));
+  syncQuoteState(side);
+}
+
+function syncQuoteState(side) {
+  const lower = side.toLowerCase();
+  const amount = elements[`${lower}-amount`].value.trim();
+  const usability = quoteUsability(tradeQuotes[side], amount);
+  elements[lower].disabled = restBusy || !usability.usable;
+  const container = elements[`${lower}-quote`];
+  container.classList.toggle('expired', Boolean(tradeQuotes[side]) && !usability.usable);
+}
+
+function setTradeStatus(state, detail) {
+  elements['trade-status'].textContent = `${state} · ${detail}`;
+  elements['trade-status'].className = `trade-status ${state === 'ERROR' ? 'error' : state === 'READY' ? 'success' : 'neutral'}`;
+}
+
+function renderOrder(order = {}) {
+  if (!shouldRenderOrder(lastOrder, order)) return false;
+  const fillPlaceholder = orderFillPlaceholder(lastOrder?.orderId, order);
+  lastOrder = { orderId: order.orderId, status: order.status };
+  elements['last-order-status'].textContent = order.status || 'UNKNOWN';
+  elements['last-order-detail'].textContent = `#${order.orderId} ${order.side || ''} · 입력 ${order.inputAmount ?? '—'} · 출력 ${order.outputAmount ?? '—'}`;
+  if (fillPlaceholder) elements['last-fill-price'].textContent = fillPlaceholder;
+  if (order.status === 'PENDING_ONCHAIN') setTradeStatus('PENDING', `주문 #${order.orderId} receipt 대기 중`);
+  if (order.status === 'FILLED') setTradeStatus('FILLED', `주문 #${order.orderId} 체결 완료`);
+  if (order.status === 'FAILED') setTradeStatus('ERROR', `주문 #${order.orderId}이 실패했습니다.`);
+  return true;
+}
+
+async function renderFinalTrade(orderId) {
+  try {
+    const result = await api.trades();
+    const trade = result.body.find((item) => item.orderId === orderId);
+    if (!trade || !isCurrentOrder(lastOrder, orderId)) return;
+    elements['last-fill-price'].textContent = `최종 체결 ${formatNumber(trade.price, '원')} · 수수료 ${formatNumber(trade.fee, 'mKRW')}`;
+  } catch (error) {
+    if (!isCurrentOrder(lastOrder, orderId)) return;
+    elements['last-fill-price'].textContent = `체결 조회 실패 · ${error.message || error}`;
+  }
+}
+
 function clearEvents() {
   ['price', 'trade', 'order', 'portfolio'].forEach((channel) => {
     const container = elements[`${channel}-events`];
@@ -285,12 +431,27 @@ function displayTime(value) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleTimeString('ko-KR');
 }
 
+function displayDateTime(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('ko-KR');
+}
+
 function setButtonsDisabled(disabled) {
   document.querySelectorAll('.controls-panel button').forEach((button) => {
     button.disabled = disabled;
   });
+  if (!disabled) {
+    syncQuoteState('BUY');
+    syncQuoteState('SELL');
+  }
 }
 
 renderToken();
 renderSocketStatus('DISCONNECTED');
+renderQuote('BUY');
+renderQuote('SELL');
+setInterval(() => {
+  if (tradeQuotes.BUY) renderQuote('BUY');
+  if (tradeQuotes.SELL) renderQuote('SELL');
+}, 1000);
 loadChart();
