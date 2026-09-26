@@ -1776,3 +1776,44 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 ## 다음 작업
 
 - Phase 6.3에서 실제 Toss·Spring Boot·PostgreSQL·Anvil·웹을 함께 실행해 정상 거래와 백엔드·RPC 중단 후 복구를 인수 시나리오로 확인한다.
+
+---
+
+# Phase 6.3: 실제 환경 종단간 인수 — 진행 중
+
+> 작성: 2026-09-27
+
+## 검증한 범위
+
+- Docker PostgreSQL과 Anvil, 로컬 Spring Boot(8082)를 함께 실행하고 `/api/health`가 `UP`임을 확인했다.
+- 실제 Toss 공급자의 삼성전자 시장 응답에서 `provider=TOSS`, `priceStatus=LIVE`, 휴장 상태를 확인했다.
+- 실제 PostgreSQL 사용자로 JWT 인증과 `/api/me`를 확인하고, 휴장 중 견적 발급이 `409 MARKET_CLOSED`로 거부되는 정책을 확인했다. 검증용 사용자와 잔고 데이터는 대상 행만 삭제했다.
+- 실제 Anvil에서 EIP-712 가격 서명, 트랜잭션 전송, Vault 매수·매도 정산과 receipt 처리를 통합 테스트로 확인했다.
+- 실제 PostgreSQL에서 같은 견적을 동시에 소비할 때 한 요청만 성공하는 DB 경합 테스트를 다시 실행했다.
+- 컨트랙트 36개, 웹 30개 테스트와 백엔드 전체 테스트가 통과했다.
+
+## 결정
+
+- 실제 Toss 장이 닫힌 상태에서 시장 정책을 우회하거나 시뮬레이션 공급자로 바꾼 결과를 실제 Toss 종단간 정상 거래로 간주하지 않는다.
+- 자동 통합 테스트로 각 실제 경계를 검증한 결과와, 브라우저에서 모든 경계를 한 요청 흐름으로 통과하는 인수 시연을 구분한다.
+- 서비스 중인 로컬 Anvil을 재시작하면 체인 상태가 초기화될 수 있으므로 이번 점검에서는 사용자의 실행 환경을 임의로 중단하지 않았다.
+
+## 검증
+
+- `cd contracts && forge test -vv`: 36개 통과, 실패 0개
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: 성공
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks --tests com.pricetrack.exchange.blockchain.BlockchainAnvilIntegrationTest --tests com.pricetrack.exchange.blockchain.BlockchainTransactionAnvilIntegrationTest`: 실제 Anvil 성공
+- `cd backend; $env:POSTGRES_INTEGRATION_TESTS='true'; .\gradlew.bat test --no-daemon --rerun-tasks --tests com.pricetrack.exchange.quote.PriceQuotePostgresConcurrencyIntegrationTest`: 실제 PostgreSQL 1개 통과
+- `cd tools/websocket-test-client && npm test`: 30개 통과, 실패 0개
+- 상세 항목과 보류 조건은 `phase-6-3-acceptance.md`에 기록했다.
+
+## 검토
+
+- 이번 기록 시점에는 제품 코드 동작을 변경하지 않고 검증 결과와 체크리스트만 추가했다. 공통 지침에 따라 별도 코드 검토는 Phase 6.3의 실제 장중 시연 완료 또는 동작 변경이 생기는 시점에 수행한다.
+
+## 남은 작업
+
+- Toss 장중에 웹에서 로그인 → 실시간 가격·차트 → faucet → 매수 견적 → 주문 확정 → 개인 주문·포트폴리오 이벤트 → 최종 체결 조회를 한 흐름으로 확인한다.
+- 같은 환경에서 매도까지 수행하고 최종 잔고·체결가·온체인 transaction hash를 대조한다.
+- 백엔드 또는 RPC 중단 시 웹 재연결·REST 복구 표시와 주문 복구 결과를 수동 인수 항목으로 확인한다.
+- 위 항목이 끝난 뒤 Phase 6.3을 완료로 변경하고 별도 검토를 거쳐 Phase 6.4 Android 인수 문서를 작성한다.
