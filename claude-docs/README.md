@@ -23,6 +23,7 @@
 - [`AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md`](AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md) — 사용자 작성 AI 확장 지침. AI Phase 번호는 거래소 Phase와 별개
 - [AI Phase 0 감사](../docs/ai/phase-0-baseline-audit.md) — 실제 인증·거래·조회 경계, 호환성 조사와 테스트 기준
 - [ADR-001 AI 실행 경계](../docs/ai/adr/ADR-001-ai-runtime-boundary.md) — 런타임 대안 비교와 추천안. 사용자 승인 대기
+- [AI Phase 1 지식 문서 보고서](../docs/ai/phase-1-knowledge-report.md) — 지식 문서 9개 목록·권한 metadata·검증 결과. 사용자 리뷰 대기
 
 ## 단일 출처(Source of Truth)
 
