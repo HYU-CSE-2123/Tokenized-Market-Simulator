@@ -1372,3 +1372,45 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 백엔드와 테스트 웹을 실행해 왼쪽 탐색 시 화면 위치 유지와 여러 페이지 연속 로딩을 브라우저에서 육안 확인
 - 화면 가격과 PriceOracle 체결 가격의 편차·견적 만료·최소 수령량 보호 설계
+
+---
+
+# Phase 5.1: EIP-712 가격 보고서 계약과 공통 테스트 벡터 — 완료
+
+> 작성: 2026-09-26
+
+## 구현
+
+- 주문별 Pull Oracle 가격 보고서를 `quoteId`, `symbolHash`, `priceE8`, `observedAt`, `validUntil`, `side`, `inputAmount`, `minimumOutput`, `executor` 순서로 확정했다.
+- EIP-712 domain은 `TokenizedMarketPriceOracle`, version `1`, `chainId`, `verifyingContract`로 체인과 검증 컨트랙트를 분리한다.
+- Solidity `PriceReportTypes` 라이브러리에 공유 struct·type hash·struct hash 계산을 구현했다.
+- Java `PriceReport`와 `PriceReportEip712`에 Solidity `abi.encode`와 동일한 32바이트 정렬, domain separator와 typed-data digest 계산을 구현했다.
+- 체인 ID 31337과 고정 보고서로 Java·Solidity 양쪽이 digest `0x17997e...246b3e`와 서명자 `0xe05f...cfF7`을 동일하게 계산하는 테스트 벡터를 추가했다.
+
+## 결정
+
+- 보고서는 주문별 일회용으로 설계하고 이후 컨트랙트에서 `quoteId` replay를 차단한다.
+- 기본 유효시간 30초, 발급 시 최대 관측 지연 5초, 미래 시각 허용 오차 2초를 다음 구현 기준으로 확정했다.
+- 가격 서명자와 거래 전송자는 별도 역할과 키로 분리한다.
+- 정확한 가격과 입력량 외에 `minimumOutput`을 서명해 수수료나 반올림 정책 변경으로 사용자의 수령량이 줄어드는 경우도 차단한다.
+- 이번 단계는 서명 형식과 테스트 벡터만 추가하며 현재 `PriceOracle`·`ExchangeVault`와 주문 동작은 변경하지 않는다.
+- Redis·Kafka는 단일 인스턴스 MVP의 이 단계에 도입하지 않는다. 향후 다중 인스턴스 가격 캐시·WebSocket fan-out·분산 nonce lock에는 Redis, 독립 서비스 간 내구성 있는 이벤트 재처리에는 Kafka를 검토한다.
+
+## 검증
+
+- `cd backend && .\gradlew.bat test --no-daemon --tests com.pricetrack.exchange.blockchain.oracle.PriceReportEip712Test`: 3개 통과, 실패 0개
+- `cd contracts && forge test --match-contract PriceReportTypesTest -vvvv`: 1개 통과, 실패 0개
+- Java와 Solidity 출력의 digest, signer와 65바이트 signature가 일치함을 확인하고 digest·signer를 양쪽 테스트의 고정 기댓값으로 승격했다.
+- `cd backend && .\gradlew.bat test --no-daemon --rerun-tasks`: 총 123개 중 120개 통과, 선택적 Anvil 테스트 3개 건너뜀, 실패·오류 0개
+- `cd contracts && forge test -vv`: 기존 20개와 신규 1개를 포함한 총 21개 통과, 실패 0개
+
+## 검토
+
+- 별도 검토자가 EIP-712 필드 순서·타입·ABI 32바이트 패딩, domain separator와 `0x1901` digest, Java·Solidity 고정 벡터와 signer 복구 및 문서 범위를 확인한 결과 `발견된 필수 수정 없음`으로 결론 냈다.
+- 검토자가 Java 대상 테스트 3개, Solidity 대상 테스트 1개, 백엔드 전체 123개, Foundry 전체 21개와 `git diff --check`를 독립 실행해 구현자 결과와 동일함을 확인했다.
+- Phase 5.2 전에 `validUntil`이 `observedAt` 또는 발급 시각 중 무엇을 기준으로 하는지와 백엔드·컨트랙트의 시간 검증 책임을 부등식으로 확정하라는 제안이 있었다. 런타임 검증을 구현하는 다음 단계의 사전 결정사항으로 남긴다.
+
+## 남은 작업
+
+- Phase 5.2에서 `PriceOracle`의 EIP-712 서명·시각·권한 검증과 승인 가격 기록 구현
+- `ExchangeVault`가 같은 트랜잭션에서 검증된 가격을 소비하고 `quoteId` replay와 최소 수령량을 차단하도록 변경

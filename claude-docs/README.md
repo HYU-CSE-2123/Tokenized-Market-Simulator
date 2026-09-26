@@ -17,6 +17,7 @@
 - [`implementation-log.md`](implementation-log.md) — 실제 구축된 코드 상태(모듈별 구현/스텁, 검증 명령, 환경, 임의 결정값)
 - [`reviewer.md`](reviewer.md) — 별도 검토자의 역할, 검토 기준과 보고 형식
 - [`ai-development-experience.md`](ai-development-experience.md) — 프로젝트 지식 관리·독립 검토를 통한 하네스 엔지니어링 적용 경험, 근거와 실제 검증 범위
+- [`oracle-price-execution-design.md`](oracle-price-execution-design.md) — Toss 가격과 온체인 체결 가격의 시간차, 서명 가격 기반 Pull Oracle과 원자적 정산의 합의 방향
 
 ## 단일 출처(Source of Truth)
 
