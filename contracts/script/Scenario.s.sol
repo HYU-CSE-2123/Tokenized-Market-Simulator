@@ -26,6 +26,7 @@ contract Scenario is Script {
 
     uint256 internal constant PRICE_75K = 75_000 * 1e8;
     uint256 internal constant PRICE_80K = 80_000 * 1e8;
+    uint256 internal constant PRICE_SIGNER_KEY = 0xA11CE;
 
     function run() external {
         uint256 ownerKey = vm.envOr("OWNER_KEY", DEFAULT_OWNER_KEY);
@@ -36,9 +37,10 @@ contract Scenario is Script {
         vm.startBroadcast(ownerKey);
         MockKRW krw = new MockKRW();
         SamsungPriceTrackingToken token = new SamsungPriceTrackingToken();
-        PriceOracle oracle = new PriceOracle(PRICE_75K);
+        PriceOracle oracle = new PriceOracle(PRICE_75K, vm.addr(PRICE_SIGNER_KEY), keccak256("mSEC"));
         ExchangeVault vault = new ExchangeVault(address(krw), address(token), address(oracle));
         token.setMinter(address(vault));
+        oracle.setAuthorizedConsumer(address(vault));
         krw.faucet(); // owner 1,000,000 mKRW
         krw.transfer(address(vault), 1_000_000 ether); // 매도 정산용 유동성
         vm.stopBroadcast();

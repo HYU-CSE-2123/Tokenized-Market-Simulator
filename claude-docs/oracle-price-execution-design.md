@@ -197,9 +197,9 @@ signer: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7
 - 가격 서명자와 거래 운영자 권한 분리 설계
 - 테스트 벡터로 Java와 Solidity가 동일 digest를 계산하는지 검증
 
-### Phase 5.2 — 컨트랙트 검증과 원자적 정산
+### Phase 5.2 — 컨트랙트 검증과 원자적 정산 — 진행 중
 
-- `PriceOracle` 서명 검증·freshness·승인 가격 기록
+- Phase 5.2-A 완료: `PriceOracle` 서명 검증·freshness·승인 가격 기록
 - `ExchangeVault`의 검증 가격 기반 매수·매도
 - 동일 트랜잭션 원자성, replay와 잘못된 서명 방어
 - Foundry 단위·fuzz 테스트와 배포 스크립트 갱신
@@ -228,3 +228,21 @@ Android 구현은 이 Phase의 완료 조건이 아니며, 검증된 REST·WebSo
 - `PriceOracle`이 서명 검증까지 수행할지 별도 검증 컨트랙트를 둘지
 - 보고서가 정확한 출력량까지 고정할지 가격과 입력량만 고정할지
 - 급격한 가격 변동을 판단하는 circuit breaker 기준
+
+## 10. Phase 5.2-A 구현 결과
+
+`PriceOracle`은 EIP-712 domain의 `verifyingContract`가 되며 다음 검증을 수행한다.
+
+```text
+validUntil == observedAt + 30
+observedAt <= block.timestamp + 2
+block.timestamp <= validUntil
+```
+
+- `authorizedConsumer`로 등록된 Vault만 보고서를 소비할 수 있다.
+- `priceSigner`와 `authorizedConsumer`는 소유자만 0이 아닌 주소로 변경할 수 있다.
+- `supportedSymbolHash`와 다른 상품, 0원, 0 `quoteId`, 잘못된 서명과 domain을 거부한다.
+- 성공적으로 소비한 `quoteId`는 replay를 막기 위해 기록한다. 이후 같은 트랜잭션의 Vault 정산이 실패하면 EVM 원자성에 의해 이 기록도 rollback된다.
+- `priceObservedAt`은 외부 시장 관측 시각, 기존 `updatedAt`은 온체인 반영 블록 시각으로 분리한다.
+- 기존 소유자 `updatePrice()`는 Phase 5.3 백엔드 전환 전 호환을 위해 유지하며 블록 시각을 관측 시각으로 기록한다.
+- Phase 5.2-A만으로는 거래가 원자화되지 않는다. Vault 연결은 Phase 5.2-B 범위다.

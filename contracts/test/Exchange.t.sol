@@ -19,6 +19,7 @@ contract ExchangeTest is Test {
 
     uint256 internal constant PRICE_75K = 75_000 * 1e8;
     uint256 internal constant PRICE_80K = 80_000 * 1e8;
+    bytes32 internal constant MSEC_SYMBOL_HASH = keccak256("mSEC");
 
     event FaucetClaimed(address indexed account, uint256 amount);
     event PriceUpdated(uint256 priceE8, uint256 updatedAt);
@@ -30,7 +31,7 @@ contract ExchangeTest is Test {
     function setUp() public {
         krw = new MockKRW();
         token = new SamsungPriceTrackingToken();
-        oracle = new PriceOracle(PRICE_75K);
+        oracle = new PriceOracle(PRICE_75K, address(this), MSEC_SYMBOL_HASH);
         vault = new ExchangeVault(address(krw), address(token), address(oracle));
         token.setMinter(address(vault));
 

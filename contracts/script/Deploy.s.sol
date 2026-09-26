@@ -14,15 +14,17 @@ contract Deploy is Script {
     uint256 internal constant INITIAL_PRICE_E8 = 75_000 * 1e8;
 
     function run() external {
+        address priceSigner = vm.envAddress("PRICE_SIGNER_ADDRESS");
         vm.startBroadcast();
 
         MockKRW krw = new MockKRW();
         SamsungPriceTrackingToken token = new SamsungPriceTrackingToken();
-        PriceOracle oracle = new PriceOracle(INITIAL_PRICE_E8);
+        PriceOracle oracle = new PriceOracle(INITIAL_PRICE_E8, priceSigner, keccak256("mSEC"));
         ExchangeVault vault = new ExchangeVault(address(krw), address(token), address(oracle));
 
         // Vault 만 mSEC mint/burn 가능하도록 minter 등록
         token.setMinter(address(vault));
+        oracle.setAuthorizedConsumer(address(vault));
 
         vm.stopBroadcast();
 
@@ -30,5 +32,6 @@ contract Deploy is Script {
         console2.log("SamsungPriceTrackingToken :", address(token));
         console2.log("PriceOracle               :", address(oracle));
         console2.log("ExchangeVault             :", address(vault));
+        console2.log("Price signer              :", priceSigner);
     }
 }

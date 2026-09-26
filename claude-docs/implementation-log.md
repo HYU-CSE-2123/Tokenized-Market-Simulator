@@ -1414,3 +1414,44 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - Phase 5.2에서 `PriceOracle`의 EIP-712 서명·시각·권한 검증과 승인 가격 기록 구현
 - `ExchangeVault`가 같은 트랜잭션에서 검증된 가격을 소비하고 `quoteId` replay와 최소 수령량을 차단하도록 변경
+
+---
+
+# Phase 5.2-A: PriceOracle 서명 가격 검증 — 완료
+
+> 작성: 2026-09-26
+
+## 구현
+
+- `PriceOracle`을 EIP-712 domain으로 만들고 `PriceReportTypes`의 digest에서 등록된 `priceSigner`를 복구한다.
+- 소유자가 가격 서명자와 `authorizedConsumer`를 설정하며, 승인된 Vault 주소만 보고서를 소비할 수 있다.
+- `validUntil = observedAt + 30초`, `observedAt <= block.timestamp + 2초`, `block.timestamp <= validUntil`을 온체인에서 강제한다.
+- 0원·0 `quoteId`·다른 종목·다른 domain·잘못된 서명·만료·미래 관측과 사용된 `quoteId`를 거부한다.
+- 외부 가격 관측 시각 `priceObservedAt`과 실제 온체인 반영 시각 `updatedAt`을 분리하고, 보고서 소비 이벤트에 `quoteId`·가격·관측/만료 시각·서명자를 남긴다.
+- 기존 소유자 `updatePrice()`는 Phase 5.3 전환 전 호환을 위해 유지하고, 배포 스크립트는 `PRICE_SIGNER_ADDRESS`와 배포된 Vault의 소비자 등록을 요구하도록 변경했다.
+
+## 결정
+
+- 거래 필드인 `side`, `inputAmount`, `minimumOutput`, `executor`는 서명에는 포함되지만 의미 검증은 이를 실제로 사용하는 Phase 5.2-B Vault가 담당한다.
+- replay 표시는 Oracle에서 기록한다. 같은 트랜잭션의 후속 Vault 정산이 revert되면 사용 표시와 가격 기록도 함께 되돌아가므로 만료 전 동일 주문을 재시도할 수 있다.
+- `updatePrice()`로 갱신한 가격은 새 원자적 거래의 가격 증명으로 사용하지 않는다. 다음 단계에서 Vault 거래는 반드시 `consumePriceReport()`를 호출한다.
+- 이번 단계는 Oracle 검증 경계만 추가하며 기존 `ExchangeVault.buy/sell` 동작과 백엔드 호출 계약은 변경하지 않는다.
+
+## 검증
+
+- 유효 보고서의 가격·관측/반영 시각·replay 기록, 미승인 소비자, 다른 서명자·domain, 다른 종목, 0원·0 ID, 잘못된 30초 창, 2초 초과 미래 시각, 만료와 replay를 검증했다.
+- 소유자만 서명자·소비자를 변경할 수 있고 0 주소는 거부하며, 기존 `updatePrice()`가 블록 시각을 관측 시각으로 유지하는 것을 검증했다.
+- `cd contracts && forge test --match-contract PriceOracleSignedReportTest -vv`: 최초 9개 통과 후 검토 제안에 따라 정확한 미래 2초·만료 동일 시각 허용과 잘못된 서명 길이 거부 테스트를 추가해 총 11개 통과, 실패 0개
+- `cd contracts && forge test -vv`: 기존 거래 20개, Phase 5.1 공통 벡터 1개와 신규 11개를 포함한 총 32개 통과, 실패 0개
+
+## 검토
+
+- 최초 별도 검토에서 권한, EIP-712 domain·서명, 시간·overflow, replay rollback 가능성, 레거시 회귀와 문서를 확인하고 `발견된 필수 수정 없음`으로 결론 냈다.
+- 비차단 제안인 잘못된 서명 길이와 정확한 시간 경계 테스트를 추가했으며, 전체 Foundry 32개가 통과했다.
+- 1차 재검토에서 `+2초` 미래 관측과 만료 동일 시각의 성공 경계, `ECDSAInvalidSignatureLength(2)`, 서로 다른 `quoteId` 소비 기록과 구현 로그 수치가 일치함을 확인했다. 검토자가 전체 32개 테스트와 `git diff --check`를 독립 실행한 결과 추가 필수 수정은 없었다.
+- 실제 Anvil broadcast 배포는 이번 작업에서 수행하지 않았으며 Phase 5.2-B·5.3 통합 시 검증한다.
+
+## 남은 작업
+
+- Phase 5.2-B에서 Vault의 매수·매도가 보고서 방향·입력량·executor·최소 수령량을 확인하고 같은 트랜잭션에서 Oracle 가격을 소비하도록 변경
+- Phase 5.3에서 백엔드 가격 보고서 발급 시 `현재 시각 - observedAt <= 5초`를 적용하고 기존 `updatePrice()` 동기화 경로를 교체
