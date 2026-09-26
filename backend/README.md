@@ -16,6 +16,7 @@
 - 블록체인 활성화 시 운영자 지갑의 buy/sell 서명·전송, receipt polling과 자동 체결
 - 가격 시뮬레이터의 최신 가격을 `PriceOracle.updatePrice`로 동기화하고 `PriceUpdated` 이벤트를 가격 이력으로 저장
 - 최신 시장 스냅샷과 Vault 명시 가격 견적으로 30초 유효 EIP-712 가격 보고서를 발급·전용 키로 서명하는 기반
+- 활성화된 온체인 모드에서 서명 견적을 로그인 사용자에게 귀속해 DB에 저장하고 API에는 서명·executor를 제외한 안전한 메타데이터만 반환
 - 블록체인 활성화 시 Oracle과 Vault를 직접 조회하는 온체인 매수·매도 견적
 - 일반 WebSocket `/ws`와 브라우저 호환 SockJS `/ws-sockjs`, STOMP JWT 인증과 공개·개인 구독 통제
 - 버전 있는 WebSocket 이벤트 envelope와 DB commit 이후에만 전송되는 공개·개인 이벤트 발행 기반
@@ -269,6 +270,10 @@ PRICE_SIGNER_PRIVATE_KEY=<PriceOracle.priceSigner 주소의 개인키>
 활성화 상태로 서버가 시작되면 전용 키에서 파생한 주소와 온체인 `PriceOracle.priceSigner()`를 비교한다. 키가 없거나 형식이 잘못됐거나 주소가 다르면 서버 기동을 중단한다. 개인키는 API 응답·로그·문서에 기록하지 않는다.
 
 발급기는 선택된 가격 공급자의 스냅샷이 5초 이내인지 검사하고, Vault의 `quoteBuyAtPrice` 또는 `quoteSellAtPrice` 결과를 `minimumOutput`으로 고정한다. 보고서는 관측 시각부터 정확히 30초 동안 유효하며 현재 단계에서는 아직 REST 견적이나 주문 전송 경로에 노출되지 않는다.
+
+Phase 5.3-B부터 위 두 설정과 `BLOCKCHAIN_ENABLED=true`가 모두 적용되면 `POST /api/quotes/buy`, `POST /api/quotes/sell`이 로그인 사용자 소유의 서명 견적을 발급한다. 응답에는 `quoteId`, `minimumOutputAmount`, `observedAt`, `validUntil`, `status`가 추가되며 개인 서명과 온체인 executor는 서버 내부 `price_quotes`에만 저장한다. 기능이 비활성화된 모의·기존 견적 응답에는 새 nullable 필드를 직렬화하지 않는다.
+
+`price_quotes` 상태는 `ISSUED → CONSUMED` 또는 `ISSUED → EXPIRED`다. 소비 서비스는 사용자·방향·입력량·만료를 확인하고 DB 비관적 잠금으로 동일 견적의 동시 재사용을 막는다. 실제 주문 요청에서 `quoteId`를 필수로 받고 새 Vault ABI로 보내는 연결은 Phase 5.3-C에서 활성화한다.
 
 ### 가격 공급자 선택
 

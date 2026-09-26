@@ -73,7 +73,7 @@ public class PriceReportIssuer {
                 quote.outputAmount(),
                 executor);
         byte[] digest = PriceReportEip712.digest(report, chainId, oracleAddress);
-        return new SignedPriceReport(report, signer.sign(digest));
+        return new SignedPriceReport(report, signer.sign(digest), quote.fee());
     }
 
     public void validateSignerConfiguration() {

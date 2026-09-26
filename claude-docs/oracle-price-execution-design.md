@@ -207,7 +207,8 @@ signer: 0xe05fcC23807536bEe418f142D19fa0d21BB0cfF7
 ### Phase 5.3 — 백엔드 가격 보고서와 주문 연동 — 진행 중
 
 - Phase 5.3-A 완료: Toss를 포함한 선택 공급자 스냅샷 기반 가격 보고서 생성·서명과 기동 검증
-- 견적 응답과 주문 요청 계약 확장
+- Phase 5.3-B 완료: 인증 사용자별 견적 영속화와 안전한 견적 응답, 일회성 소비 기반
+- 주문 요청 계약 확장
 - web3j 인코딩·전송·receipt 정산과 실패 복구
 - 서명 키 환경 설정과 비밀정보 관리
 
@@ -265,3 +266,13 @@ block.timestamp <= validUntil
 - EIP-712 domain에는 RPC에서 조회한 실제 chain ID와 설정된 PriceOracle 주소를 사용한다.
 - `PRICE_SIGNER_PRIVATE_KEY`는 운영자 거래 키와 분리되며, `PRICE_REPORT_SIGNING_ENABLED=true`일 때 서버 기동 과정에서 파생 주소와 온체인 `priceSigner()`가 같은지 확인한다.
 - 현재 발급기는 내부 서비스 기반만 제공한다. API 노출, 사용자별 견적 소유권과 주문 소비는 Phase 5.3-B, 새 tuple/bytes 거래 ABI 전송은 Phase 5.3-C 범위다.
+
+## 13. Phase 5.3-B 구현 결과
+
+- `price_quotes`는 서명 보고서, 서명, 수수료와 발급 사용자, 상태, 연결 주문을 저장한다. raw uint256은 `NUMERIC(78,0)`으로 손실 없이 보존한다.
+- 블록체인과 가격 보고서 기능이 모두 활성화된 견적 API는 JWT 사용자에게 서명 견적을 귀속시켜 저장한다.
+- 클라이언트에는 `quoteId`, 표시 가격·수수료·예상/최소 수령량, 관측/만료 시각과 상태만 반환한다. 서명과 executor는 서버 내부에만 둔다.
+- 소비 시 사용자 소유권, `ISSUED` 상태, `now <= validUntil`, 거래 방향과 정수 단위 입력량 일치를 검사하고 주문 ID에 연결한다.
+- repository의 `PESSIMISTIC_WRITE` 잠금으로 같은 `quoteId`에 대한 동시 소비를 직렬화한다. 먼저 소비한 요청만 `CONSUMED`가 되고 나머지는 거부된다.
+- 만료를 발견하면 `EXPIRED`로 기록한다. 다른 사용자의 견적은 존재 여부를 노출하지 않도록 동일한 not-found로 응답한다.
+- 현재 주문 API와 web3j 전송은 아직 견적을 소비하지 않는다. 중간 상태에서 기존 주문을 깨뜨리지 않고 Phase 5.3-C에서 `quoteId` 필수화와 새 ABI 전송을 동시에 적용한다.

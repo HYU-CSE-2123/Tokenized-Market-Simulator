@@ -98,6 +98,30 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_price_ticks_blockchain_transaction_id
 
 CREATE INDEX IF NOT EXISTS idx_orders_user_created_at ON orders (user_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS price_quotes (
+    quote_id VARCHAR(66) PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    side VARCHAR(10) NOT NULL,
+    price_e8 NUMERIC(78, 0) NOT NULL,
+    input_amount NUMERIC(78, 0) NOT NULL,
+    minimum_output NUMERIC(78, 0) NOT NULL,
+    fee NUMERIC(78, 0) NOT NULL,
+    executor VARCHAR(42) NOT NULL,
+    signature VARCHAR(132) NOT NULL,
+    observed_at TIMESTAMP NOT NULL,
+    valid_until TIMESTAMP NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    order_id BIGINT UNIQUE,
+    created_at TIMESTAMP NOT NULL,
+    consumed_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_price_quotes_user_created_at
+    ON price_quotes (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_price_quotes_status_valid_until
+    ON price_quotes (status, valid_until);
+
 CREATE TABLE IF NOT EXISTS trades (
     id BIGSERIAL PRIMARY KEY,
     order_id BIGINT NOT NULL,

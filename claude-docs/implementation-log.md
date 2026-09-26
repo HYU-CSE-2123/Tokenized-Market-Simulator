@@ -1533,3 +1533,44 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - Phase 5.3-B에서 사용자별 견적 소유권·일회성 상태와 REST 견적/주문 계약을 확장한다.
 - Phase 5.3-C에서 `buy/sell(PriceReport,bytes)` ABI 인코딩·전송과 receipt 정산을 연결하고 기존 `updatePrice()` 동기화 경로를 제거한다.
 - 실제 Anvil과 Toss를 함께 사용하는 서명 보고서 종단간 검증은 Phase 5.3-C/5.4에서 수행한다.
+
+---
+
+# Phase 5.3-B: 사용자별 서명 견적과 일회성 소비 — 완료
+
+> 작성: 2026-09-26
+
+## 구현
+
+- `price_quotes` 테이블과 JPA 모델에 보고서 정수값, 서명, 수수료, 사용자, 상태, 만료와 연결 주문을 저장한다.
+- 블록체인·가격 보고서 기능이 활성화된 매수/매도 견적 API가 JWT 사용자 ID로 `PriceReportIssuer` 결과를 귀속·저장한다.
+- 응답에는 `quoteId`, 최소 수령량, 관측/만료 시각과 상태를 추가하되 서명·executor·개인키는 노출하지 않는다.
+- `PriceQuoteService.consume`이 비관적 DB 잠금 아래 소유권, 상태, 만료, 방향, 정수 입력량을 검증하고 `CONSUMED`와 주문 ID를 기록한다.
+- 만료 견적은 `EXPIRED`로 기록하며 다른 사용자의 견적은 not-found로 숨긴다.
+
+## 결정
+
+- 클라이언트는 bearer 형태의 서명 원문 대신 불투명한 `quoteId`만 보유한다. 실제 보고서와 서명은 Phase 5.3-C에서 서버가 읽어 트랜잭션을 구성한다.
+- `NUMERIC(78,0)`으로 Solidity uint256 값을 손실 없이 저장하고 API 표시 시에만 18자리 토큰 단위로 변환한다.
+- 동일 견적의 동시 재사용을 조회 후 저장 로직에 맡기지 않고 `PESSIMISTIC_WRITE`로 직렬화한다.
+- 기존 주문 API는 아직 `quoteId`를 받지 않는다. 주문 요청 계약과 새 ABI 전송은 Phase 5.3-C에서 함께 전환한다.
+- 모의 및 가격 보고서 비활성 견적은 기존 계산 경로를 유지하고 새 nullable 응답 필드는 JSON에서 생략한다.
+
+## 검증
+
+- 사용자 귀속 발급·영속화, 정상 소비·재사용 차단, 타 사용자 은닉, 만료 상태 기록, 방향·입력량 불일치를 검증했다.
+- 인증된 REST 견적 발급과 DB 저장, 미인증 401, API 응답의 서명·executor·키 비노출을 H2 통합 테스트로 검증했다.
+- `cd backend && .\\gradlew.bat test --no-daemon`: 총 146개 중 143개 통과, 실패 0개, 선택적 Anvil 테스트 3개 skipped
+
+## 검토
+
+- 최초 검토 요청은 검토 에이전트 사용량 제한으로 실행되지 않아 다른 별도 검토 세션으로 다시 요청했다.
+- 재요청한 별도 검토에서 DB/JPA 정밀도, 사용자 격리, 정확한 만료 경계, 만료 상태 commit, 비관적 잠금, API 비밀정보 비노출, 기존 주문·ABI 비변경과 문서 일치를 확인했으며 `발견된 필수 수정 없음`으로 결론 났다.
+- 검토자가 `gradlew test --rerun-tasks`를 독립 실행해 전체 146개 중 실패 0개·3개 skipped와 `git diff --check` 통과를 확인했다.
+- 실제 PostgreSQL의 두 트랜잭션 경쟁 테스트는 비차단 제안으로 남았으며 Phase 5.3-C/5.4 통합 검증 범위에 유지한다.
+
+## 남은 작업
+
+- Phase 5.3-C에서 주문 요청에 사용자 소유 `quoteId`를 필수화하고 견적 소비와 주문 준비를 하나의 흐름으로 연결한다.
+- `buy/sell(PriceReport,bytes)` tuple/bytes ABI 인코딩·전송, receipt 정산과 실패 복구를 연결하고 레거시 `updatePrice()` 동기화를 제거한다.
+- 실제 PostgreSQL 동시 소비와 Anvil 서명 거래 종단간 검증을 Phase 5.3-C/5.4에서 수행한다.

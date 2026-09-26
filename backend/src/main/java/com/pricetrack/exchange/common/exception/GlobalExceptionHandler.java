@@ -15,6 +15,8 @@ import com.pricetrack.exchange.blockchain.support.OperatorNotReadyException;
 import com.pricetrack.exchange.market.MarketClosedException;
 import com.pricetrack.exchange.market.StalePriceException;
 import com.pricetrack.exchange.market.InvalidCandleQueryException;
+import com.pricetrack.exchange.quote.PriceQuoteNotFoundException;
+import com.pricetrack.exchange.quote.PriceQuoteUnavailableException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -97,6 +99,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> invalidCandleQuery(
             InvalidCandleQueryException exception, HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "INVALID_CANDLE_QUERY", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(PriceQuoteNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> priceQuoteNotFound(
+            PriceQuoteNotFoundException exception, HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "PRICE_QUOTE_NOT_FOUND", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(PriceQuoteUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> priceQuoteUnavailable(
+            PriceQuoteUnavailableException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "PRICE_QUOTE_UNAVAILABLE", exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
