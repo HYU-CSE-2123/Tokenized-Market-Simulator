@@ -26,7 +26,7 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 
 ## Phase
 
-0 초기 설정 → 0.5 최소 온체인 시나리오 → 1 컨트랙트 → 2 백엔드 mock API → 3 web3j 연동 → 4 WebSocket·실제 시세·웹 검증 → 5 웹 MVP 마감·통합 검증 → 6 시연·문서화. Android는 별도 담당 범위로 최후순위에 둔다.
+0 초기 설정 → 0.5 최소 온체인 시나리오 → 1 컨트랙트 → 2 백엔드 mock API → 3 web3j 연동 → 4 WebSocket·실제 시세·웹 검증 → 5 서명 가격 기반 웹 MVP 마감 → 6 Android 인수 전 웹 완성·복구·종단간 인수·전달 문서. Android 앱 구현 자체는 별도 담당 범위이며 Phase 6 완료 후 진행한다.
 
 ## 현재 상태 (2026-09-24)
 
@@ -73,9 +73,18 @@ Ethereum ERC-20 기반 모의 원화(mKRW)로 삼성전자 기준 가격을 추�
 - 백엔드 기본 테스트 전체 통과, Anvil 실제 읽기와 EIP-712 서명 견적·tuple ABI 주문 정산 선택 테스트 별도 통과
 - 사용자 테이블에는 향후 Google 로그인·이메일 인증을 위한 `email`, `email_verified`, `google_sub`를 nullable로 준비했지만 관련 기능은 아직 없음
 
-## 다음 개발 후보
+## 다음 개발 Phase
 
-Phase 3, Phase 4와 실제 Toss 가격 공급자, 장·가격 가용성 정책, 공급자 공통 캔들 API 및 과거 탐색이 가능한 브라우저 실시간 차트까지 구현했습니다. Phase 5.1에서 주문별 서명 가격 계약을 확정하고 Phase 5.2-A/B에서 `PriceOracle` 검증과 `ExchangeVault` 원자적 정산을 구현했으며 Phase 5.3-A/B/C에서 발급·서명·사용자 소유 견적과 실제 주문 전송을 연결했습니다. Phase 5.4에서는 브라우저의 명시적 견적 확인·주문 확정 UX와 PostgreSQL 동시 소비 검증까지 완료했습니다. Android 구현은 별도 담당 범위로 최후순위에 둡니다.
+Phase 3, Phase 4와 실제 Toss 가격 공급자, 장·가격 가용성 정책, 공급자 공통 캔들 API 및 과거 탐색이 가능한 브라우저 실시간 차트까지 구현했습니다. Phase 5.1에서 주문별 서명 가격 계약을 확정하고 Phase 5.2-A/B에서 `PriceOracle` 검증과 `ExchangeVault` 원자적 정산을 구현했으며 Phase 5.3-A/B/C에서 발급·서명·사용자 소유 견적과 실제 주문 전송을 연결했습니다. Phase 5.4에서는 브라우저의 명시적 견적 확인·주문 확정 UX와 PostgreSQL 동시 소비 검증까지 완료했습니다.
+
+Android 담당자가 별도 거래 로직을 설계하지 않고 검증된 계약을 그대로 적용할 수 있도록 다음 Phase를 먼저 수행합니다.
+
+- Phase 6.1: 웹에서 인증·시장·차트·견적·주문·체결·포트폴리오·내역 등 Android MVP 대응 기능의 누락을 점검하고 완성
+- Phase 6.2: WebSocket 재연결 후 REST 재동기화, 이벤트 유실·중복·역순, 견적 만료·재사용, 잔고·휴장·stale·RPC 장애 처리 검증
+- Phase 6.3: 실제 Toss·Spring Boot·PostgreSQL·Anvil·웹을 연결한 정상/실패 종단간 인수 테스트
+- Phase 6.4: REST·WebSocket 계약, JSON 예제, 상태 전이, 오류 처리, 에뮬레이터 주소와 체크리스트를 Android 담당자에게 전달
+
+Android 앱 구현 자체는 Phase 6의 완료 조건이 아니다. Phase 6에서 웹을 실행 가능한 기준 클라이언트로 완성한 뒤 별도 담당자가 동일 계약을 Jetpack Compose에 적용한다.
 
 ## 핵심 설계 원칙
 

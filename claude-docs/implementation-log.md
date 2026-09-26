@@ -1660,3 +1660,42 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 실제 Toss 장중에 브라우저에서 서명 견적 발급부터 Anvil 체결, 주문·포트폴리오 WebSocket과 최종 거래 조회까지 수동 시연한다.
 - Android 앱 연동은 검증된 REST·WebSocket 계약을 바탕으로 별도 담당 범위에서 진행한다.
+
+---
+
+# Phase 6: Android 인수 전 웹 MVP 완성과 전달 — 계획
+
+> 확정: 2026-09-27
+
+## 목표
+
+- Android 구현 전에 사용자가 경험할 MVP 흐름을 웹 기준 클라이언트에서 모두 실행하고 검증한다.
+- Android 담당자는 백엔드·블록체인 거래 규칙을 새로 설계하지 않고 동일한 REST·WebSocket 계약과 상태 전이를 Jetpack Compose에 적용한다.
+- Phase 6 완료 조건에는 Android 앱 구현 자체를 포함하지 않는다.
+
+## 세부 Phase
+
+### Phase 6.1 — 웹 MVP 기능 완성
+
+- 인증, 시장 상태, 실시간·과거 차트, faucet, 포트폴리오, 견적, 매수·매도, 주문·체결 내역을 Android MVP 기능과 대조한다.
+- 웹에서 누락된 사용자 흐름과 상태 표시를 보완한다.
+
+### Phase 6.2 — 연결 복구와 오류 시나리오
+
+- WebSocket 재연결 뒤 주문·포트폴리오·시장 상태를 REST로 재동기화한다.
+- 이벤트 유실·중복·역순, 견적 만료·재사용, 잔고 부족, 휴장·stale 가격, RPC 중단과 주문 실패 복구를 검증한다.
+
+### Phase 6.3 — 실제 환경 종단간 인수
+
+- Toss API → Spring Boot → PostgreSQL → EIP-712 가격 서명 → Anvil Vault → REST·WebSocket → 웹 화면의 전체 흐름을 검증한다.
+- 정상 매수·매도와 주요 실패 시나리오의 실행 결과를 인수 체크리스트로 남긴다.
+
+### Phase 6.4 — Android 인수 패키지
+
+- REST 요청·응답과 오류 JSON, JWT 사용법, Native STOMP 연결·구독 destination과 payload를 문서화한다.
+- 견적 발급부터 주문 확정, 주문 상태 전이, 재연결·REST 복구 규칙과 Android 에뮬레이터 주소를 제공한다.
+- 웹 동작과 Android 화면의 대응표 및 실행 체크리스트를 제공한다.
+
+## 다음 작업
+
+- Phase 6.1을 시작하기 전에 현재 웹 기능과 Android MVP 요구 기능의 차이를 코드·API 기준으로 조사하고 구현 범위와 테스트 계획을 사용자에게 설명해 승인받는다.

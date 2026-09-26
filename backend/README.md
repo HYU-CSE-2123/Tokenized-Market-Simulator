@@ -274,7 +274,7 @@ Phase 5.3-B부터 위 두 설정과 `BLOCKCHAIN_ENABLED=true`가 모두 적용�
 
 `price_quotes` 상태는 `ISSUED → CONSUMED` 또는 `ISSUED → EXPIRED`다. 소비 서비스는 사용자·방향·입력량·만료를 확인하고 DB 비관적 잠금으로 동일 견적의 동시 재사용을 막는다. 온체인 주문 요청은 `quoteId`를 필수로 받고 서버가 DB의 원본 보고서와 서명을 읽어 `buy/sell(PriceReport,bytes)`를 호출한다. 모의 거래에서는 `quoteId` 없이 기존 즉시 거래가 유지된다.
 
-실제 PostgreSQL 행 잠금의 동시 소비 검증은 실행 중인 로컬 DB를 대상으로 선택 실행한다. 테스트가 사용하는 고정 견적 행만 생성한 뒤 삭제하며 기존 사용자·주문 데이터는 지우지 않는다.
+실제 PostgreSQL 행 잠금의 동시 소비 검증은 실행 중인 로컬 DB를 대상으로 선택 실행한다. 테스트는 실행마다 무작위 `quoteId`와 주문 ID를 생성하고 자신이 만든 견적 행만 삭제하며 기존 사용자·주문 데이터는 지우지 않는다.
 
 ```powershell
 $env:POSTGRES_INTEGRATION_TESTS = "true"
