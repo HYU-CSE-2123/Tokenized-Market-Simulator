@@ -2,15 +2,15 @@
 title: "시스템 책임과 지식의 경계"
 domain: architecture
 type: overview
-version: 1
-status: draft
+version: 2
+status: active
 minimum_role: USER
 updated_at: 2026-09-27
 ---
 
 # 시스템 책임과 지식의 경계
 
-> 코드 기준: 30105a4. Phase 1 사용자 검토 대기 문서이며 아직 검색·임베딩 대상이 아니다.
+> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
 
 ## 정의와 목적
 
@@ -39,9 +39,9 @@ DB와 체인은 하나의 ACID 트랜잭션이 아니다. 먼저 입력 자산�
 
 ## AI 범위 — 계획과 현재의 구분
 
-현재 AI는 지식 문서 작성 단계다. RAG·Tool·Agent는 아직 구현하지 않았다. 향후 RAG는 정책을 설명하고 인가된 읽기 Tool은 현재 상태를 조회한다. 주문 실행·서명·강제 정산을 AI에 허용하지 않는다.
+AI Phase 2에는 ADMIN 전용 Basic RAG 저장·색인·검색·출처 기반 답변 코드를 추가했다. 실제 공급자 품질 평가는 별도 완료 확인이 필요하다. Tool·Agent는 아직 구현하지 않았다. RAG는 정책을 설명하고 향후 인가된 읽기 Tool은 현재 상태를 조회한다. 주문 실행·서명·강제 정산을 AI에 허용하지 않는다.
 
-현재 가격, 특정 계정 잔고, 주문 상태, txHash·receipt는 이 문서에서 알 수 없다. 최신 인가 조회가 없으면 확인 불가로 설명한다. Spring AI 사용 여부, LLM/Embedding 공급자와 pgvector 도입 방식은 Phase 2 전 결정하며 ADR-001은 제안 상태다.
+현재 가격, 특정 계정 잔고, 주문 상태, txHash·receipt는 이 문서에서 알 수 없다. 최신 인가 조회가 없으면 확인 불가로 설명한다. 승인된 Phase 2 선택은 기존 Boot 내부 어댑터, 별도 pgvector DB, text-embedding-3-small 1536차원과 gpt-5.6-terra다. 거래 DB와 AI DB 사이의 분산 트랜잭션은 없다.
 
 ## 근거
 
@@ -49,4 +49,3 @@ DB와 체인은 하나의 ACID 트랜잭션이 아니다. 먼저 입력 자산�
 - [wallet/WalletService.java](../../backend/src/main/java/com/pricetrack/exchange/wallet/WalletService.java)
 - [blockchain/settlement/OnchainSettlementService.java](../../backend/src/main/java/com/pricetrack/exchange/blockchain/settlement/OnchainSettlementService.java)
 - [현재 구현 Brief](../../claude-docs/career-project-brief.md)
-

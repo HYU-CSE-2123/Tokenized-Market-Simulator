@@ -3,14 +3,14 @@ title: "WebSocket 알림과 REST 재동기화"
 domain: realtime
 type: policy
 version: 1
-status: draft
+status: active
 minimum_role: USER
 updated_at: 2026-09-27
 ---
 
 # WebSocket 알림과 REST 재동기화
 
-> 코드 기준: 30105a4. Phase 1 사용자 검토 대기 문서이며 아직 검색·임베딩 대상이 아니다.
+> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
 
 ## 역할
 
@@ -49,4 +49,3 @@ Native WebSocket과 SockJS 모두 STOMP 구독 정책을 따른다. CONNECT의 B
 - [웹 복구 처리](../../tools/websocket-test-client/src/recovery.js)
 - [웹 연결 처리](../../tools/websocket-test-client/src/websocket.js)
 - [현재 구현 Brief](../../claude-docs/career-project-brief.md)
-

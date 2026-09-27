@@ -1,0 +1,79 @@
+[
+  {
+    "question": "왜 주문이 바로 FILLED가 되지 않아?",
+    "expected": [
+      "order-lifecycle.md",
+      "onchain-settlement-policy.md"
+    ]
+  },
+  {
+    "question": "견적은 언제부터 30초 동안 유효해?",
+    "expected": [
+      "signed-quote-policy.md"
+    ]
+  },
+  {
+    "question": "다른 사람의 quoteId로 주문할 수 있어?",
+    "expected": [
+      "signed-quote-policy.md",
+      "authorization-policy.md"
+    ]
+  },
+  {
+    "question": "서버 재시작 후 SIGNED 트랜잭션은 어떻게 복구돼?",
+    "expected": [
+      "transaction-recovery-runbook.md"
+    ]
+  },
+  {
+    "question": "RPC 전송 응답이 없으면 새 nonce로 보내도 돼?",
+    "expected": [
+      "transaction-recovery-runbook.md"
+    ]
+  },
+  {
+    "question": "REVIEW_REQUIRED는 주문 상태야?",
+    "expected": [
+      "order-lifecycle.md",
+      "error-and-status-guide.md"
+    ]
+  },
+  {
+    "question": "성공 receipt만 확인하면 잔고를 지급해도 돼?",
+    "expected": [
+      "onchain-settlement-policy.md"
+    ]
+  },
+  {
+    "question": "CLOSED인데 LIVE로 표시될 수 있어?",
+    "expected": [
+      "market-data-policy.md"
+    ]
+  },
+  {
+    "question": "소켓 연결이 끊기면 주문 결과를 어디에서 복구해?",
+    "expected": [
+      "websocket-consistency-policy.md"
+    ]
+  },
+  {
+    "question": "ADMIN이면 다른 사용자 주문 API를 바로 볼 수 있어?",
+    "expected": [
+      "authorization-policy.md"
+    ]
+  },
+  {
+    "question": "mSEC는 삼성전자 주주권을 주는 토큰이야?",
+    "expected": [
+      "system-overview.md"
+    ]
+  },
+  {
+    "question": "PRICE_QUOTE_UNAVAILABLE 오류는 무슨 의미야?",
+    "expected": [
+      "error-and-status-guide.md",
+      "signed-quote-policy.md"
+    ]
+  }
+]
+

@@ -3,14 +3,14 @@ title: "체인 전송 장애의 읽기 전용 진단"
 domain: operations
 type: runbook
 version: 1
-status: draft
+status: active
 minimum_role: ADMIN
 updated_at: 2026-09-27
 ---
 
 # 체인 전송 장애의 읽기 전용 진단
 
-> 코드 기준: 30105a4. Phase 1 사용자 검토 대기 문서이며 아직 검색·임베딩 대상이 아니다.
+> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
 
 ## 목적과 접근 범위
 
@@ -57,4 +57,3 @@ EventValidationException 또는 SettlementConsistencyException이면 트랜잭�
 - [blockchain/reconciliation/BlockchainReconciliationService.java](../../backend/src/main/java/com/pricetrack/exchange/blockchain/reconciliation/BlockchainReconciliationService.java)
 - [order/OnchainOrderService.java](../../backend/src/main/java/com/pricetrack/exchange/order/OnchainOrderService.java)
 - [현재 구현 Brief](../../claude-docs/career-project-brief.md)
-

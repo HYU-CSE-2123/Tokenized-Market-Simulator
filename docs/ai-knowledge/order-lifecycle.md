@@ -3,14 +3,14 @@ title: "주문 상태와 트랜잭션 상태"
 domain: trading
 type: policy
 version: 1
-status: draft
+status: active
 minimum_role: USER
 updated_at: 2026-09-27
 ---
 
 # 주문 상태와 트랜잭션 상태
 
-> 코드 기준: 30105a4. Phase 1 사용자 검토 대기 문서이며 아직 검색·임베딩 대상이 아니다.
+> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
 
 ## 정의
 
@@ -50,4 +50,3 @@ RPC 응답을 못 받았다는 사실만으로 주문이 실패했다고 판단�
 - [blockchain/transaction/BlockchainTransactionStatus.java](../../backend/src/main/java/com/pricetrack/exchange/blockchain/transaction/BlockchainTransactionStatus.java)
 - [blockchain/settlement/OnchainSettlementService.java](../../backend/src/main/java/com/pricetrack/exchange/blockchain/settlement/OnchainSettlementService.java)
 - [현재 구현 Brief](../../claude-docs/career-project-brief.md)
-

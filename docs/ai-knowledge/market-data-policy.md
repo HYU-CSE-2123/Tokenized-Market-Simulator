@@ -3,14 +3,14 @@ title: "시세·장 상태·차트 데이터의 의미"
 domain: market
 type: policy
 version: 1
-status: draft
+status: active
 minimum_role: USER
 updated_at: 2026-09-27
 ---
 
 # 시세·장 상태·차트 데이터의 의미
 
-> 코드 기준: 30105a4. Phase 1 사용자 검토 대기 문서이며 아직 검색·임베딩 대상이 아니다.
+> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
 
 ## 정의와 공급자 역할
 

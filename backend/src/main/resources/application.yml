@@ -30,6 +30,21 @@ server:
 
 # 애플리케이션 커스텀 설정
 app:
+  ai:
+    enabled: ${AI_ENABLED:false}
+    jdbc-url: ${AI_DB_URL:jdbc:postgresql://127.0.0.1:5433/exchange_ai}
+    db-user: ${AI_DB_USERNAME:exchange_ai}
+    db-password: ${AI_DB_PASSWORD:}
+    knowledge-root: ${AI_KNOWLEDGE_ROOT:../docs/ai-knowledge}
+    manifest: ${AI_MANIFEST:../docs/ai/ingest-manifest.json}
+    api-key: ${OPENAI_API_KEY:}
+    embedding-model: text-embedding-3-small
+    chat-model: gpt-5.6-terra
+    chunk-tokens: ${AI_CHUNK_TOKENS:800}
+    overlap-tokens: ${AI_OVERLAP_TOKENS:60}
+    top-k: ${AI_TOP_K:5}
+    minimum-similarity: ${AI_MINIMUM_SIMILARITY:0.3}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:20}
   websocket:
     allowed-origin-patterns: ${WEBSOCKET_ALLOWED_ORIGINS:*}
   admin:

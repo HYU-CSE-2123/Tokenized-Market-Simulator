@@ -2,15 +2,15 @@
 title: "사용자 데이터와 관리자 권한 경계"
 domain: security
 type: policy
-version: 1
-status: draft
+version: 2
+status: active
 minimum_role: USER
 updated_at: 2026-09-27
 ---
 
 # 사용자 데이터와 관리자 권한 경계
 
-> 코드 기준: 30105a4. Phase 1 사용자 검토 대기 문서이며 아직 검색·임베딩 대상이 아니다.
+> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
 
 ## 현재 인증
 
@@ -26,9 +26,9 @@ JWT 검증 후 DB 사용자를 조회하여 userId와 USER/ADMIN 역할을 복�
 
 ## AI 인가 — 후속 구현 원칙
 
-AI 검색과 Tool은 아직 구현되지 않았다. 후속 구현에서는 서버가 만든 인증 컨텍스트로 문서 검색과 조회를 제한해야 한다. 모델에게 역할 판단을 맡기거나 프롬프트로만 차단하지 않는다.
+Basic RAG API는 ADMIN으로 제한하며 내부 서비스도 인증 주체의 ADMIN 역할을 확인한다. USER용 검색과 개인 데이터 Tool은 아직 구현되지 않았다. 후속 구현에서는 서버가 만든 인증 컨텍스트로 문서 검색과 조회를 제한해야 한다. 모델에게 역할 판단을 맡기거나 프롬프트로만 차단하지 않는다.
 
-문서의 minimum_role은 검색에 적용할 최소 역할 메타데이터다. ADMIN runbook은 USER 검색 후보에서 제외해야 한다. 지금 메타데이터를 작성했다고 런타임 접근 제어가 구현된 것은 아니다. 현재 저장소 파일은 런타임 인증으로 보호되는 지식 API가 아니다.
+문서의 minimum_role은 검색에 적용할 최소 역할 메타데이터다. 현재 ADMIN 전용 API는 승인된 USER/ADMIN 문서를 검색한다. USER용 검색을 개방할 때 ADMIN runbook을 검색 후보에서 제외해야 한다. 저장소 파일 자체는 런타임 인증으로 보호되지 않으며 metadata가 파일 접근 권한을 대신하지 않는다.
 
 개인 데이터 Tool도 매 호출마다 소유권을 강제한다. 내부 메서드 호출은 HTTP 보안 필터를 다시 거치지 않으므로 조회 facade에서 검증해야 한다. 비동기 작업에 인증이 자동 전파된다고 가정하지 않는다.
 
@@ -46,4 +46,3 @@ AI 검색과 Tool은 아직 구현되지 않았다. 후속 구현에서는 서�
 - [quote/PriceQuoteService.java](../../backend/src/main/java/com/pricetrack/exchange/quote/PriceQuoteService.java)
 - [websocket/config/WebSocketAuthInterceptor.java](../../backend/src/main/java/com/pricetrack/exchange/websocket/config/WebSocketAuthInterceptor.java)
 - [현재 구현 Brief](../../claude-docs/career-project-brief.md)
-

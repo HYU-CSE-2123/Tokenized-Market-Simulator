@@ -46,6 +46,7 @@ public class SecurityConfig {
                             request.getRequestURI()));
                 }))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/ai/**").hasRole("ADMIN")
                         .requestMatchers(
                                 "/api/health",
                                 "/api/auth/**",

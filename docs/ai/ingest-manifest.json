@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "documents": [
+    {"path":"authorization-policy.md","documentVersion":"2","sha256":"f656c9227a53ec66a7d06e8a0358ec20bb1fc7c1ac4ff2482bdb61594061af6b"},
+    {"path":"error-and-status-guide.md","documentVersion":"1","sha256":"9197ae22f966f76fb5776c5b89030d1752785d07fe00a3bf26b176bc073f030d"},
+    {"path":"market-data-policy.md","documentVersion":"1","sha256":"e6a8b3e0b999832ef21310e28a40f307ff0bb9be06c3235dcd86761cf438f1f7"},
+    {"path":"onchain-settlement-policy.md","documentVersion":"1","sha256":"22e5e90b13c4d820b8999dca2616e078d3b9cd5c4eef4ecd3164709b20c8cd10"},
+    {"path":"order-lifecycle.md","documentVersion":"1","sha256":"27d7c24809aa33a3fd84d93371dce034f03179c7276ef3a27ab60370622af792"},
+    {"path":"signed-quote-policy.md","documentVersion":"1","sha256":"cc562eb86aebaddde9e532222e80524b24537c25ded8e6ca7e69fe9dfd2d4ee0"},
+    {"path":"system-overview.md","documentVersion":"2","sha256":"161d7d401d34c43b92cc54dd1a17d208e44527b39ad5a2965cb881e19509c6a1"},
+    {"path":"transaction-recovery-runbook.md","documentVersion":"1","sha256":"0f34f980e371f63b23f146f43a1535cd591a3dc45946b87b4f824003b0401f11"},
+    {"path":"websocket-consistency-policy.md","documentVersion":"1","sha256":"d6b0fb13335ebae55eb994af0068c15d1b735aa7825d4c2e9d5e9e1fe8f73cc2"}
+  ]
+}

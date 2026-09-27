@@ -1,0 +1,22 @@
+# 기존 거래 postgres/anvil과 다른 Compose 프로젝트로 실행한다.
+services:
+  ai-postgres:
+    image: pgvector/pgvector:0.8.6-pg16@sha256:eac621400b7b7ff52493883e41e930e3d104695fea5b68cc0c42370cf7880067
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: exchange_ai
+      POSTGRES_USER: exchange_ai
+      POSTGRES_PASSWORD: ${AI_DB_PASSWORD:?Set AI_DB_PASSWORD in backend/.env}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ai-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exchange_ai -d exchange_ai"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  ai-data:
+    name: exchange_ai-data
+

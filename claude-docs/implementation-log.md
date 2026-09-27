@@ -1885,3 +1885,44 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 사용자 지식 문서 리뷰. 완료 전에는 Phase 1 전체 완료나 지식 ingest 승인으로 기록하지 않는다.
 - Phase 2 진입 전 기술 선택·비용·DB 보존 방안과 구현/테스트 범위를 합의하고 승인받는다.
+
+---
+
+# AI Phase 2: Basic RAG — 구현·로컬 검증 / 실제 공급자 평가 대기
+
+> 작성: 2026-09-27
+
+## 구현과 결정
+
+- Phase 1 산출물과 Phase 2 기술 선택을 사용자에게 승인받았다. 내부 Boot 모듈+provider adapter, 별도 PG16/pgvector 0.8.6 컨테이너·볼륨, text-embedding-3-small(1536), gpt-5.6-terra를 사용한다.
+- backend의 ai 패키지에 승인 문서 로딩·제목 기반 분할·embedding·AI 전용 JDBC·cosine 검색·구조화 답변과 근거 ID 검증을 추가했다.
+- AI DB pool은 DataSource Bean으로 노출하지 않는다. 기존 JPA 설정·거래 schema·컨트랙트는 변경하지 않았고 분산 트랜잭션도 없다. AI 접속·DDL·색인은 요청 시 명시적으로 수행한다.
+- /api/ai/index, /search, /answers는 ADMIN 전용이며 내부 서비스도 역할을 검증한다. Hybrid Search·Tool·Agent·UI는 구현하지 않았다.
+- active 문서+manifest의 정규화 SHA-256+index fingerprint로 승인·재색인을 검증한다. 문서 구조/역할은 유지하고, system/authorization 문서의 AI 구현 상태만 version 2로 갱신했다.
+- Docker 신규 프로젝트 exchange-ai와 볼륨 exchange_ai-data, AI 전용 exchange_ai_test DB를 생성했다. 기존 거래 DB·Anvil을 재시작/삭제하지 않았다.
+- ADR-001을 승인 상태로 반영했다. 설정/실행/삭제·재색인 정책/미완료는 docs/ai/phase-2-basic-rag.md에 기록했다.
+
+## 검증
+
+- AI_PGVECTOR_TESTS=true, backend gradlew test --no-daemon --rerun-tasks: 175개 중 171 통과·4 skipped·실패 0(초기 회귀).
+- 실제 pgvector extension/schema 반복 초기화, vector 검색·중복 방지·색인 전환 rollback·빈 index 통과.
+- H2 거래 DB와 별도 AI 연결의 격리, AI DB 불가/가짜 공급자 장애 이후 모의 매수 FILLED 통과.
+- 문서 metadata/승인 해시/경로 탈출/역할/만료 승인 차단, 재색인 캐시·미완성 색인 비공개·인용 검증, 로컬 HTTP adapter 검증 통과.
+- forge test --summary: 36개 통과. 웹 npm test: 30개 통과. npm run build: 권한 재실행 후 통과.
+- 기존 Anvil 통합 2개, 거래 PostgreSQL 경합 1개와 유료 AI 평가 1개는 skipped다. 과거 통과 이력과 이번 결과를 구분한다.
+
+## 검토와 제한
+
+- 별도 검토 요청 전 문서 초안까지 반영했다. 검토 결과는 후속 기록한다.
+- 최초 별도 검토에서 응답 전체 버퍼링 뒤 크기를 검사하는 문제와 현재/내 주문 단어만으로 정적 정책 질문까지 차단하는 문제를 발견했다. 수신 중 2MB 제한·전체 본문 deadline 취소와 좁은 선판별로 수정하고, 대용량 chunked 성공/오류·느린 본문·정적 질문 3종 회귀를 추가했다.
+- 수정 후 AI_PGVECTOR_TESTS=true 전체 backend 재실행: 179개 중 175 통과, 4 skipped, 실패 0. 재검토 결과는 후속 기록한다.
+- 별도 검토자 review_ai_phase2의 재검토 1회 결과는 발견된 필수 수정 없음이다. 검토자는 수신 중 상한·본문 deadline·정적 질문 경로를 코드/테스트로 확인하고 git diff --check를 직접 통과시켰다. 전체 테스트 수치는 구현자의 실행 결과이며 검토자가 재실행한 결과는 아니다.
+- 검토자는 후속 테스트 보강으로 가짜 subscription의 즉시 cancel 검증을 제안했다. 현재 로컬 HTTP 대용량 테스트는 예외 반환을 확인하고 수신 중 취소는 코드 검토로 확인했다. 이 제안은 필수 수정이 아니다.
+- OPENAI_API_KEY 미설정으로 실제 공급자 호출/한국어 검색 품질/생성 답변 평가는 대기다. 12개 golden 질문과 명시적 유료 평가 테스트를 준비했지만 통과로 기록하지 않는다.
+- 현재 chunk 크기는 UTF-8 byte를 토큰 상한으로 계산하는 보수적 방식이다. 실제 tokenizer 기준 최적화와 관련성 threshold 보정은 실제 평가 결과를 보고 결정한다.
+- 프로세스당 API 호출 상한은 영속 과금 제한이 아니며 공유 JVM의 완전한 장애 격리를 주장하지 않는다.
+
+## 남은 작업
+
+- 별도 검토 지적 반영·재검토 및 최종 회귀는 완료했다.
+- 사용자 API 키 설정 후 실제 embedding·출처 답변과 golden hit@5 평가. 이 검증 전 Phase 2 전체 완료로 표시하지 않는다.

@@ -2,6 +2,8 @@
 
 삼성전자 가격 추종 토큰 거래소의 REST API 및 WebSocket 서버입니다.
 
+AI Phase 2 Basic RAG는 기본 비활성인 ADMIN 전용 모듈입니다. 거래 DB/JPA와 별도의 pgvector 연결을 사용합니다. 설정·실행·색인·평가 및 미검증 범위는 [AI 실행 보고서](../docs/ai/phase-2-basic-rag.md)를 참고하세요.
+
 ## 현재 구현 상태
 
 - 자체 회원가입: `loginId`, `password`, `nickname`
