@@ -1926,3 +1926,12 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 별도 검토 지적 반영·재검토 및 최종 회귀는 완료했다.
 - 사용자 API 키 설정 후 실제 embedding·출처 답변과 golden hit@5 평가. 이 검증 전 Phase 2 전체 완료로 표시하지 않는다.
+
+## AI Phase 2 실제 공급자 평가 — 2026-09-27
+
+- 사용자 키 설정 후 AI_LIVE_EVALUATION=true로 LiveRagEvaluationTest를 실행했다. 키는 로컬 .env에서 프로세스 환경으로 전달하고 출력하지 않았다.
+- Gradle 샌드박스 캐시 접근 실패 후 승인된 권한으로 재실행하여 BUILD SUCCESSFUL을 확인했다.
+- 실제 text-embedding-3-small 검색 hit@5는 10/12(83.3%)로 초기 기준 10/12를 충족했다. gpt-5.6-terra 출처 포함 답변, 무관 질문 INSUFFICIENT_EVIDENCE, 현재 잔고 질문 LIVE_DATA_REQUIRED, 동일 색인 재사용 검증도 통과했다.
+- 전용 exchange_ai_test DB를 사용했다. 기존 거래 로직·DB와 모델 설정은 변경하지 않았다. 전체 회귀를 다시 실행한 결과가 아니라 기존 미실행 유료 평가 1건을 추가 실행한 결과다.
+- 결과 파일: backend/build/reports/ai/retrieval-evaluation.json. 검색 품질은 임베딩·청크·검색 설정의 평가이며 Terra/Luna 비교 평가가 아니다. 두 모델의 답변 품질·지연 비교는 미실행이다.
+- 동작 변경 없는 검증 기록 추가이므로 별도 재검토는 생략했다. Phase 2 초기 기술 검증은 충족했으며 사용자 확인을 기다린다.
