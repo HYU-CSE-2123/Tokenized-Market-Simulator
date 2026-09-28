@@ -23,7 +23,7 @@ class RagServiceTest {
     @BeforeEach void setup() {
         when(loader.load()).thenReturn(corpus); when(store.active("v1")).thenReturn(true);
         when(embedding.embed(any())).thenReturn(List.of(AiFixtures.vector(0)));
-        when(store.search(eq("v1"),any(),eq(5),eq(.3))).thenReturn(List.of(hit));
+        when(store.search(eq("v1"),any(),eq(40),eq(.3))).thenReturn(List.of(hit));
     }
     @Test void userCannotInvokeInternalService() {
         assertThatThrownBy(() -> service.search(new AuthenticatedUser(2L,"user",UserRole.USER),"question"))
@@ -87,6 +87,17 @@ class RagServiceTest {
         when(store.active("v1")).thenReturn(false);
         assertThatThrownBy(() -> service.search(AiFixtures.ADMIN,"정책")).hasMessage("AI_INDEX_NOT_READY");
         verifyNoInteractions(embedding,chat);
+    }
+    @Test void diversityUsesWideSearchBeforeFinalSelection() {
+        var candidates=new ArrayList<KnowledgeHit>();
+        for(int i=0;i<7;i++)candidates.add(new KnowledgeHit("c"+i,i<4?"a.md":i<6?"b.md":"c.md","Title","Section","1","USER","content",.9-i*.01));
+        when(store.search(eq("v1"),any(),eq(40),eq(.3))).thenReturn(candidates);
+        assertThat(service.search(AiFixtures.ADMIN,"정책")).extracting(KnowledgeHit::id).containsExactly("c0","c1","c4","c5","c6");
+    }
+    @Test void approvalChangedDuringSearchFailsClosedBeforeAnswer() {
+        when(loader.load()).thenReturn(corpus,new KnowledgeCorpus("v2",List.of(),List.of()));
+        assertThatThrownBy(() -> service.answer(AiFixtures.ADMIN,"정책")).hasMessage("AI_APPROVAL_MISMATCH");
+        verifyNoInteractions(chat);
     }
     @Test void modelUncertaintyUsesFixedSafeResponse() {
         when(chat.answer(any(),any())).thenReturn(new ChatModelProvider.Generated("INSUFFICIENT_EVIDENCE","invented raw",List.of()));

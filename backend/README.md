@@ -4,6 +4,8 @@
 
 AI Phase 2 Basic RAG는 기본 비활성인 ADMIN 전용 모듈입니다. 거래 DB/JPA와 별도의 pgvector 연결을 사용합니다. 설정·실행·색인·평가 및 미검증 범위는 [AI 실행 보고서](../docs/ai/phase-2-basic-rag.md)를 참고하세요.
 
+AI Phase 3은 문장 경계·순수 링크 청크 정리, 1200바이트 청크, similarity 0.25와 충분한 후보 이후 문서당 최대 2개 선택을 적용합니다. 기존 색인은 명시적으로 재생성해야 합니다. Hybrid는 서비스에 연결하지 않은 비교 실험입니다. 수치와 제한사항은 [검색 품질 보고서](../docs/ai/phase-3-retrieval.md)를 참고하세요.
+
 ## 현재 구현 상태
 
 - 자체 회원가입: `loginId`, `password`, `nickname`

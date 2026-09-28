@@ -1935,3 +1935,34 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 전용 exchange_ai_test DB를 사용했다. 기존 거래 로직·DB와 모델 설정은 변경하지 않았다. 전체 회귀를 다시 실행한 결과가 아니라 기존 미실행 유료 평가 1건을 추가 실행한 결과다.
 - 결과 파일: backend/build/reports/ai/retrieval-evaluation.json. 검색 품질은 임베딩·청크·검색 설정의 평가이며 Terra/Luna 비교 평가가 아니다. 두 모델의 답변 품질·지연 비교는 미실행이다.
 - 동작 변경 없는 검증 기록 추가이므로 별도 재검토는 생략했다. Phase 2 초기 기술 검증은 충족했으며 사용자 확인을 기다린다.
+
+# AI Phase 3: Retrieval 품질 개선 — 구현·검증·별도 검토 완료
+
+> 2026-09-28. 사용자가 Phase 2 완료와 Phase 3 설계를 승인했다.
+
+## 구현·결정
+
+- 고정 golden 12개/기대 문서/원본 manifest를 보존하고 12가지 독립·조합 실험을 수행했다. 원래 baseline hit@5 10/12는 변경하지 않았다.
+- 문장/행 단위 overlap, 순수 근거 링크 절 제외, 새 chunking fingerprint, 넓은 후보 검색 후 문서당 2개 선택을 구현했다.
+- 채택 K는 1200바이트 청크·threshold 0.25·후보 최소 40개·최종 Top-K 5다. hit@5 12/12, MRR 0.8819(baseline 0.7778), 직접 근거 anchor 12/12(baseline 9/12), 기존 성공 10개 회귀 0.
+- Hybrid 비교는 PostgreSQL simple FTS로 영문 식별자를 검색하고 RRF로 결합했다. 식별자 hit는 6/8→8/8이지만 golden MRR/직접 근거는 K보다 낮아 서비스에 채택하지 않았다. 한국어 형태소 분석·BM25·별도 검색 서버·reranker는 추가하지 않았다.
+- AI API는 ADMIN-only 유지. USER 검색 개방이나 domain/type 자동 필터 추가는 없다. Tool·Agent·Skill·UI·거래 코드/DB·컨트랙트 변경 없음.
+- 실제 .env는 수정하지 않았다. 변경된 chunking fingerprint 때문에 서버 재시작 뒤 ADMIN 명시적 재색인이 필요하다. 기존 거래는 이 과정과 독립적이다.
+
+## 검증
+
+- 실제 OpenAI/pgvector 실험, 현재 서비스 LiveRagEvaluationTest 및 답변 비교 3개 통과. 무관 질문 후보 오탐은 A/K/L 모두 5/8, 최종 답변 오탐은 각각 0/8. 정확 식별자 2개 미검색과 소규모 개발 세트 과적합 가능성은 남은 제한이다.
+- 전체 backend 초기 회귀: 189개 중 183 통과·6 skipped·실패 0. 실제 AI DB 통합 포함, 기존 Anvil/거래 PostgreSQL 실연동 3개는 미실행이다. 유료 평가 3개는 별도 실행 결과로 구분한다.
+- forge 36개·웹 30개·Vite production build 통과. build는 샌드박스 접근 제한 후 승인된 권한으로 재실행했다.
+- 실험 데이터/코드 위치와 상세 수치: docs/ai/phase-3-retrieval.md, docs/ai/phase-3-results.json, backend/src/test/java/com/pricetrack/exchange/ai/RetrievalExperimentTest.java.
+
+## 검토·남은 작업
+
+- 별도 검토와 마지막 assertion 추가 후 최종 회귀는 후속 기록한다.
+- Hybrid의 식별자 이득과 자연어 근거 회귀 trade-off, 검색 오탐 5/8은 해결했다고 표시하지 않는다.
+
+## 최종 검증·별도 검토
+
+- 마지막 전체 backend 회귀: 190개 중 184 통과, 6 skipped, 실패 0. golden 해시/지표 기준 assertion을 추가한 실제 유료 평가 3개도 재실행 통과했다. 공유 수치 JSON과 마지막 보고서의 지표 차이는 0건이다.
+- 별도 review_ai_phase3 결과는 발견된 필수 수정 없음. tracked/untracked 변경과 관련 경계를 검토하고, diff 검사·지표 독립 재계산·보고서와 답변 30행 대조를 직접 수행했다. 검토자는 테스트/유료 호출을 직접 재실행하지 않았다.
+- 제안 1건: 핵심 2개 생성 답변의 ANSWERED 상태 assertion 추가. 현재 실제 답변 내용/인용을 확인했고 검색 직접 근거 assertion은 있지만 해당 생성 상태 assertion은 없다. 필수 수정은 아니며 후속 보강 대상으로 남긴다.

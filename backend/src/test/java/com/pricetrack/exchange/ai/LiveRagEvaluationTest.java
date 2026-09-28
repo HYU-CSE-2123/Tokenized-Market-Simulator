@@ -18,7 +18,7 @@ class LiveRagEvaluationTest {
         var p=new AiProperties(true,"jdbc:postgresql://127.0.0.1:5433/exchange_ai_test","exchange_ai",
                 System.getenv().getOrDefault("AI_DB_PASSWORD","ai-local-test-only"),
                 "../docs/ai-knowledge","../docs/ai/ingest-manifest.json",key,"https://api.openai.com/v1/",
-                "text-embedding-3-small","gpt-5.6-terra",800,60,5,.3,20);
+                "text-embedding-3-small","gpt-5.6-terra",1200,60,5,.25,20);
         var json=new ObjectMapper();
         try(var store=new PgKnowledgeStore(p)) {
             var loader=new KnowledgeLoader(p,json);var provider=new OpenAiProvider(p,json);
@@ -36,11 +36,11 @@ class LiveRagEvaluationTest {
                         "paths",found.stream().map(h -> h.path()).toList(),
                         "scores",found.stream().map(h -> h.similarity()).toList()));
             }
-            Path report=Path.of("build/reports/ai/retrieval-evaluation.json");
+            Path report=Path.of("build/reports/ai/retrieval-evaluation-current.json");
             Files.createDirectories(report.getParent());
             json.writerWithDefaultPrettyPrinter().writeValue(report.toFile(),Map.of(
                     "model",p.embeddingModel(),"indexVersion",loader.load().fingerprint(),"hitAt5",(double)hits/cases.size(),"results",results));
-            assertThat(hits).as("golden hit@5 >= 10/12").isGreaterThanOrEqualTo(10);
+            assertThat(hits).as("Phase 3 selected retrieval hit@5").isEqualTo(12);
             var answer=service.answer(AiFixtures.ADMIN,"quoteId는 왜 한 번만 사용할 수 있어?");
             assertThat(answer.status()).isEqualTo("ANSWERED");assertThat(answer.sources()).isNotEmpty();
             assertThat(service.answer(AiFixtures.ADMIN,"화성에서 감자를 재배하는 방법").status()).isEqualTo("INSUFFICIENT_EVIDENCE");
@@ -48,4 +48,3 @@ class LiveRagEvaluationTest {
         }
     }
 }
-

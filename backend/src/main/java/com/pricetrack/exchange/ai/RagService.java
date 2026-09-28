@@ -3,6 +3,7 @@ package com.pricetrack.exchange.ai;
 import com.pricetrack.exchange.ai.knowledge.*;
 import com.pricetrack.exchange.ai.provider.*;
 import com.pricetrack.exchange.ai.store.*;
+import com.pricetrack.exchange.ai.retrieval.EvidenceSelector;
 import com.pricetrack.exchange.auth.AuthenticatedUser;
 import com.pricetrack.exchange.user.UserRole;
 import java.util.*;
@@ -80,7 +81,9 @@ public class RagService {
         if(!store.active(corpus.fingerprint()))throw new AiFailure("AI_INDEX_NOT_READY");
         float[] vector=embedding.embed(List.of(question)).getFirst();
         PgKnowledgeStore.vector(vector);
-        var hits=store.search(corpus.fingerprint(),vector,properties.topK(),properties.minimumSimilarity());
+        // 최종 5개를 먼저 잘라내지 않는다. 동일 문서가 후보를 독점해도 다른 근거를 채울 수 있게 한다.
+        var candidates=store.search(corpus.fingerprint(),vector,Math.max(40,properties.topK()*8),properties.minimumSimilarity());
+        var hits=EvidenceSelector.select(candidates,properties.topK(),2);
         verifyUnchanged(corpus.fingerprint());
         return new Retrieved(corpus.fingerprint(),hits);
     }

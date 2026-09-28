@@ -16,7 +16,14 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 public class KnowledgeLoader {
     private final AiProperties properties;
     private final ObjectMapper json;
-    public KnowledgeLoader(AiProperties properties, ObjectMapper json) { this.properties = properties; this.json = json; }
+    private final MarkdownChunker chunker;
+    public KnowledgeLoader(AiProperties properties, ObjectMapper json) {
+        this(properties, json, new MarkdownChunker(properties.chunkTokens(), properties.overlapTokens()));
+    }
+    /** 동일 승인 corpus에서 chunking 한 변수만 바꾸는 평가에도 사용한다. */
+    public KnowledgeLoader(AiProperties properties, ObjectMapper json, MarkdownChunker chunker) {
+        this.properties = properties; this.json = json; this.chunker = chunker;
+    }
     public KnowledgeCorpus load() {
         try {
             Path root = Path.of(properties.knowledgeRoot()).toRealPath();
@@ -57,11 +64,10 @@ public class KnowledgeLoader {
                         || !metadata.get("version").equals(entry.path("documentVersion").asText()))
                     throw new AiFailure("AI_APPROVAL_MISMATCH");
                 documents.add(new KnowledgeCorpus.Document(path, hash, Map.copyOf(metadata)));
-                chunks.addAll(new MarkdownChunker(properties.chunkTokens(), properties.overlapTokens())
-                        .split(path, hash, metadata, text.substring(end + 5)));
+                chunks.addAll(chunker.split(path, hash, metadata, text.substring(end + 5)));
             }
             documents.sort(Comparator.comparing(KnowledgeCorpus.Document::path));
-            String identity = properties.embeddingModel() + ":1536:heading-byte-bound-v1:"
+            String identity = properties.embeddingModel() + ":1536:" + chunker.version() + ":"
                     + properties.chunkTokens() + ":" + properties.overlapTokens()
                     + documents.stream().map(d -> "\n" + d.path() + ":" + d.hash()).reduce("", String::concat);
             return new KnowledgeCorpus(hash(identity), List.copyOf(documents), List.copyOf(chunks));
@@ -74,4 +80,3 @@ public class KnowledgeLoader {
         catch (Exception e) { throw new IllegalStateException(e); }
     }
 }
-

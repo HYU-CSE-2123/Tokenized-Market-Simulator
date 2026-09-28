@@ -1,0 +1,36 @@
+{
+  "goldenEvidence": [
+    ["HTTP 요청 처리, 체인 채굴"],
+    ["observedAt + 30초"],
+    ["타인의 견적", "소유권·ISSUED 상태"],
+    ["저장된 동일 raw transaction을 재전송한다"],
+    ["새 nonce로 재서명하면"],
+    ["BlockchainTransaction의 자동 정산 격리 상태", "REVIEW_REQUIRED는 트랜잭션 격리"],
+    ["성공 receipt도 혼자서는", "예상 Vault 주소와 Bought/Sold"],
+    ["CLOSED + LIVE는 모순이 아니며"],
+    ["재연결 후 REST로 시장·주문·체결·포트폴리오를 재동기화한다"],
+    ["자동으로 다른 사용자의 주문을 볼 수 없다"],
+    ["실제 주식·배당·의결권·실제 원화 상환권을 제공하지 않는다"],
+    ["PRICE_QUOTE_UNAVAILABLE | 409 | 누락·만료", "만료·이미 소비됨·방향/입력 불일치"]
+  ],
+  "negative": [
+    "화성에서 감자를 재배하는 방법을 알려줘",
+    "김치찌개를 끓일 때 물은 얼마나 넣어?",
+    "양자역학의 슈뢰딩거 방정식을 풀어줘",
+    "프랑스 비자 신청에 필요한 서류는 무엇이야?",
+    "거래소 VIP 등급별 수수료 할인율 표를 알려줘",
+    "mSEC를 담보로 대출받을 때 연이율 계산식은?",
+    "비트코인 반감기마다 채굴 보상은 어떻게 바뀌어?",
+    "이 거래소 친구 초대 리워드 지급 조건은?"
+  ],
+  "identifiers": [
+    {"question":"PENDING_ONCHAIN", "expected":["order-lifecycle.md"], "needle":"HTTP 요청 처리"},
+    {"question":"REVIEW_REQUIRED", "expected":["order-lifecycle.md","error-and-status-guide.md"], "needle":"트랜잭션"},
+    {"question":"PRICE_QUOTE_UNAVAILABLE", "expected":["error-and-status-guide.md","signed-quote-policy.md"], "needle":"만료"},
+    {"question":"INVALID_CREDENTIALS", "expected":["error-and-status-guide.md"], "needle":"로그인 정보 불일치"},
+    {"question":"BALANCE_NOT_INITIALIZED", "expected":["error-and-status-guide.md"], "needle":"잔고 초기화"},
+    {"question":"INVALID_CANDLE_QUERY", "expected":["error-and-status-guide.md"], "needle":"캔들 조회 조건 오류"},
+    {"question":"QuoteAlreadyUsed", "expected":["error-and-status-guide.md"], "needle":"온체인 견적 재사용"},
+    {"question":"MinimumOutputNotMet", "expected":["error-and-status-guide.md"], "needle":"최소 수령량 조건 불충족"}
+  ]
+}

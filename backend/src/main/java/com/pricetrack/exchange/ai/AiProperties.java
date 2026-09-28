@@ -16,17 +16,16 @@ public record AiProperties(
         @DefaultValue("https://api.openai.com/v1/") String apiBase,
         @DefaultValue("text-embedding-3-small") String embeddingModel,
         @DefaultValue("gpt-5.6-terra") String chatModel,
-        @DefaultValue("800") int chunkTokens,
+        @DefaultValue("1200") int chunkTokens,
         @DefaultValue("60") int overlapTokens,
         @DefaultValue("5") int topK,
-        @DefaultValue("0.3") double minimumSimilarity,
+        @DefaultValue("0.25") double minimumSimilarity,
         @DefaultValue("20") int timeoutSeconds) {
     public static final int DIMENSIONS = 1536;
     public void validate() {
         if (chunkTokens < 256 || chunkTokens > 2000 || overlapTokens < 0 || overlapTokens >= chunkTokens / 2
-                || topK < 1 || topK > 10 || minimumSimilarity < 0 || minimumSimilarity > 1
+                || topK < 1 || topK > 10 || !Double.isFinite(minimumSimilarity) || minimumSimilarity < 0 || minimumSimilarity > 1
                 || timeoutSeconds < 1 || timeoutSeconds > 60) throw new IllegalArgumentException("Invalid AI limits");
         if (!jdbcUrl.startsWith("jdbc:postgresql:")) throw new IllegalArgumentException("AI requires PostgreSQL");
     }
 }
-

@@ -91,6 +91,12 @@ Android 앱 구현 자체는 Phase 6의 완료 조건이 아니다. Phase 6에�
 
 ## 핵심 설계 원칙
 
+### AI 확장 상태 (2026-09-28, 거래소 Phase와 별도)
+
+AI Phase 2 Basic RAG는 사용자 완료 승인을 받았다. Phase 3은 고정 golden 12개에서 hit@5 10/12→12/12, MRR@5 0.7778→0.8819로 개선하고 검증·별도 검토를 마쳤다. ADMIN-only·별도 AI DB 경계는 유지한다. Hybrid는 식별자 검색 개선과 자연어 근거 회귀가 함께 나타나 비교 실험으로만 남겼다. 검색 후보 오탐 5/8과 작은 개발 평가 세트라는 한계가 있다. 자세한 조건은 [AI Phase 3 보고서](../docs/ai/phase-3-retrieval.md)를 따른다. Tool·Agent·Skill·AI UI는 아직 구현하지 않았다.
+
+### 거래 시스템 원칙
+
 - 컨트랙트 트랜잭션은 비동기이므로 주문 상태를 `REQUESTED → PENDING_ONCHAIN → FILLED/FAILED`로 분리합니다.
 - DB 기록과 온체인 결과의 불일치는 `blockchain_transactions` 및 reconciliation 작업으로 다룹니다.
 - 온체인 체결 가격은 사용자가 확인한 30초 유효 서명 견적의 가격이며 Vault가 같은 트랜잭션에서 서명·만료·재사용을 검증합니다.

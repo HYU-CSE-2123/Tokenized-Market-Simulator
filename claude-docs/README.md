@@ -25,6 +25,7 @@
 - [ADR-001 AI 실행 경계](../docs/ai/adr/ADR-001-ai-runtime-boundary.md) — Phase 2 사용자 승인 기술 선택과 격리 경계
 - [AI Phase 1 지식 문서 보고서](../docs/ai/phase-1-knowledge-report.md) — 사용자 승인된 지식 문서 9개 목록·권한 metadata·검증 결과
 - [AI Phase 2 실행·검증 보고서](../docs/ai/phase-2-basic-rag.md) — Basic RAG 설정, API, 재색인, 실제 검증과 남은 평가
+- [AI Phase 3 검색 품질 보고서](../docs/ai/phase-3-retrieval.md) — 고정 baseline, 독립 실험, 채택 설정과 Hybrid 비교
 
 ## 단일 출처(Source of Truth)
 
