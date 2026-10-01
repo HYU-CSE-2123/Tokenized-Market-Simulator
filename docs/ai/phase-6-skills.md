@@ -1,8 +1,8 @@
 # AI Phase 6 — 제한된 Skill 진단 절차 설계안
 
-> 2026-10-01 / 제안 상태, 구현 승인 대기. Phase 5는 사용자 완료 승인됨.
+> 2026-10-01 / 구현·검증·별도 검토 완료, 사용자 완료 승인 대기. Phase 5는 사용자 완료 승인됨.
 > 기준: master guide의 Phase 6, 실제 AgentService/ToolRegistry/ToolReadFacade/ReadOnlyReceiptClient와 현재 지식 metadata.
-> 이번 변경은 설계 문서와 승인 기록뿐이다. 아래 클래스·설정·응답은 아직 구현되지 않았다.
+> 1~10절은 승인받은 설계 기준이다. 실제 구현과 검증 기록은 11절 이후에 누적한다.
 
 ## 1. 목적과 Phase 5와의 차이
 
@@ -192,3 +192,79 @@ trace는 최대12항목, 내부 절차는 최대10단계를 제안한다. 단계
 제안 결정: **버전 관리된 정의+고정 registry/handler**, **운영 정산 Skill ADMIN-only/견적·시장 Skill USER+ADMIN**, **명시 선택 및 기존 분류 내 선택**, **SQL role+domain 제한**, **현재 run 예산 공유**, **단계 trace와 근거 검증된 진단**.
 
 승인 전 제품 코드·설정·Skill 정의·DB·환경 파일은 구현/변경하지 않는다. 사용자 승인 후 이 설계를 기준으로 한 Phase로 진행한다.
+
+## 11. 사용자 승인 후 실제 구현 (2026-10-01)
+
+- 시작 HEAD `33a8dad`(Phase 6 설계), 직전 `9a0df88`(Phase 4·5 통합). 시작 Git 작업 트리는 깨끗했다. 커밋은 자동 실행하지 않는다.
+- `ai/skill/SkillRegistry`: 정의 로딩·제한된 front matter 검증·version/hash·코드 ceiling. 기존 Jackson만 사용하고 일반 YAML 실행 기능은 만들지 않았다. resource8KiB/중복/unknown/tag/alias/경로/권한 확대를 거부하고 개별 정의 오류는 격리한다.
+- `SkillRunner`: 세 고정 handler와 RunContext. Agent의 기존 private Run이 callback으로 동일 Tool cache/예산/deadline을 제공하며 pool이나 별도 run을 추가하지 않는다. 단계 목록은 승인 정의와 코드에서 일치해야 한다.
+- `SkillResult`: optional response.skill에 id/version/hash, diagnosis(classification/observedFindings/hypotheses), trace. 분류와 관측은 서버가 성공 Tool에서 생성하여 모델의 classification을 받지 않는다. hypotheses 배열은 비우고 정책 기반 가능성 설명은 기존 근거 검증된 answer에서만 제공한다.
+- definitions3개와 승인 manifest는 `src/main/resources/ai/skills/`. hot reload/외부 다운로드/Skill embedding 없음. 이름·목적·절차 본문은 검토 가능한 배포 정의이고 실제 실행은 고정 handler다.
+- AgentRequest의 optional skillId, AgentService의 명시 선택·기존 분류 내 eligible ID 선택·정의 재검증·trace audit. 명시 선택은 선인가 뒤 바로 절차로 들어가며 분류0/종합≤1, 자동은 분류1/종합≤1. 일반 Phase 5 요청은 기본 비활성 Skill 설정에서 기존 계약을 유지한다.
+- `AuthorizedKnowledgeRetrieval`/`KnowledgeStore`/`PgKnowledgeStore`: scoped 검색의 SQL role+domain 후보 필터와 corpus metadata 방어 검증. scope 지원 없는 store는 안전하게 실패하고 일반 검색으로 확대하지 않는다. Basic RAG의 ADMIN-only legacy 호출을 유지한다.
+- 조회 연결의 양방향 ID·종목·방향·입력(decimal 비교)·단위를 확인하고 불일치에는 후속 tx/receipt 분기를 중단한다. quote 소비/만료 findings는 독립. chain FAILED 원인은 미검증으로 남기고 성공 정산 분류에는 FILLED/체결 요약/receipt SUCCESS/event MATCH/DB CONFIRMED/확인 수를 모두 요구한다.
+- trace≤12, 정의 단계≤8, Tool≤4/검색1/모델≤2/40초/worker2/대기열0. trace에는 payload와 resource ID를 넣지 않는다. 인가 실패는 Skill metadata/근거 없이 기존 안전한 오류로 종료한다. 승인 문서 무효화 시 정책·해석·trace 정책 인용을 함께 폐기한다.
+- 설정 `AI_SKILLS_ENABLED=false`와 example만 추가. 실제 `.env`, 거래 코드·컨트랙트·schema·JPA 트랜잭션·Tool8개·의존성은 변경하지 않았다.
+- active 지식9개 중 system/authorization을 v5로 갱신하고 manifest/hash를 맞췄다. 기존 golden12는 변경하지 않는다. 로컬 AI 색인은 회귀 성공 후에만 발행한다.
+
+## 12. 이번 검증과 검토 기록
+
+구현 도중 표적 Skill/Agent 회귀는 통과했다. 신규 HTTP 통합 테스트의 Order import 충돌은 컴파일 단계에서 발견해 수정했다. 전체 DB/Anvil 회귀·실제 공급자·현행 지식 검색 평가·별도 검토는 실행 후 결과를 기록하며 아직 완료로 표시하지 않는다.
+
+검증 위치: `ai/skill/SkillRegistryTest`, `SkillServiceTest`, `SkillApiIntegrationTest`, `LiveSkillEvaluationTest`; 기존 agent/AuthorizedKnowledgeRetrievalTest/OpenAiAgentProviderTest/AgentAnvilIntegrationTest, PgKnowledgeStoreIntegrationTest, ToolPostgresIntegrationTest, KnowledgeLoaderTest/KnowledgeRefreshEvaluationTest도 보강했다.
+
+### 최초 전체 회귀
+
+- 신규 테스트의 Mockito 재설정 시 기존 Answer가 실행되는 fixture 오류2건과 H2 Anvil fixture의 txHash/nonce 중복1건을 발견해 수정했다. 테스트 주장을 줄이지 않고 doReturn/doAnswer와 독립 fixture 식별자로 바로잡았다.
+- 전체 backend295 중285통과/10skip/실패·오류0. Skill 결정적20·registry3·HTTP3, 실제 pgvector3(신규 domain+role Top-K canary 포함)·Tool PostgreSQL4(세 Skill rows 전부 불변 포함)·Agent Anvil2(신규 settlement Skill NOT_FOUND/nonce·잔고·블록 불변 포함)가 실행됐다.
+- skip10은 새 LiveSkill1을 포함한 실제 공급자/검색 opt-in과 기존 거래 broadcast·성공 event/견적 PostgreSQL 조건부 테스트다. 공급자/검색 실행을 따로 수행하며 전체 회귀 결과와 혼동하지 않는다.
+- forge test -q 통과. 기존 웹 npm test30/30, vite build87modules 통과. 거래·컨트랙트·웹 제품 코드 변경 없음.
+
+### 실제 공급자·scoped 검색·지식 회귀
+
+- 최초 live 평가에서 정산/견적 명시 Skill2개는 통과했지만 시장 명시 Skill은 INSUFFICIENT_EVIDENCE였다. 현재 관측+정책 설명과 실제 신규 견적/거래 성공 보장을 분리하도록 종합 지시를 보완하고 같은6개 시나리오를 재실행했다. 통과 assertion을 낮추거나 실패를 정상 PARTIAL로 바꾸지 않았다.
+- 최종 live Skill 명시3/자동3, 선택6/6·route MIXED6/6 통과. 모두 근거 검증된 정상 PARTIAL6이며 PLAN_UNAVAILABLE/SYNTHESIS_UNAVAILABLE/RAG_UNAVAILABLE은0이다. USER 공개 문서만, ADMIN 정산 권한, domain별 출처, 역할 거부403/Tool0/모델0·타인404/모델0, fixture 주문/견적 불변도 검증했다.
+- 실제 model gpt-5.6-terra/embedding1536/pgvector 사용. 상태는 전용 H2 fixture와 모의 시장이며 새로운 온체인 거래가 아니다. 성공 실행의 input16,506/output3,782 tokens, 지연6.456~11.188초는 이전 실패 실행/embedding/golden/Phase5 평가 사용량을 포함한 총계가 아니다.
+
+| Skill | 명시/자동 결과 | Tool 수 | 모델 명시/자동 | trace 단계 | 관측 분류 |
+|---|---|---:|---|---:|---|
+| settlement-debugging | PARTIAL / PARTIAL | 3 | 1 / 2 | 8 | WAITING_OBSERVED |
+| signed-quote-diagnosis | PARTIAL / PARTIAL | 3 | 1 / 2 | 7 | WAITING_OBSERVED + EXPIRED_BY_TIME |
+| market-availability-diagnosis | PARTIAL / PARTIAL | 1 | 1 / 2 | 4 | INSUFFICIENT_EVIDENCE + REFERENCE_SNAPSHOT_OBSERVED |
+
+정산 trace: LOAD_ORDER→CHECK_ORDER→LOAD_LINKED_QUOTE→LOAD_TRANSACTION→LOAD_RECEIPT(SKIPPED: 연결 tx 없음)→CHECK_EVIDENCE→RETRIEVE_POLICY→SUMMARIZE. 견적은 LOAD_QUOTE→LOAD_LINKED_ORDER→같은 tx/receipt/근거/정책/종합 순서다. 시장은 LOAD_REFERENCE→CHECK_EVIDENCE→RETRIEVE_POLICY→SUMMARIZE이며 Tool 스냅샷1개만 사용한다. 모든 절차의 검색은1회다. 시장의 분류는 발급/거래 성공을 확인할 근거 부족이지 스냅샷 조회 실패를 뜻하지 않는다.
+
+- 별도 scoped3문항 기대 문서 hit3/3: 정산 onchain-settlement-policy, 견적 signed-quote-policy, 시장 market-data-policy. 고정 golden12에 이 문항을 섞거나 평가 set을 바꾸지 않았다.
+- 기존 Phase5 실제 공급자6개도 재실행 route6/6, ANSWERED4/PARTIAL2, 의존성 실패0. 최신 raw phase5 보고서는 이번 실행이며 역사적 Phase5 결과JSON을 덮어쓰지 않았다.
+- 현행9문서56청크: 고정 hit@5=12/12, MRR@5=0.8819444444444443, 직접근거12/12, K회귀0, 무관 검색후보5/8·답변오탐0/8, 핵심 ANSWERED2/2, 식별자6/8. Phase2 baseline hit10/12와 기존 K 설정은 유지한다.
+- 회귀 성공 후 local exchange_ai만 index `3904f896c019d95243d1c3eb52bcd0e0e6308db78625f118375181b3d0a660f4`로 발행했다. 테스트용 exchange_ai_test는 canary 테스트가 임시 색인을 발행할 수 있고 서비스 local DB와 구분한다. 거래 DB와 분산 트랜잭션을 만들지 않았다.
+- raw: backend/build/reports/ai/phase6-skill-evaluation.json, phase6-scoped-retrieval.json, phase6-knowledge-refresh.json. 공유 요약 수치는 docs/ai/phase-6-results.json에 기록한다.
+- 후속 자체 점검에서 미확정 생성 답변의 검증되지 않은 인용을 trace에 넣지 않도록 차단했고 manifest version 타입을 정수로 강제했다. 문서 승인 무효화 시 모델 생성 uncertainties도 정책 해석과 함께 폐기하도록 서버 관측 uncertainties와 분리했다. 정상 공급자/색인 경로와 문서·검색 설정은 바꾸지 않았다. 신규 결정적 assertions를 포함해 최종 전체 회귀를 다시 실행한다.
+
+재현: backend에서 AI_PGVECTOR_TESTS=true, AI_TOOL_POSTGRES_TESTS=true, AI_AGENT_ANVIL_TESTS=true로 `./gradlew test --no-daemon --rerun-tasks`. 공급자는 AI_SKILL_LIVE_EVALUATION=true, 검색 회귀는 AI_KNOWLEDGE_REFRESH_EVALUATION=true/AI_PHASE6_EVALUATION=true. AI_PUBLISH_CURRENT_INDEX=true는 회귀 성공 후 exchange_ai에만 발행하는 별도 opt-in. 공급자/검색/색인 교체 테스트는 동시에 실행하지 않는다.
+
+OpenAI Docs 지침에 따라 [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)와 [평가 가이드](https://developers.openai.com/api/docs/guides/evaluation-best-practices)를 확인했다. 기존 승인 모델과 adapter를 유지하고 닫힌 schema와 서버 assertions를 주 검증으로 사용한다. schema 준수가 해석의 진실성 보장은 아니다.
+
+## 13. 남은 한계와 제외
+
+### 최종 전체 회귀와 검토 요청
+
+- 최종 guard/문서/manifest 상태로 전체 backend298 중288통과/10skip/실패·오류0 재실행. SkillService22/SkillRegistry4/SkillHTTP3, 실제 pgvector3/PostgreSQL4/Anvil2를 포함한다. 핵심 제품 소스보다 최신 컴파일 산출물과 최종 XML을 확인했다.
+- 이번 Phase의 forge36/36·웹30/30와 build87modules 통과. 마지막 수정은 Agent 정책 폐기/trace와 정의 parser 경계뿐이며 컨트랙트·웹·지식 본문/검색 설정은 변하지 않았다.
+- skip10: LiveAgent, KnowledgeRefresh, LiveRag, RetrievalAnswer, RetrievalExperiment, LiveSkill 각1; 기존 ToolAnvil의 성공 event1, 거래 broadcast 관련Anvil2, 견적 PostgreSQL concurrency1. LiveAgent/LiveSkill/KnowledgeRefresh는 위 별도 opt-in 실행으로 성공했고 나머지는 이번 전체 명령에서 건너뛰었다.
+- 제품·테스트·문서 초안을 멈추고 별도 검토를 요청한다. 아직 검토 완료로 표시하지 않으며 이후 발견 사항과 결과를 기록한다.
+
+- 현재 Tool에 없던 revert 원인/block timestamp/개별 주문 잠금액/Oracle usedQuoteIds·signer 직접 검증을 추가하지 않았다. 실제 quote 발급 성공 여부와 과거 실패 원인을 현재 스냅샷만으로 보장하지 않는다.
+- 실제 Anvil 성공 MATCH는 기존 event가 있을 때만 읽기 검증 가능하다. Phase 6 테스트를 위해 배포·거래를 만들지 않는다. 해당 실행 여부는 결과에서 별도로 표시한다.
+- live 공급자 평가는 모델/embedding/pgvector를 실제 사용하되 상태는 전용 H2 fixture와 모의 시장이다. 운영 Toss·사용자 거래의 실제 장애 원인 평가가 아니다.
+- structured hypotheses는 이번 서버 계약에서 비우고, 정책 근거에 따른 해석은 answer에 남긴다. 자연어의 완전한 진실성 보장을 주장하지 않는다.
+- Phase 7 이벤트 자동 진단·저장·UI·장기 기억·재시도·mutation은 미구현이다.
+
+## 14. 최종 별도 검토와 완료 상태
+
+- 독립 검토자 `review_ai_phase6`: 발견된 필수 수정 없음. 전체 dirty diff, 신규 정의·registry·handler·테스트·결과 JSON과 역할/대상 제한, 양방향 연결 재인가, SQL role+domain 후보 제한, 공유 run/cache/예산, 승인 무효화 시 해석·인용·모델 uncertainties·정책 trace 폐기를 직접 확인했다.
+- 검토자 직접 실행: SkillService22/Registry4/HTTP3, AgentService19/AuthorizedKnowledgeRetrieval5/OpenAiAgentProvider4, 총57개 통과·실패/오류/skip0. `git diff --check` 통과. 현재 XML은 검토자57개 표적 결과이며 구현자의 최종 전체298개 실행과 구분한다.
+- 검토자는 공유 DB/Anvil/외부 공급자·forge·웹을 재실행하지 않았고 `.env`/키를 읽지 않았다. 실제 공급자·scoped·golden 원시 보고서 수치를 공유 결과와 대조했다. 실제 Anvil 성공 MATCH, 운영 Toss 장애·실제 사용자 거래, 자연어 해석의 완전한 진실성은 미검증으로 유지한다.
+- 검토 후 제품 코드와 테스트는 변경하지 않았다. 이 완료·검토 기록만 추가했다. 승인 범위의 구현과 검증을 완료했으며 사용자 완료 승인 전 Phase 7은 시작하지 않는다. 실제 `.env`는 변경하지 않았고 Skill 기본 설정은 false다. 커밋은 실행하지 않았다.
+
+커밋 메시지: `feat(ai): 제한된 Skill 진단 절차와 역할·domain 검색 경계 구현`

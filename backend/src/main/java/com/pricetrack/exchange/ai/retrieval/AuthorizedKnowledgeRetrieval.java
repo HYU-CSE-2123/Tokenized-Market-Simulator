@@ -8,6 +8,7 @@ import com.pricetrack.exchange.auth.AuthenticatedUser;
 import com.pricetrack.exchange.user.UserRole;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 /** Server principal -> SQL candidate role filter. No USER-to-ADMIN principal substitution. */
 public class AuthorizedKnowledgeRetrieval {
@@ -22,12 +23,19 @@ public class AuthorizedKnowledgeRetrieval {
     public Evidence search(AuthenticatedUser principal, String question, Duration budget) {
         return search(principal,question,budget,true);
     }
+    public Evidence searchScoped(AuthenticatedUser principal,String question,Duration budget,Set<String> domains) {
+        if(domains==null || domains.isEmpty())throw new AiFailure("AI_DOMAIN_FILTER_INVALID");
+        return search(principal,question,budget,true,Set.copyOf(domains));
+    }
     /** Preserves the established Basic RAG provider/store contract for its ADMIN-only wrapper. */
     public Evidence searchLegacyAdmin(AuthenticatedUser principal,String question) {
         if(principal==null || principal.role()!=UserRole.ADMIN)throw new org.springframework.security.access.AccessDeniedException("ADMIN required");
         return search(principal,question,Duration.ofSeconds(p.timeoutSeconds()+5L),false);
     }
     private Evidence search(AuthenticatedUser principal,String question,Duration budget,boolean bounded) {
+        return search(principal,question,budget,bounded,null);
+    }
+    private Evidence search(AuthenticatedUser principal,String question,Duration budget,boolean bounded,Set<String> domains) {
         if (principal == null || principal.userId() == null || principal.userId() <= 0 || principal.role() == null)
             throw new org.springframework.security.access.AccessDeniedException("Authentication required");
         if (question == null || question.isBlank() || question.length() > 1000) throw new AiFailure("AI_INPUT_LIMIT");
@@ -36,13 +44,17 @@ public class AuthorizedKnowledgeRetrieval {
         if(!store.active(corpus.fingerprint())) throw new AiFailure("AI_INDEX_NOT_READY");
         float[] vector=(bounded?embedding.embed(List.of(question),remaining(end)):embedding.embed(List.of(question))).getFirst();
         PgKnowledgeStore.vector(vector);
-        var candidates=!bounded
+        var candidates=domains!=null
+                ? store.searchForScope(corpus.fingerprint(),vector,Math.max(40,p.topK()*8),p.minimumSimilarity(),principal.role(),domains,remaining(end))
+                : !bounded
                 ? store.search(corpus.fingerprint(),vector,Math.max(40,p.topK()*8),p.minimumSimilarity())
                 : store.searchForRole(corpus.fingerprint(),vector,Math.max(40,p.topK()*8),p.minimumSimilarity(),principal.role(),remaining(end));
         var hits=EvidenceSelector.select(candidates,p.topK(),2);
         // Defense in depth; primary protection is SQL before top-K.
         if (principal.role() == UserRole.USER && hits.stream().anyMatch(h -> !"USER".equals(h.role())))
             throw new AiFailure("AI_ROLE_FILTER_INVALID");
+        if(domains!=null && hits.stream().anyMatch(h -> corpus.documents().stream().noneMatch(d ->
+                d.path().equals(h.path()) && domains.contains(d.metadata().get("domain")))))throw new AiFailure("AI_DOMAIN_FILTER_INVALID");
         verify(corpus.fingerprint()); remaining(end);
         return new Evidence(corpus.fingerprint(), hits);
     }

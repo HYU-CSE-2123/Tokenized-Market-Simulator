@@ -31,6 +31,8 @@ server:
 # 애플리케이션 커스텀 설정
 app:
   ai:
+    skills:
+      enabled: ${AI_SKILLS_ENABLED:false}
     agent:
       enabled: ${AI_AGENT_ENABLED:false}
     tools:

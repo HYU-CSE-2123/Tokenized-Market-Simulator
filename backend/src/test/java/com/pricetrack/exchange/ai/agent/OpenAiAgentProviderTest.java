@@ -61,4 +61,12 @@ class OpenAiAgentProviderTest {
         assertThatThrownBy(() -> provider().plan("정책",Subject.NONE,Duration.ofSeconds(5))).hasMessage("INVALID_AGENT_PLAN");
         assertThatThrownBy(() -> provider().plan("정책",Subject.NONE,Duration.ZERO)).isInstanceOf(RuntimeException.class);
     }
+    @Test void eligibleSkillIsClosedAndForgedSelectionIsRejected()throws Exception {
+        output(Map.of("route","MIXED","subject","QUOTE","skillId","signed-quote-diagnosis"));
+        assertThat(provider().planWithSkills("견적 진단",Subject.QUOTE,List.of("signed-quote-diagnosis"),Duration.ofSeconds(5)).skillId()).isEqualTo("signed-quote-diagnosis");
+        var schema=json.readTree(requested).path("text").path("format").path("schema");
+        assertThat(schema.path("properties").path("skillId").path("enum")).isEqualTo(json.valueToTree(List.of("signed-quote-diagnosis","NONE")));
+        output(Map.of("route","MIXED","subject","QUOTE","skillId","settlement-debugging"));
+        assertThatThrownBy(() -> provider().planWithSkills("진단",Subject.QUOTE,List.of("signed-quote-diagnosis"),Duration.ofSeconds(5))).hasMessage("INVALID_AGENT_PLAN");
+    }
 }

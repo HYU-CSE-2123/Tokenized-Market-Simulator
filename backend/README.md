@@ -10,9 +10,11 @@ AI Phase 4는 `AI_TOOLS_ENABLED=true`로 켜는 독립 읽기 Tool 계층입니�
 
 ## 현재 구현 상태
 
-Phase 4 승인 후 SELL 테스트와 지식·색인 회귀를 갱신했습니다. [후속 보고서](../docs/ai/phase-4-knowledge-refresh.md)는 당시 결과입니다. [Phase 5 Agent](../docs/ai/phase-5-rag-tool-agent.md)는 구현·검증·별도 재검토와 사용자 완료 승인을 받았습니다. [Phase 6 Skill](../docs/ai/phase-6-skills.md)은 설계 제안이며 아직 구현하지 않았습니다.
+Phase 4 승인 후 SELL 테스트와 지식·색인 회귀를 갱신했습니다. [후속 보고서](../docs/ai/phase-4-knowledge-refresh.md)는 당시 결과입니다. [Phase 5 Agent](../docs/ai/phase-5-rag-tool-agent.md)는 구현·검증·별도 재검토와 사용자 완료 승인을 받았습니다. [Phase 6 Skill](../docs/ai/phase-6-skills.md)은 승인 설계에 따라 구현·회귀·평가·별도 검토를 완료했으며 사용자 완료 승인 대기입니다.
 
-제한된 Agent는 `AI_ENABLED=true`, `AI_AGENT_ENABLED=true`로 활성화하며 상태 조회에는 `AI_TOOLS_ENABLED=true`도 필요합니다(설정 후 재시작). `POST /api/ai/agent/answers`에 기존 JWT와 `{"question":"이 주문이 왜 대기 중인가요?","target":{"orderId":153}}`를 전달합니다. 견적은 target.quoteId만 지정하며 정책·시장·본인 자산 질문은 target을 생략합니다. `history`, `userId`, `role`을 받지 않습니다. KNOWLEDGE는 역할별 RAG, STATE는 인가된 조회, MIXED는 두 근거를 결합합니다. USER의 검색 후보에서 ADMIN 문서를 SQL 단계에 제외하며 기존 RAG API는 ADMIN-only입니다. `answer`는 해석, `toolEvidence`는 서버가 복사한 사실, `uncertainties`는 부분 실패·불일치입니다. 기본 Agent 비활성·읽기 전용이며 Skill·AI UI·거래 실행은 포함하지 않습니다.
+제한된 Agent는 `AI_ENABLED=true`, `AI_AGENT_ENABLED=true`로 활성화하며 상태 조회에는 `AI_TOOLS_ENABLED=true`도 필요합니다(설정 후 재시작). `POST /api/ai/agent/answers`에 기존 JWT와 `{"question":"이 주문이 왜 대기 중인가요?","target":{"orderId":153}}`를 전달합니다. 견적은 target.quoteId만 지정하며 정책·시장·본인 자산 질문은 target을 생략합니다. `history`, `userId`, `role`을 받지 않습니다. KNOWLEDGE는 역할별 RAG, STATE는 인가된 조회, MIXED는 두 근거를 결합합니다. USER의 검색 후보에서 ADMIN 문서를 SQL 단계에 제외하며 기존 RAG API는 ADMIN-only입니다. `answer`는 해석, `toolEvidence`는 서버가 복사한 사실, `uncertainties`는 부분 실패·불일치입니다. 기본 Agent 비활성·읽기 전용이며 AI UI·거래 실행은 포함하지 않습니다.
+
+Skill은 위 세 설정과 `AI_SKILLS_ENABLED=true`로 활성화합니다(기본 false, 실제 `.env`는 자동 변경하지 않음). 같은 Agent API에서 optional `skillId`를 지정하거나 자동 선택을 사용합니다. ADMIN의 `settlement-debugging`은 orderId, USER/ADMIN의 `signed-quote-diagnosis`는 quoteId, `market-availability-diagnosis`는 target 없이 요청합니다. 예: `{"question":"시장 가용성을 진단해주세요","skillId":"market-availability-diagnosis"}`. 정의는 resources/ai/skills의 세 Markdown과 manifest에 있으며 고정 registry/handler를 사용합니다. 응답의 `skill`은 id/version/definitionHash, 서버 관측 diagnosis, 안전한 단계 trace입니다. 일반 응답에서는 skill을 생략합니다. trace는 현재 응답과 감사 로그에만 제공하며 DB에 저장하지 않습니다. 정의 불일치는 해당 Skill만 비활성화하고 기존 질문 경로와 거래를 보존합니다.
 
 - 자체 회원가입: `loginId`, `password`, `nickname`
 - 자체 로그인 및 JWT 액세스 토큰 발급

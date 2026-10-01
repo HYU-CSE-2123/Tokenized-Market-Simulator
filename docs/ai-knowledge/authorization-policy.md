@@ -2,10 +2,10 @@
 title: "사용자 데이터와 관리자 권한 경계"
 domain: security
 type: policy
-version: 4
+version: 5
 status: active
 minimum_role: USER
-updated_at: 2026-09-30
+updated_at: 2026-10-01
 ---
 
 # 사용자 데이터와 관리자 권한 경계
@@ -37,6 +37,8 @@ Agent는 명시적 target의 주문/견적을 Tool로 선확인하고 타인/미
 getReceiptSummary는 인가된 orderId에서 저장된 txHash를 찾는다. 임의 txHash·RPC URL·userId·role을 입력받지 않는다. 비동기 Tool에도 서버가 생성한 컨텍스트를 명시적으로 전달하며, 서명·전송·복구 기능을 호출하지 않는다.
 
 ## 허용하지 않는 데이터와 행동
+
+Phase 6의 settlement-debugging Skill은 ADMIN-only이며 USER의 기존 본인 주문 설명을 대체하거나 차단하지 않는다. signed-quote-diagnosis는 본인 견적과 서버가 검증한 연결 주문만 조사하고 market-availability-diagnosis는 공개 시장 스냅샷만 조사한다. 정의와 모델은 코드 registry의 역할·Tool·domain 상한을 넓힐 수 없다. 검색은 기존 minimum_role과 Skill domain을 후보 단계에서 함께 적용하며 근거가 없을 때 전체 검색으로 우회하지 않는다. trace에는 ID, 전체 DTO, txHash, 서명, 키와 모델 사고 과정을 담지 않는다.
 
 비밀키·JWT·비밀번호·signature·raw transaction을 모델에 전달하지 않는다. 인가된 요약 DTO만 읽기 Tool 대상으로 삼는다. 로그인·견적 신규 발급·주문·faucet·서명·전송·강제 정산은 읽기 Tool이 아니다.
 

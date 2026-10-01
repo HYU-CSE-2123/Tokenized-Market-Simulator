@@ -128,7 +128,7 @@ class KnowledgeRefreshEvaluationTest {
         }
     }
     void write(Map<String,Object> report) throws Exception {
-        Path path = Path.of("build/reports/ai/" + ("true".equals(System.getenv("AI_PHASE5_EVALUATION"))
+        Path path = Path.of("build/reports/ai/" + ("true".equals(System.getenv("AI_PHASE6_EVALUATION"))?"phase6-knowledge-refresh.json":"true".equals(System.getenv("AI_PHASE5_EVALUATION"))
                 ? "phase5-knowledge-refresh.json" : "phase4-knowledge-refresh.json"));
         Files.createDirectories(path.getParent()); json.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), report);
     }

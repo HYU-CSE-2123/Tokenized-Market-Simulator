@@ -113,4 +113,21 @@ class ToolPostgresIntegrationTest {
         result.put("balances", jdbc.queryForList("select * from user_balances where user_id=?", uid));
         return result;
     }
+    @Test void threeSkillsKeepEveryPostgresFieldAndRowUnchanged()throws Exception{
+        var json=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var model=org.mockito.Mockito.mock(com.pricetrack.exchange.ai.agent.AgentModelProvider.class);
+        var before=snapshot();
+        try(var agent=new com.pricetrack.exchange.ai.agent.AgentService(new com.pricetrack.exchange.ai.agent.AgentProperties(true),()->model,()->null,tools,json,
+                Duration.ofSeconds(40),new com.pricetrack.exchange.ai.skill.SkillProperties(true),new com.pricetrack.exchange.ai.skill.SkillRegistry(json))){
+            for(String skill:List.of("settlement-debugging","signed-quote-diagnosis","market-availability-diagnosis")){
+                var body=new LinkedHashMap<String,Object>();body.put("question","상태를 진단해주세요");body.put("skillId",skill);
+                if(skill.equals("settlement-debugging"))body.put("target",Map.of("orderId",order.getId()));
+                if(skill.equals("signed-quote-diagnosis"))body.put("target",Map.of("quoteId",quoteId));
+                var result=agent.answer(new AuthenticatedUser(uid,"unused",UserRole.ADMIN),json.writeValueAsBytes(body));
+                assertThat(result.status()).isEqualTo("PARTIAL");assertThat(result.skill().id()).isEqualTo(skill);
+                assertThat(result.metrics().toolCalls()).isLessThanOrEqualTo(4);assertThat(snapshot()).isEqualTo(before);
+            }
+            org.mockito.Mockito.verifyNoInteractions(model);
+        }
+    }
 }

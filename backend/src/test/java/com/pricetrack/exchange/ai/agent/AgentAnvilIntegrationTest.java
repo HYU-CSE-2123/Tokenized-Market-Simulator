@@ -57,4 +57,31 @@ class AgentAnvilIntegrationTest {
             }
         }finally{web3j.shutdown();}
     }
+    @Test void settlementSkillUsesRealNotFoundReceiptWithoutChangingChain()throws Exception{
+        var web3j=Web3j.build(new HttpService("http://127.0.0.1:8545"));
+        try{
+            var height=web3j.ethBlockNumber().send().getBlockNumber();
+            var nonce=web3j.ethGetTransactionCount(ToolFixtures.ADDRESS,DefaultBlockParameterName.PENDING).send().getTransactionCount();
+            var balance=web3j.ethGetBalance(ToolFixtures.ADDRESS,DefaultBlockParameterName.LATEST).send().getBalance();
+            var order=orders.saveAndFlush(ToolFixtures.order(820002));var record=ToolFixtures.tx(order.getId());
+            record.setTxHash("0x"+"dd".repeat(32));record.setNonce(11L);var tx=txs.saveAndFlush(record);
+            var provider=mock(AgentModelProvider.class);
+            var chain=new BlockchainProperties(true,"http://127.0.0.1:8545","","","",ToolFixtures.ADDRESS,"");
+            try(var rpc=new ReadOnlyReceiptClient(chain,new BlockchainReconciliationProperties(1000,1000,1),new ContractEventParser(),json);
+                var tools=new ToolDispatcher(new ToolProperties(true),new ToolRegistry(json),reads,rpc,new ToolAudit(),json);
+                var agent=new AgentService(new AgentProperties(true),()->provider,()->null,tools,json,java.time.Duration.ofSeconds(40),
+                    new com.pricetrack.exchange.ai.skill.SkillProperties(true),new com.pricetrack.exchange.ai.skill.SkillRegistry(json))){
+                var result=agent.answer(new AuthenticatedUser(820002L,"unused",UserRole.ADMIN),json.writeValueAsBytes(Map.of(
+                    "question","정산 상태를 진단해주세요","skillId","settlement-debugging","target",Map.of("orderId",order.getId()))));
+                assertThat(result.status()).isEqualTo("PARTIAL");assertThat(result.skill().diagnosis().classification()).isEqualTo("REVIEW_REQUIRED_OBSERVED");
+                assertThat(result.toolEvidence()).filteredOn(e -> e.tool().equals("getReceiptSummary")).singleElement().satisfies(e -> assertThat(e.data().path("receiptStatus").asText()).isEqualTo("NOT_FOUND"));
+                assertThat(txs.findById(tx.getId()).orElseThrow().getStatus()).isEqualTo(BlockchainTransactionStatus.REVIEW_REQUIRED);
+                assertThat(orders.findById(order.getId()).orElseThrow().getStatus()).isEqualTo(OrderStatus.PENDING_ONCHAIN);
+                assertThat(web3j.ethBlockNumber().send().getBlockNumber()).isEqualTo(height);
+                assertThat(web3j.ethGetTransactionCount(ToolFixtures.ADDRESS,DefaultBlockParameterName.PENDING).send().getTransactionCount()).isEqualTo(nonce);
+                assertThat(web3j.ethGetBalance(ToolFixtures.ADDRESS,DefaultBlockParameterName.LATEST).send().getBalance()).isEqualTo(balance);
+                verifyNoInteractions(provider);
+            }
+        }finally{web3j.shutdown();}
+    }
 }

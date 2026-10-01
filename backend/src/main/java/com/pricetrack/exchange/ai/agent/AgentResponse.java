@@ -9,7 +9,12 @@ import java.util.List;
 /** answer is interpretation; toolEvidence contains server-copied facts, never model-generated values. */
 public record AgentResponse(String runId,String status,String route,String answer,String indexVersion,
         List<KnowledgeHit> knowledgeSources,List<ToolEvidence> toolEvidence,List<String> citationIds,
-        List<String> uncertainties,List<String> recommendedNextCheck,Metrics metrics,String error,int httpStatus) {
+        List<String> uncertainties,List<String> recommendedNextCheck,Metrics metrics,String error,int httpStatus,
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        com.pricetrack.exchange.ai.skill.SkillResult skill) {
+    public AgentResponse(String runId,String status,String route,String answer,String indexVersion,
+        List<KnowledgeHit> sources,List<ToolEvidence> tools,List<String> citations,List<String> uncertainties,List<String> next,
+        Metrics metrics,String error,int httpStatus){this(runId,status,route,answer,indexVersion,sources,tools,citations,uncertainties,next,metrics,error,httpStatus,null);}
     public record ToolEvidence(String evidenceId,String tool,String version,String status,Instant retrievedAt,
                                String source,JsonNode data,String error) {
         public static ToolEvidence from(String id,ToolResult result){return new ToolEvidence(id,result.tool(),result.version(),

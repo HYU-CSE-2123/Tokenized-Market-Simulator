@@ -29,7 +29,7 @@
 - [AI Phase 4 Read-only Tool 보고서](../docs/ai/phase-4-read-only-tools.md) — 승인 설계, 8개 조회 Tool·권한·민감 정보·실패 계약·실제 검증과 검토 기록
 - [AI Phase 4 후속 지식 갱신](../docs/ai/phase-4-knowledge-refresh.md) — SELL 보강·Tool 지식/manifest/로컬 색인 동기화와 고정 golden 회귀
 - [AI Phase 5 Agent 설계·구현](../docs/ai/phase-5-rag-tool-agent.md) — 역할 필터·제한된 RAG/Tool orchestration·근거 응답, 실행 결과·별도 검토·남은 한계
-- [AI Phase 6 Skill 설계 제안](../docs/ai/phase-6-skills.md) — 반복 진단 정의·역할별 절차·domain 제한·trace·검증 계획, 구현 승인 대기
+- [AI Phase 6 Skill 설계·구현](../docs/ai/phase-6-skills.md) — 승인된 반복 진단 정의·고정 handler·역할/domain·trace와 이번 검증 기록
 
 ## 단일 출처(Source of Truth)
 

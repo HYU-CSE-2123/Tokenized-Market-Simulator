@@ -1,0 +1,5 @@
+{
+  "settlement-debugging": {"version": 1, "hash": "c3f9748bb2f8bacd0e5471037bf25797befc4a038716624ea967a693c4b7cf28"},
+  "signed-quote-diagnosis": {"version": 1, "hash": "1f9ab1f8f35280da7c1624e2041d611cc374cb148797143b357f97d79a61c969"},
+  "market-availability-diagnosis": {"version": 1, "hash": "4e2352a3c8004b74115127160d97b59c5f779d326a9ae85d258bae33bd2c9aac"}
+}

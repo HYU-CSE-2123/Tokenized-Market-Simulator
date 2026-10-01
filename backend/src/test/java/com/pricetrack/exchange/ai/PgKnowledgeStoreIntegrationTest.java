@@ -10,6 +10,26 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 @EnabledIfEnvironmentVariable(named="AI_PGVECTOR_TESTS",matches="true")
 class PgKnowledgeStoreIntegrationTest {
+    @Test void domainAndRoleFilterExcludeMoreSimilarCanariesBeforeTopK(){
+        var p=AiFixtures.properties(Path.of("."),Path.of("manifest"),"jdbc:postgresql://127.0.0.1:5433/exchange_ai_test");
+        try(var store=new PgKnowledgeStore(p)){
+            store.initialize();String index=KnowledgeLoader.hash(UUID.randomUUID().toString());
+            var docs=new ArrayList<KnowledgeCorpus.Document>();var chunks=new ArrayList<KnowledgeCorpus.Chunk>();var vectors=new HashMap<String,float[]>();
+            for(String id:List.of("outside","admin","allowed")){
+                String role=id.equals("admin")?"ADMIN":"USER",domain=id.equals("outside")?"security":"trading",path=id+".md";
+                docs.add(new KnowledgeCorpus.Document(path,"hash",Map.of("title",id,"version","1","minimum_role",role,"domain",domain,"type","policy","updated_at","2026-10-01")));
+                chunks.add(new KnowledgeCorpus.Chunk(id,path,id,"H","1",role,domain,"policy","hash",id));
+                var vector=AiFixtures.vector(0);if(id.equals("allowed"))vector[1]=.5f;vectors.put(id,vector);
+            }
+            store.publish(new KnowledgeCorpus(index,docs,chunks),vectors,p.embeddingModel());
+            assertThat(store.searchForScope(index,AiFixtures.vector(0),1,.2,com.pricetrack.exchange.user.UserRole.USER,Set.of("trading"),java.time.Duration.ofSeconds(5)))
+                .extracting(KnowledgeHit::content).containsExactly("allowed");
+            assertThat(store.searchForScope(index,AiFixtures.vector(0),1,.2,com.pricetrack.exchange.user.UserRole.ADMIN,Set.of("trading"),java.time.Duration.ofSeconds(5)))
+                .extracting(KnowledgeHit::content).containsExactly("admin");
+            assertThat(store.searchForScope(index,AiFixtures.vector(0),5,.2,com.pricetrack.exchange.user.UserRole.USER,Set.of("market"),java.time.Duration.ofSeconds(5))).isEmpty();
+            assertThatThrownBy(() -> store.searchForScope(index,AiFixtures.vector(0),5,.2,com.pricetrack.exchange.user.UserRole.USER,Set.of(),java.time.Duration.ofSeconds(5))).hasMessage("AI_DOMAIN_FILTER_INVALID");
+        }
+    }
     @Test void roleFilterRunsBeforeTopKAndNeverReturnsAdminToUser() {
         var p=AiFixtures.properties(Path.of("."),Path.of("manifest"),"jdbc:postgresql://127.0.0.1:5433/exchange_ai_test");
         try(var store=new PgKnowledgeStore(p)){

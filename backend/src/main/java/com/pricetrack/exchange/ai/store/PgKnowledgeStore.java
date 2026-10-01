@@ -77,6 +77,16 @@ public class PgKnowledgeStore implements KnowledgeStore, AutoCloseable {
     }
     @Override public List<KnowledgeHit> searchForRole(String fingerprint, float[] query, int topK,
             double threshold, UserRole role, Duration timeout) {
+        return searchScoped(fingerprint,query,topK,threshold,role,null,timeout);
+    }
+    @Override public List<KnowledgeHit> searchForScope(String fingerprint,float[] query,int topK,double threshold,
+            UserRole role,Set<String> domains,Duration timeout) {
+        if(domains==null || domains.isEmpty() || domains.size()>4 || domains.stream().anyMatch(d ->
+                !Set.of("trading","settlement","operations","support","market").contains(d)))throw new AiFailure("AI_DOMAIN_FILTER_INVALID");
+        return searchScoped(fingerprint,query,topK,threshold,role,Set.copyOf(domains),timeout);
+    }
+    private List<KnowledgeHit> searchScoped(String fingerprint,float[] query,int topK,double threshold,
+            UserRole role,Set<String> domains,Duration timeout) {
         if (role == null) throw new org.springframework.security.access.AccessDeniedException("Role required");
         String rolePredicate = role == UserRole.ADMIN ? "d.minimum_role in ('USER','ADMIN')" : "d.minimum_role='USER'";
         List<KnowledgeHit> result = new ArrayList<>();
@@ -86,12 +96,13 @@ public class PgKnowledgeStore implements KnowledgeStore, AutoCloseable {
             join ai.indexes i on i.id=ch.index_id
             where i.active and i.id=? and %s
             and 1-(ch.embedding <=> ?::vector)>=? order by ch.embedding <=> ?::vector,ch.id limit ?
-            """.formatted(rolePredicate))) {
+            """.formatted(rolePredicate+(domains==null?"":" and d.domain = any (?::text[])")))) {
             if (Thread.currentThread().isInterrupted() || timeout.isZero() || timeout.isNegative()) throw new AiFailure("AI_QUERY_TIMEOUT");
             s.setQueryTimeout((int)Math.max(1, Math.min(5, (timeout.toMillis()+999)/1000)));
             String vector = vector(query);
-            s.setString(1, vector); s.setString(2, fingerprint); s.setString(3, vector);
-            s.setDouble(4, threshold); s.setString(5, vector); s.setInt(6, topK);
+            s.setString(1, vector); s.setString(2, fingerprint);int parameter=3;
+            if(domains!=null)s.setArray(parameter++,c.createArrayOf("text",domains.toArray(String[]::new)));
+            s.setString(parameter++, vector);s.setDouble(parameter++, threshold); s.setString(parameter++, vector); s.setInt(parameter, topK);
             try (ResultSet r = s.executeQuery()) {
                 while (r.next()) result.add(new KnowledgeHit(r.getString(1),r.getString(2),r.getString(3),r.getString(4),
                         r.getString(5),r.getString(6),r.getString(7),r.getDouble(8)));

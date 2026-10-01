@@ -1,0 +1,47 @@
+{
+  "phase": "AI Phase 6",
+  "date": "2026-10-01",
+  "status": "completed-awaiting-user-acceptance",
+  "indexVersion": "3904f896c019d95243d1c3eb52bcd0e0e6308db78625f118375181b3d0a660f4",
+  "documents": 9,
+  "chunks": 56,
+  "retrieval": {
+    "phase2BaselineHitAt5": "10/12",
+    "hits": 12, "total": 12, "mrrAt5": 0.8819444444444443,
+    "directEvidence": 12, "regressionsFromK": 0,
+    "negativeCandidates": 5, "negativeFalseAnswers": 0, "negativeTotal": 8,
+    "criticalAnswered": 2, "identifierHits": 6, "identifierTotal": 8,
+    "scopedHits": 3, "scopedTotal": 3, "publishedLocalDatabase": "exchange_ai"
+  },
+  "liveSkills": {
+    "model": "gpt-5.6-terra", "selected": 6, "total": 6, "routeMatched": 6,
+    "answered": 0, "normalPartial": 6, "dependencyFailures": 0,
+    "inputTokens": 16506, "outputTokens": 3782, "minLatencyMs": 6456, "maxLatencyMs": 11188,
+    "usageScope": "Successful final Skill run only; excludes earlier failed run, embedding, golden and Phase 5 evaluation",
+    "stateSource": "isolated H2 fixtures and simulated market, not production Toss trading",
+    "scenarios": [
+      {"id":"settlement-debugging","selection":"EXPLICIT","status":"PARTIAL","classification":"WAITING_OBSERVED","toolCalls":3,"modelCalls":1,"retrievalCalls":1,"traceSteps":8},
+      {"id":"signed-quote-diagnosis","selection":"EXPLICIT","status":"PARTIAL","classification":"WAITING_OBSERVED","toolCalls":3,"modelCalls":1,"retrievalCalls":1,"traceSteps":7},
+      {"id":"market-availability-diagnosis","selection":"EXPLICIT","status":"PARTIAL","classification":"INSUFFICIENT_EVIDENCE","toolCalls":1,"modelCalls":1,"retrievalCalls":1,"traceSteps":4},
+      {"id":"settlement-debugging","selection":"AUTOMATIC","status":"PARTIAL","classification":"WAITING_OBSERVED","toolCalls":3,"modelCalls":2,"retrievalCalls":1,"traceSteps":8},
+      {"id":"signed-quote-diagnosis","selection":"AUTOMATIC","status":"PARTIAL","classification":"WAITING_OBSERVED","toolCalls":3,"modelCalls":2,"retrievalCalls":1,"traceSteps":7},
+      {"id":"market-availability-diagnosis","selection":"AUTOMATIC","status":"PARTIAL","classification":"INSUFFICIENT_EVIDENCE","toolCalls":1,"modelCalls":2,"retrievalCalls":1,"traceSteps":4}
+    ]
+  },
+  "livePhase5Regression": {"routesMatched":6,"total":6,"answered":4,"normalPartial":2,"dependencyFailures":0},
+  "contracts": {"passed":36,"failures":0,"skipped":0},
+  "web": {"passed":30,"failures":0,"buildModules":87},
+  "backend": {"tests":298,"passed":288,"skipped":10,"failures":0,"errors":0,"skillService":22,"skillRegistry":4,"skillHttp":3,"realPgvector":3,"realToolPostgres":4,"realAgentAnvil":2},
+  "review": {
+    "status":"no-mandatory-findings","independent":true,"reviewer":"review_ai_phase6",
+    "directTests":57,"passed":57,"failures":0,"errors":0,"skipped":0,
+    "scope":"Independent code, definitions, tests, diff and report review; isolated Skill/Agent/Retrieval/Provider tests",
+    "limitations":"No shared DB, Anvil, live provider, forge or web rerun; latest XML now contains reviewer targeted tests"
+  },
+  "unverified": [
+    "Actual Anvil successful Bought/Sold event MATCH in this Phase; no deployments or trades created",
+    "Production Toss incidents and live user transactions; provider evaluation state uses fixtures",
+    "Revert cause, block timestamp, per-order locked amount and Oracle replay/signer direct verification are outside existing Tools",
+    "Natural-language truthfulness is not fully guaranteed"
+  ]
+}

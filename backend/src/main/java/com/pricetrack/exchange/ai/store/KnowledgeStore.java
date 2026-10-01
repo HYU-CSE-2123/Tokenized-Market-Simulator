@@ -16,4 +16,9 @@ public interface KnowledgeStore {
         if (role != UserRole.ADMIN) throw new org.springframework.security.access.AccessDeniedException("Role-aware store required");
         return search(fingerprint, query, topK, minimumSimilarity);
     }
+    /** A scoped implementation must filter candidates before ranking; never silently widen scope. */
+    default List<KnowledgeHit> searchForScope(String fingerprint,float[] query,int topK,double threshold,
+            UserRole role,Set<String> domains,Duration timeout) {
+        throw new com.pricetrack.exchange.ai.AiFailure("AI_DOMAIN_FILTER_UNAVAILABLE");
+    }
 }

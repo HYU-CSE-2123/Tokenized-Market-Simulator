@@ -43,4 +43,14 @@ class AuthorizedKnowledgeRetrievalTest {
         assertThat(request.modelQuestion()).doesNotContain("153","SECRET_JWT","sk-testSECRET","mail@test.com","password=SECRET");
         assertThat(request.conflictingTarget()).isFalse();
     }
+    @Test void scopedSearchNeverWidensAndDefensivelyChecksDocumentDomains(){
+        var domains=Set.of("trading");
+        var hit=new KnowledgeHit("h","public.md","t","h","1","USER","policy",.9);
+        when(loader.load()).thenReturn(new KnowledgeCorpus("index",List.of(new KnowledgeCorpus.Document("public.md","hash",Map.of("domain","security"))),List.of()));
+        when(store.searchForScope(any(),any(),anyInt(),anyDouble(),any(),any(),any())).thenReturn(List.of(hit));
+        assertThatThrownBy(() -> retrieval.searchScoped(user,"규칙",Duration.ofSeconds(5),domains)).hasMessage("AI_DOMAIN_FILTER_INVALID");
+        verify(store).searchForScope(eq("index"),any(),eq(40),eq(.25),eq(UserRole.USER),eq(domains),any());
+        verify(store,never()).searchForRole(any(),any(),anyInt(),anyDouble(),any(),any());
+        assertThatThrownBy(() -> retrieval.searchScoped(user,"규칙",Duration.ofSeconds(5),Set.of())).hasMessage("AI_DOMAIN_FILTER_INVALID");
+    }
 }

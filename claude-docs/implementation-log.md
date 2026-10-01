@@ -2106,3 +2106,39 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 명시적 Skill은 분류 생략, 자동 선택은 기존 분류1회 내에서 수행하며 한 run의 모델2/Tool4/검색1/worker2 예산을 공유하도록 제안했다.
 - 제품 코드·테스트·설정·Skill 정의·active 지식/manifest·색인·`.env`는 수정하지 않았다. 테스트/공급자/API/DB 재실행과 별도 검토는 문서 설계 제안에서 실행하지 않았으며 새 검증 결과로 표시하지 않는다.
 - 승인 후 설계 범위대로 구현하고 전체 회귀·실제 평가·별도 검토·지식/색인 동기화를 진행한다.
+
+# AI Phase 6: 제한된 Skill 진단 절차 — 구현·검증 진행 중
+
+> 2026-10-01. 사용자 설계 승인 후 진행. 시작 HEAD33a8dad, 기존 Phase4·5는9a0df88로 커밋됐으며 시작 작업 트리는 깨끗했다.
+
+## 구현·결정
+
+- SkillRegistry가 배포 Markdown3개·manifest/hash/version과 코드의 역할·Tool·domain·단계 ceiling을 검사한다. 일반 YAML/DSL/동적 설치·새 의존성 없음. SkillRunner는 고정 정산/견적/시장 handler와 기존 Agent run callback을 사용한다.
+- optional skillId·명시 분류 생략·기존 분류 내 eligible Skill 선택, 동일 worker/cache/Tool4·검색1·모델2·40초 예산. 서버가 관측 분류와 민감 정보 없는 trace를 생성하고 정책은 role+domain SQL 후보에서 제한한다.
+- 연결 양방향 ID/종목/방향/입력/단위 불일치 시 후속 branch 중단, 현재 만료와 소비 독립, failed receipt의 원인 미검증. 정의 오류는 Skill만 격리하고 문서 승인 실패는 정책/해석/trace 출처도 폐기한다.
+- system/authorization 지식v5와 manifest를 동기화했다. actual.env·거래·컨트랙트·Tool8개·schema 미변경. AI_SKILLS_ENABLED 기본 false, 진단 DB·이벤트·UI는 Phase7 미구현.
+
+## 검증
+
+- fixture Mockito2건/H2tx 중복1건과 신규 HTTP 테스트 import 컴파일 오류를 수정 후 전체 backend295 중285통과/10skip/실패·오류0. 실제 pgvector3·PostgreSQL4·Anvil2 포함이며 Skill 결정적20/registry3/HTTP3 통과.
+- forge test -q 통과, 웹30/30와 build87modules 통과. 실제 공급자와 고정 golden/Skill scoped 평가·로컬 AI 색인 발행은 별도 실행 후 기록한다.
+
+## 검토·남은 작업
+
+- 전체 회귀 뒤 실제 공급자·검색 평가와 문서 초안을 완료하고 별도 검토를 요청한다. 현재 별도 검토는 미실행이며 완료로 표시하지 않는다.
+- 실제 Anvil 성공 MATCH는 새 거래 없이 검증할 수 있는 event가 필요하다. revert 원인/개별 주문 잠금/Oracle replay·signer 직접 검증 Tool과 자연어 진실성 보장은 제공하지 않는다.
+- 상세 설계·파일·재현·수치는 docs/ai/phase-6-skills.md에 누적하며 커밋은 실행하지 않았다.
+
+## 최종 실행·별도 검토 요청
+
+- 새 trace 인용/manifest 정수 타입/정책 무효화 시 모델 uncertainties 폐기 guard까지 포함해 최종 전체298 중288통과/10skip/실패·오류0. SkillService22/registry4/HTTP3, 실제 pgvector3/PostgreSQL4/Anvil2 포함. forge36·웹30/build87도 이번 Phase에서 통과했다.
+- 실제 Skill 명시3/자동3 선택6/6·정상 PARTIAL6·의존성 실패0, scoped 기대 문서3/3. 기존 Phase5 실제 공급자route6/6(ANSWERED4/PARTIAL2) 유지. 실제 상태 fixture와 운영 체인/Toss 평가 한계를 구분한다.
+- 지식9개56청크, golden hit12/12·MRR0.8819444444444443·직접근거12/12·K회귀0·무관답변0/8·핵심ANSWERED2/2·식별자6/8. 성공 후 로컬 AI index3904f896c019d95243d1c3eb52bcd0e0e6308db78625f118375181b3d0a660f4 발행.
+- live 성공 Skill 실행 input16,506/output3,782는 이전 실패/embedding/golden/Phase5 사용량을 포함하지 않는다. 공유수치 docs/ai/phase-6-results.json와 상세보고서를 작성하고 제품 변경을 멈춘 뒤 독립 검토를 요청한다.
+
+## 최종 별도 검토·완료 상태 (2026-10-01)
+
+- 독립 review_ai_phase6: 발견된 필수 수정 없음. 전체 변경과 신규 정의/소스/테스트/결과를 직접 확인하고 역할·연결 재인가, SQL role+domain 후보 제한, 공유 Agent 예산과 승인 무효화 시 응답/trace 폐기 경계를 검토했다.
+- 검토자 직접 실행57개(SkillService22/Registry4/HTTP3, AgentService19/AuthorizedKnowledgeRetrieval5/OpenAiAgentProvider4) 모두 통과, 실패·오류·skip0. diff 검사도 통과. 현재 XML은 이 표적57개이며 구현자 최종 전체298개 결과와 구분한다.
+- 실제 공급자·scoped·golden 원시 수치를 대조했다. 검토자는 공유 DB/Anvil/공급자/forge/웹을 재실행하지 않았고 `.env`·키를 읽지 않았다. 실제 Anvil 성공 MATCH/운영 Toss 장애·사용자 거래/자연어 진실성 한계는 그대로 남긴다.
+- 검토 후 제품·테스트 변경 없이 완료·검토 기록만 반영했다. AI Phase 6 구현·검증·별도 검토 완료, 사용자 완료 승인 대기. Phase 7은 시작하지 않았으며 실제 `.env`와 기본 Skill 비활성 설정을 보존했고 커밋은 실행하지 않았다.
