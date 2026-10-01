@@ -20,7 +20,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(properties={"app.ai.enabled=true","app.ai.jdbc-url=jdbc:postgresql://127.0.0.1:1/ai_unavailable",
+@SpringBootTest(properties={"app.ai.enabled=true","app.ai.tools.enabled=true","app.ai.jdbc-url=jdbc:postgresql://127.0.0.1:1/ai_unavailable",
         "app.ai.db-password=test","app.ai.knowledge-root=../docs/ai-knowledge",
         "app.ai.manifest=../docs/ai/ingest-manifest.json","app.blockchain.enabled=false"})
 @AutoConfigureMockMvc
@@ -43,6 +43,9 @@ class AiIsolationIntegrationTest {
         assertThat(orders.buy(user.getId(),"mSEC",new BigDecimal("10000"),null).getStatus().name()).isEqualTo("FILLED");
         mvc.perform(get("/api/health")).andExpect(status().isOk());
         mvc.perform(get("/api/markets")).andExpect(status().isOk());
+        mvc.perform(post("/api/ai/tools/getMarketStatus").with(authentication(auth(UserRole.USER)))
+                .contentType("application/json").content("{\"arguments\":{}}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("SUCCESS"));
     }
     @Test void aiEndpointsRejectAnonymousAndUserBeforeDatabaseAccess() throws Exception {
         mvc.perform(post("/api/ai/index")).andExpect(status().isUnauthorized());
@@ -51,4 +54,3 @@ class AiIsolationIntegrationTest {
                     .content("{\"question\":\"정산 정책\"}")).andExpect(status().isForbidden());
     }
 }
-

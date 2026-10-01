@@ -31,6 +31,10 @@ server:
 # 애플리케이션 커스텀 설정
 app:
   ai:
+    agent:
+      enabled: ${AI_AGENT_ENABLED:false}
+    tools:
+      enabled: ${AI_TOOLS_ENABLED:false}
     enabled: ${AI_ENABLED:false}
     jdbc-url: ${AI_DB_URL:jdbc:postgresql://127.0.0.1:5433/exchange_ai}
     db-user: ${AI_DB_USERNAME:exchange_ai}

@@ -2,10 +2,10 @@
 title: "체인 전송 장애의 읽기 전용 진단"
 domain: operations
 type: runbook
-version: 1
+version: 2
 status: active
 minimum_role: ADMIN
-updated_at: 2026-09-27
+updated_at: 2026-09-30
 ---
 
 # 체인 전송 장애의 읽기 전용 진단
@@ -46,11 +46,20 @@ SIGNED 저장 전 실패는 failIfNotSigned가 주문 실패·잠금 해제를 �
 
 EventValidationException 또는 SettlementConsistencyException이면 트랜잭션을 REVIEW_REQUIRED로 격리한다. 주문 상태와 잠금은 유지된다. receipt 미발견·일시적 RPC 오류만으로 격리하지 않는다.
 
-운영자는 거래 유형, 연결 주문, Vault 이벤트 수·주소·입력, 잠금액, 중복 체결 여부를 확인한다. 비밀키·JWT·signature·raw transaction·원시 예외 전체를 AI 컨텍스트나 공유 문서에 붙이지 않는다. 인가된 요약 DTO는 후속 Phase에서 구현할 대상이다.
+운영자는 거래 유형, 연결 주문, Vault 이벤트 수·주소·입력, 잠금액, 중복 체결 여부를 확인한다. 비밀키·JWT·signature·raw transaction·원시 예외 전체를 AI 컨텍스트나 공유 문서에 붙이지 않는다. Phase 4의 인가된 요약 DTO로 읽기 전용 조회가 가능하다.
 
 기존 UPDATE_PRICE 기록의 정산 복구 코드는 남아 있으나 현재 거래를 위한 주기적 updatePrice 제출은 제거됐다. 이 기록을 현재 주문으로 오해하지 않는다.
 
+## 읽기 Tool의 출력 해석
+
+getBlockchainTransaction의 errorCategory는 NONE/UNCLASSIFIED이며 상세 원인 분류가 아니다. getReceiptSummary의 executionStatus, confirmations, eventValidation, databaseStatus는 별도 사실이며 DB 정산 완료를 대신하지 않는다. NOT_FOUND는 실행 실패가 아니고 NOT_LINKED는 모의 거래 확정 근거가 아니다. timeout은 조회 실패다. 조회는 서명·전송·복구를 실행하지 않는다.
+
+관리자 listAbnormalOrders는 REVIEW_REQUIRED 또는 SIGNED/SUBMITTED 중 조회 기준보다 오래된 WAITING_LONG을 제한된 페이지로 조회한다. WAITING_LONG은 진단 필터이며 새로운 저장 상태나 자동 복구 조건이 아니다. 개인별 타인 포트폴리오·전체 원장 대사 기능은 제공하지 않는다.
+
 ## 근거
+
+- [ai/tool/read/ToolReadFacade.java](../../backend/src/main/java/com/pricetrack/exchange/ai/tool/read/ToolReadFacade.java)
+- [ai/tool/receipt/ReadOnlyReceiptClient.java](../../backend/src/main/java/com/pricetrack/exchange/ai/tool/receipt/ReadOnlyReceiptClient.java)
 
 - [blockchain/transaction/BlockchainTransactionSender.java](../../backend/src/main/java/com/pricetrack/exchange/blockchain/transaction/BlockchainTransactionSender.java)
 - [blockchain/transaction/BlockchainTransactionPersistence.java](../../backend/src/main/java/com/pricetrack/exchange/blockchain/transaction/BlockchainTransactionPersistence.java)

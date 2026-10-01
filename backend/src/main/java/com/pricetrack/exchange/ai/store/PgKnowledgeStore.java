@@ -5,6 +5,8 @@ import com.pricetrack.exchange.ai.knowledge.KnowledgeCorpus;
 import com.zaxxer.hikari.*;
 import java.sql.*;
 import java.util.*;
+import com.pricetrack.exchange.user.UserRole;
+import java.time.Duration;
 import org.springframework.core.io.ClassPathResource;
 
 /** JPA/DataSource Bean/TransactionManager와 분리된 private pool. AI DB만 단일 로컬 트랜잭션 사용. */
@@ -71,15 +73,22 @@ public class PgKnowledgeStore implements KnowledgeStore, AutoCloseable {
         } catch (Exception e) { throw new AiFailure("AI_DATABASE_UNAVAILABLE"); }
     }
     @Override public List<KnowledgeHit> search(String fingerprint, float[] query, int topK, double threshold) {
+        return searchForRole(fingerprint, query, topK, threshold, UserRole.ADMIN, Duration.ofSeconds(5));
+    }
+    @Override public List<KnowledgeHit> searchForRole(String fingerprint, float[] query, int topK,
+            double threshold, UserRole role, Duration timeout) {
+        if (role == null) throw new org.springframework.security.access.AccessDeniedException("Role required");
+        String rolePredicate = role == UserRole.ADMIN ? "d.minimum_role in ('USER','ADMIN')" : "d.minimum_role='USER'";
         List<KnowledgeHit> result = new ArrayList<>();
         try (Connection c = pool.getConnection(); PreparedStatement s = c.prepareStatement("""
             select ch.id,d.path,d.title,ch.heading,d.version,d.minimum_role,ch.content,1-(ch.embedding <=> ?::vector) score
             from ai.chunks ch join ai.documents d on d.index_id=ch.index_id and d.path=ch.path
             join ai.indexes i on i.id=ch.index_id
-            where i.active and i.id=? and d.minimum_role in ('USER','ADMIN')
+            where i.active and i.id=? and %s
             and 1-(ch.embedding <=> ?::vector)>=? order by ch.embedding <=> ?::vector,ch.id limit ?
-            """)) {
-            s.setQueryTimeout(5);
+            """.formatted(rolePredicate))) {
+            if (Thread.currentThread().isInterrupted() || timeout.isZero() || timeout.isNegative()) throw new AiFailure("AI_QUERY_TIMEOUT");
+            s.setQueryTimeout((int)Math.max(1, Math.min(5, (timeout.toMillis()+999)/1000)));
             String vector = vector(query);
             s.setString(1, vector); s.setString(2, fingerprint); s.setString(3, vector);
             s.setDouble(4, threshold); s.setString(5, vector); s.setInt(6, topK);

@@ -91,9 +91,15 @@ Android 앱 구현 자체는 Phase 6의 완료 조건이 아니다. Phase 6에�
 
 ## 핵심 설계 원칙
 
-### AI 확장 상태 (2026-09-28, 거래소 Phase와 별도)
+### AI 확장 상태 (2026-09-30, 거래소 Phase와 별도)
 
-AI Phase 2 Basic RAG는 사용자 완료 승인을 받았다. Phase 3은 고정 golden 12개에서 hit@5 10/12→12/12, MRR@5 0.7778→0.8819로 개선하고 검증·별도 검토를 마쳤다. ADMIN-only·별도 AI DB 경계는 유지한다. Hybrid는 식별자 검색 개선과 자연어 근거 회귀가 함께 나타나 비교 실험으로만 남겼다. 검색 후보 오탐 5/8과 작은 개발 평가 세트라는 한계가 있다. 자세한 조건은 [AI Phase 3 보고서](../docs/ai/phase-3-retrieval.md)를 따른다. Tool·Agent·Skill·AI UI는 아직 구현하지 않았다.
+AI Phase 2와 Phase 3은 사용자 완료 승인을 받았다. Phase 3은 고정 golden 12개에서 hit@5 10/12→12/12, MRR@5 0.7778→0.8819로 개선하고 검증·별도 검토를 마쳤다. RAG의 ADMIN-only·별도 AI DB 경계는 유지한다. Hybrid는 식별자 검색 개선과 자연어 근거 회귀가 함께 나타나 비교 실험으로만 남겼다. 검색 후보 오탐 5/8과 작은 개발 평가 세트라는 한계가 있다. 자세한 조건은 [AI Phase 3 보고서](../docs/ai/phase-3-retrieval.md)를 따른다. 핵심 2문항의 ANSWERED assertion도 후속 보강·실제 검증했다.
+
+승인된 [Phase 4 Read-only Tool](../docs/ai/phase-4-read-only-tools.md)은 8개 조회·서버 권한·안전한 DTO·감사·조회 상한을 구현하고 실제 PostgreSQL/Anvil을 포함해 검증했다. USER 본인 조회와 ADMIN 운영 조회만 허용하며 기존 거래 상태는 변경하지 않는다. AI_TOOLS_ENABLED 기본 false이고 RAG·AI DB·외부 AI API와 독립적이다. Agent 연결은 아래 Phase 5에서 구현했으며 Skill·자동 분석·AI UI는 아직 없다.
+
+AI Phase 4도 사용자 완료 승인을 받았다. [후속 보완](../docs/ai/phase-4-knowledge-refresh.md)에서 SELL 테스트와 지식·manifest·로컬 AI 색인을 갱신했다. [Phase 5](../docs/ai/phase-5-rag-tool-agent.md)는 제한된 RAG+Tool Agent의 구현·검증·별도 재검토와 사용자 완료 승인을 받았다. USER/ADMIN용 stateless 질문 API, 선소유권 확인·SQL 역할 필터·Tool 최대4/모델 최대2/검색1 경계이며 거래 실행·Skill·AI UI는 제외한다. 지식9개·54청크, 2개 v4 갱신과 로컬 색인 동기화 후 K hit12/12·MRR0.8819·직접근거12/12·오탐0/8을 유지했다. backend254통과/9skip, 실제 공급자6/6 route 확인이며 실제 체인 성공 MATCH 재검증 한계는 보고서에 명시한다.
+
+[Phase 6 Skill](../docs/ai/phase-6-skills.md)은 버전 관리된 정산/견적/시장 진단 절차, 역할·domain·Tool 제한과 trace를 제안한 상태다. 제품 코드와 Skill 정의는 아직 없으며 구현 승인 대기다. 이벤트 자동 진단·저장·UI는 Phase 7 범위로 남긴다.
 
 ### 거래 시스템 원칙
 

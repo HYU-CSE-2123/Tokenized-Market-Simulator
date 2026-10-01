@@ -1,4 +1,6 @@
 package com.pricetrack.exchange.ai.provider;
 import java.util.List;
-public interface EmbeddingProvider { List<float[]> embed(List<String> texts); }
-
+public interface EmbeddingProvider {
+    List<float[]> embed(List<String> texts);
+    default List<float[]> embed(List<String> texts, java.time.Duration timeout) { return embed(texts); }
+}

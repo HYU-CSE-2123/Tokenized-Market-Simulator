@@ -11,6 +11,13 @@ import org.springframework.context.annotation.*;
 @Configuration
 @ConditionalOnProperty(name="app.ai.enabled",havingValue="true")
 public class AiConfiguration {
+    @Bean com.pricetrack.exchange.ai.retrieval.AuthorizedKnowledgeRetrieval authorizedKnowledgeRetrieval(AiProperties p,
+            KnowledgeLoader loader,PgKnowledgeStore store,OpenAiProvider provider){
+        return new com.pricetrack.exchange.ai.retrieval.AuthorizedKnowledgeRetrieval(p,loader,store,provider);
+    }
+    @Bean com.pricetrack.exchange.ai.agent.AgentModelProvider agentModelProvider(OpenAiProvider provider,ObjectMapper json){
+        return new com.pricetrack.exchange.ai.agent.OpenAiAgentProvider(provider,json);
+    }
     @Bean(destroyMethod="close") PgKnowledgeStore aiKnowledgeStore(AiProperties p) {
         p.validate(); return new PgKnowledgeStore(p);
     }
@@ -20,4 +27,3 @@ public class AiConfiguration {
         return new RagService(p,loader,store,provider,provider);
     }
 }
-

@@ -41,6 +41,9 @@ class RetrievalAnswerEvaluationTest {
                     }
                 }
                 if(i>=12 && !status.equals("INSUFFICIENT_EVIDENCE"))falseAnswers++;
+                if(i<12 && !experiment.path("name").asText().equals("A_baseline"))
+                    assertThat(status).as("Core question must be answered: %s / %s",
+                            experiment.path("name").asText(),row.path("question").asText()).isEqualTo("ANSWERED");
                 results.add(Map.of("variant",experiment.path("name").asText(),"question",row.path("question").asText(),
                         "negative",i>=12,"status",status,"answer",answer));
                 json.writerWithDefaultPrettyPrinter().writeValue(Path.of("build/reports/ai/phase3-answers.json").toFile(),results);

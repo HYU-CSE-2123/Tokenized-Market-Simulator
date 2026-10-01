@@ -2,10 +2,10 @@
 title: "시스템 책임과 지식의 경계"
 domain: architecture
 type: overview
-version: 2
+version: 4
 status: active
 minimum_role: USER
-updated_at: 2026-09-27
+updated_at: 2026-09-30
 ---
 
 # 시스템 책임과 지식의 경계
@@ -39,11 +39,21 @@ DB와 체인은 하나의 ACID 트랜잭션이 아니다. 먼저 입력 자산�
 
 ## AI 범위 — 계획과 현재의 구분
 
-AI Phase 2에는 ADMIN 전용 Basic RAG 저장·색인·검색·출처 기반 답변 코드를 추가했다. 실제 공급자 품질 평가는 별도 완료 확인이 필요하다. Tool·Agent는 아직 구현하지 않았다. RAG는 정책을 설명하고 향후 인가된 읽기 Tool은 현재 상태를 조회한다. 주문 실행·서명·강제 정산을 AI에 허용하지 않는다.
+AI Phase 2 Basic RAG와 Phase 3 검색 품질 개선은 실제 공급자 평가와 사용자 승인을 완료했다. 문서 검색·출처 기반 답변 API는 ADMIN 전용이다. 기본 검색은 pgvector semantic 검색, threshold 0.25, 충분한 후보 중 문서당 최대 2개·최종 5개 선택이다. Hybrid Search는 비교 실험이며 기본 경로가 아니다.
+
+Phase 4에는 독립적인 읽기 Tool 8개를 구현했다. getOrder/getQuote/getBlockchainTransaction/getReceiptSummary는 인가된 거래 상태를, getMarketStatus/getCurrentReferencePrice는 시장 스냅샷을, getPortfolio는 본인 자산을, listAbnormalOrders는 관리자용 이상 주문 목록을 조회한다. AI_TOOLS_ENABLED는 기본 false이며 AI DB·외부 AI API 없이도 Tool 조회가 동작한다.
+
+RAG는 정적 규칙, Tool은 조회 시점의 사실을 제공한다. Phase 5의 제한된 RAG+Tool Agent는 KNOWLEDGE/STATE/MIXED로 질문을 분류하고 서버가 정한 읽기 경로만 실행한다. AI_AGENT_ENABLED 기본 false이며 USER/ADMIN의 POST /api/ai/agent/answers에 연결된다. 기존 Basic RAG의 현재 상태 질문은 여전히 LIVE_DATA_REQUIRED이며 Agent API와 구분한다.
+
+Agent는 명시적 주문/견적 target의 소유권을 모델 호출 전에 확인한다. 문서 규칙과 성공 Tool 사실을 분리하고 인용 ID·사실 값을 검증한다. 조회 실패나 DB/체인 불일치는 불확실성으로 제공하며 원인을 확정하거나 거래를 실행하지 않는다. Skill·이벤트 자동 진단·AI UI·장기 기억은 아직 없다. 주문 실행·서명·강제 정산을 AI에 허용하지 않는다.
 
 현재 가격, 특정 계정 잔고, 주문 상태, txHash·receipt는 이 문서에서 알 수 없다. 최신 인가 조회가 없으면 확인 불가로 설명한다. 승인된 Phase 2 선택은 기존 Boot 내부 어댑터, 별도 pgvector DB, text-embedding-3-small 1536차원과 gpt-5.6-terra다. 거래 DB와 AI DB 사이의 분산 트랜잭션은 없다.
 
 ## 근거
+
+- [ai/tool/ToolRegistry.java](../../backend/src/main/java/com/pricetrack/exchange/ai/tool/ToolRegistry.java)
+- [ai/RagService.java](../../backend/src/main/java/com/pricetrack/exchange/ai/RagService.java)
+- [ai/agent/AgentService.java](../../backend/src/main/java/com/pricetrack/exchange/ai/agent/AgentService.java)
 
 - [order/OrderService.java](../../backend/src/main/java/com/pricetrack/exchange/order/OrderService.java)
 - [wallet/WalletService.java](../../backend/src/main/java/com/pricetrack/exchange/wallet/WalletService.java)

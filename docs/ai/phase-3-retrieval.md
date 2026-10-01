@@ -1,6 +1,6 @@
 # AI Phase 3 — Retrieval 품질 개선과 독립 실험
 
-> 2026-09-28 / 구현·실제 비교·전체 회귀·별도 검토 완료. Phase 2는 사용자가 완료 승인했다.
+> 2026-09-28 / 구현·실제 비교·전체 회귀·별도 검토 완료. Phase 2와 Phase 3은 사용자가 완료 승인했다.
 
 ## 승인 범위와 불변 조건
 
@@ -100,3 +100,12 @@ $env:AI_RETRIEVAL_ANSWER_EVALUATION='true'
 - AI 장애 후 모의 거래 유지·JPA 단일 DataSource·미인증/USER 거부, manifest/hash/버전 승인 경계, 변경 중 검색 차단, 청크 경계·링크 보존·Unicode·다양성 선택을 검증했다.
 - 별도 검토자 review_ai_phase3: 발견된 필수 수정 없음. tracked/untracked 코드·문서 전체와 청크 종료 조건·인가·승인·재색인 경계를 확인했다. diff 검사, 공유 JSON/원본 보고서 대조, hit/MRR/근거 지표 재계산 및 답변 30행 내용 확인은 검토자가 직접 수행했다. 테스트와 유료 API 호출은 검토자가 재실행하지 않았으며 구현자 실행 결과와 구분한다.
 - 검토자 제안: 답변 평가에서 K/L 핵심 2개 질문의 ANSWERED 상태도 assertion으로 추가하면 좋다. 현재는 실제 기록/수동 내용 확인과 검색 anchor assertion으로 검증하며, 해당 생성 상태 assertion은 아직 없다. 필수 수정 사항은 아니었다.
+
+## 사용자 승인 후 작은 테스트 보완 — 2026-09-28
+
+- Phase 3 완료와 K 기본 경로 유지가 사용자 승인됐다. 위 검토 당시의 제안은 후속 보완으로 반영했다.
+- RetrievalAnswerEvaluationTest에 K/L의 견적 만료·WebSocket 복구 질문 각 2개가 ANSWERED인지 assertion을 추가했다. 이미 있던 인용 ID 검증과 무관 질문 오답 0 assertion은 유지했다. A baseline의 의도된 실패를 성공으로 강제하지 않는다.
+- AI_RETRIEVAL_ANSWER_EVALUATION=true로 해당 테스트를 실제 gpt-5.6-terra에 재실행해 통과했다. K/L 각각 ANSWERED 2/2, A는 1/2. A/K/L 무관 질문 오답 각각 0/8이다. 기존 검색 보고서/evidence를 사용했으며 embedding/검색을 다시 실행하지 않아 hit@5·MRR 등 Phase 3 수치는 변경하지 않았다.
+- 서버 코드·모델·색인·golden·거래 기능은 변경하지 않았다. 전체 기본 backend 회귀는 190개 중 183 통과·7 skipped·실패/오류 0이다. 이번에는 실제 pgvector opt-in도 활성화하지 않아 이전 184 통과·6 skipped와 구분한다. skipped는 pgvector 1개·기존 Anvil 2개·거래 PostgreSQL 1개·유료 AI 3개이며 답변 평가는 앞의 별도 실행에서 통과했다. test-only 보완으로 forge/웹은 재실행하지 않았다. 별도 검토 결과는 후속 기록한다.
+- 다음 [Phase 4 설계안](phase-4-read-only-tools.md)은 구현 승인 대기다.
+- 별도 review_ai_phase3_followup 결과는 발견된 필수 수정 없음이다. 테스트와 관련 소스·Phase 4 제안 포함 6개 변경 파일을 읽기 전용으로 검토하고, diff 검사·답변 JSON 30행 대조·XML 독립 집계를 직접 수행했다. 검토자는 유료 API/테스트를 재실행하지 않았다. Phase 4의 실제 인가/timeout/실연동 검증은 아직 미래 계획이다.

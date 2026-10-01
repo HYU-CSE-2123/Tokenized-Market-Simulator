@@ -4,6 +4,7 @@ import com.pricetrack.exchange.ai.knowledge.*;
 import com.pricetrack.exchange.ai.provider.*;
 import com.pricetrack.exchange.ai.store.*;
 import com.pricetrack.exchange.ai.retrieval.EvidenceSelector;
+import com.pricetrack.exchange.ai.retrieval.AuthorizedKnowledgeRetrieval;
 import com.pricetrack.exchange.auth.AuthenticatedUser;
 import com.pricetrack.exchange.user.UserRole;
 import java.util.*;
@@ -17,11 +18,13 @@ public class RagService {
     private final KnowledgeStore store;
     private final EmbeddingProvider embedding;
     private final ChatModelProvider chat;
+    private final AuthorizedKnowledgeRetrieval retrieval;
     private final Semaphore requests = new Semaphore(2);
     private final AtomicBoolean indexing = new AtomicBoolean();
     public RagService(AiProperties properties, KnowledgeLoader loader, KnowledgeStore store,
             EmbeddingProvider embedding, ChatModelProvider chat) {
         this.properties=properties; this.loader=loader; this.store=store; this.embedding=embedding; this.chat=chat;
+        this.retrieval=new AuthorizedKnowledgeRetrieval(properties,loader,store,embedding);
     }
     public record IndexResult(String indexVersion, int documents, int chunks, boolean unchanged) {}
     public record Answer(String status, String answer, String indexVersion, List<KnowledgeHit> sources) {}
@@ -51,7 +54,7 @@ public class RagService {
     public List<KnowledgeHit> search(AuthenticatedUser principal,String question) {
         authorize(principal); validate(question);
         if(!requests.tryAcquire())throw new AiFailure("AI_BUSY");
-        try { return retrieve(question).hits(); } finally {requests.release();}
+        try { return retrieve(principal,question).hits(); } finally {requests.release();}
     }
     public Answer answer(AuthenticatedUser principal,String question) {
         authorize(principal); validate(question);
@@ -63,7 +66,7 @@ public class RagService {
                     || compact.matches("^(지금|현재)?(내|제)주문(이)?(지금)?체결됐(어|나요)?[?？]*$")
                     || compact.matches("^(지금|현재)?(삼성전자|삼전|mSEC)(가격|현재가)(은|는|이|가)?얼마(야|예요|인가요)?[?？]*$"))
                 return unavailable("LIVE_DATA_REQUIRED",null);
-            Retrieved retrieved=retrieve(question);
+            Retrieved retrieved=retrieve(principal,question);
             if(retrieved.hits().isEmpty())return unavailable("INSUFFICIENT_EVIDENCE",retrieved.version());
             var result=chat.answer(question,retrieved.hits());
             verifyUnchanged(retrieved.version());
@@ -76,16 +79,9 @@ public class RagService {
         } finally {requests.release();}
     }
     private record Retrieved(String version,List<KnowledgeHit> hits) {}
-    private Retrieved retrieve(String question) {
-        var corpus=loader.load();
-        if(!store.active(corpus.fingerprint()))throw new AiFailure("AI_INDEX_NOT_READY");
-        float[] vector=embedding.embed(List.of(question)).getFirst();
-        PgKnowledgeStore.vector(vector);
-        // 최종 5개를 먼저 잘라내지 않는다. 동일 문서가 후보를 독점해도 다른 근거를 채울 수 있게 한다.
-        var candidates=store.search(corpus.fingerprint(),vector,Math.max(40,properties.topK()*8),properties.minimumSimilarity());
-        var hits=EvidenceSelector.select(candidates,properties.topK(),2);
-        verifyUnchanged(corpus.fingerprint());
-        return new Retrieved(corpus.fingerprint(),hits);
+    private Retrieved retrieve(AuthenticatedUser principal,String question) {
+        var found=retrieval.searchLegacyAdmin(principal,question);
+        return new Retrieved(found.indexVersion(),found.hits());
     }
     private void verifyUnchanged(String fingerprint) {
         if(!loader.load().fingerprint().equals(fingerprint))throw new AiFailure("AI_APPROVAL_MISMATCH");

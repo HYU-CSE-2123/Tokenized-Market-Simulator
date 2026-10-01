@@ -1966,3 +1966,143 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 마지막 전체 backend 회귀: 190개 중 184 통과, 6 skipped, 실패 0. golden 해시/지표 기준 assertion을 추가한 실제 유료 평가 3개도 재실행 통과했다. 공유 수치 JSON과 마지막 보고서의 지표 차이는 0건이다.
 - 별도 review_ai_phase3 결과는 발견된 필수 수정 없음. tracked/untracked 변경과 관련 경계를 검토하고, diff 검사·지표 독립 재계산·보고서와 답변 30행 대조를 직접 수행했다. 검토자는 테스트/유료 호출을 직접 재실행하지 않았다.
 - 제안 1건: 핵심 2개 생성 답변의 ANSWERED 상태 assertion 추가. 현재 실제 답변 내용/인용을 확인했고 검색 직접 근거 assertion은 있지만 해당 생성 상태 assertion은 없다. 필수 수정은 아니며 후속 보강 대상으로 남긴다.
+
+# AI Phase 3 승인 후 assertion 보완 / Phase 4 설계 제안
+
+> 2026-09-28. 사용자는 Phase 3 완료·K 유지와 작은 assertion 보완을 승인했다. Phase 4는 설계 먼저, 구현 승인 대기다.
+
+## 변경·결정
+
+- RetrievalAnswerEvaluationTest에 K/L 핵심 2문항의 ANSWERED assertion을 추가했다. 기존 citation 검증·무관 질문 거절 조건과 Phase 2 baseline은 그대로 유지한다.
+- docs/ai/phase-4-read-only-tools.md에 master guide/Phase 0/실제 코드 기준 8개 read-only Tool, 서버 권한·safe DTO, orderId 기반 receipt, 최소 dispatcher API, 감사·조회 상한·테스트 계획을 제안했다.
+- Phase 4 제품 코드·설정·endpoint·DB·거래 기능은 변경하지 않았다. RAG K 기본 경로와 ADMIN-only는 그대로다. Phase 4 USER Tool 경계의 제한적 개방은 아직 제안이다.
+
+## 검증
+
+- 실제 API 답변 평가 1개 통과. K/L 각각 핵심 ANSWERED 2/2, baseline A 1/2, A/K/L 각 무관 질문 오답 0/8. 기존 retrieval 보고서를 사용하며 embedding/검색 지표 재측정은 하지 않았다.
+- 실행: backend에서 AI_RETRIEVAL_ANSWER_EVALUATION=true, gradlew test --no-daemon --rerun-tasks --tests com.pricetrack.exchange.ai.RetrievalAnswerEvaluationTest. API 키는 로컬 .env에서 프로세스에 전달하고 출력하지 않았다. 샌드박스 Gradle 캐시 접근 실패 후 승인된 권한으로 실행했다.
+- 전체 기본 backend 회귀: gradlew test --no-daemon --rerun-tasks 성공, XML 집계 190개 중 183 통과·7 skipped·실패/오류 0. skipped는 pgvector 1개·Anvil 2개·거래 PostgreSQL 1개·유료 AI 3개이며 답변 평가는 위 별도 실행에서 통과했다. forge/웹/실제 pgvector·거래 PostgreSQL·Anvil은 이번 test-only 보완으로 재실행하지 않았다.
+
+## 검토·남은 작업
+
+- 별도 review_ai_phase3_followup 결과는 발견된 필수 수정 없음이다. 6개 변경 파일(미추적 Phase 4 설계 포함)과 관련 소스·master guide·Phase 0을 확인하고 diff 검사, 실제 답변 JSON 30행·핵심 내용 대조, XML 독립 집계를 직접 수행했다. 제공된 API/테스트 실행 결과와 직접 검증을 구분했으며 유료 호출은 재실행하지 않았다. Phase 4 구현 완료나 실연동 결과로 기록하지 않는다.
+- Phase 4 설계 승인 후에만 Tool 구현을 시작한다. Agent·Skill·자동 분석·UI는 이후 Phase 범위다.
+
+# AI Phase 4: Read-only Tool Layer — 구현·검증·별도 검토 완료
+
+> 사용자 승인 2026-09-29 / 기록 2026-09-30. 시작 시 남아 있던 Phase 3 assertion·문서/Phase 4 설계 변경은 보존했다.
+
+## 구현·결정
+
+- ai/tool에 명시적 8개 Tool registry/schema·dispatcher·서버 context·audit·안전한 JPA read facade·독립 receipt HTTP adapter를 추가했다. 구현 위치/계약/예는 docs/ai/phase-4-read-only-tools.md 9~10절에 기록했다.
+- POST /api/ai/tools/*만 인증 USER/ADMIN에 개방하고 내부 역할/소유권을 재검증한다. 기존 RAG /index/search/answers는 ADMIN-only다. orderId에서 receipt hash를 조회하며 임의 hash/RPC URL을 인자로 받지 않는다.
+- 서명/rawTransaction/내부 예외·개인 식별자를 응답/로그에서 제외한다. quote storedStatus와 expiredByTime, 기대 출력과 실제 체결, EVM 실행과 DB 정산을 구분한다.
+- 입력 2KiB·출력 32KiB·RPC 수신 64KiB·JPA query/transaction 2초·RPC 3초·dispatcher 5초·동시 worker 4개/대기열 없음. timeout 취소 후에도 실제 worker가 종료돼야 새 작업을 받는다.
+- AI_TOOLS_ENABLED 기본 false를 설정·example에 추가했다. 로컬 .env·거래 코드/schema·컨트랙트·RAG K·golden·승인 지식 corpus/manifest는 변경하지 않았다.
+
+## 검증
+
+- 신규 Tool 테스트 31개 모두 통과: HTTP/JWT/USER/ADMIN·교차 사용자·손상 링크·민감정보·상태 불변·paging·audit·timeout/상한·RPC 성공/실패/미발견/이벤트 불일치.
+- 전용 exchange_tool_test PostgreSQL DB에서 5개 테이블 fixture 불변 및 잠긴 SELECT 취소·rollback·connection 복구 통과. 생성한 테스트 행만 정리하며 기존 exchange DB·볼륨은 보존했다.
+- 기존 Anvil 체결을 읽어 실제 receipt/event MATCH와 DB/nonce/ETH 잔고/블록 높이 불변을 확인했다. 키/서명/배포/funding/broadcast 없이 수행했다.
+- AI_TOOL_POSTGRES_TESTS=true, AI_TOOL_ANVIL_TESTS=true, AI_PGVECTOR_TESTS=true 전체 backend: 221개 중 215 통과·6 skipped·실패/오류 0. skipped는 기존 거래 Anvil 2개·견적 PG 경합 1개·유료 AI 3개다. 신규 Tool의 실제 PG/Anvil 검증은 포함됐다.
+- forge 36개·웹 30개·Vite build 87 modules 통과. 외부 유료 AI 호출·Toss 장중 재인수는 수행하지 않았다.
+- 전체 회귀 뒤 추가한 AI DB/API 장애 후 Tool 조회 검증(기존 두 격리 테스트 파일)도 별도 실행 3개 모두 통과했다. 마지막 제품 코드 변경 이후 전체 회귀와 이 보강 검증을 구분해 기록한다.
+
+## 검토·남은 작업
+
+- 별도 review_ai_phase4가 신규 제품 12파일·테스트 6파일과 보안/설정·장애 격리·문서를 검토한 결과, 발견된 필수 수정 없음이다. 격리 테스트 28개와 diff 검사를 직접 재실행해 통과했다. 실제 PostgreSQL/Anvil·전체 회귀·forge·웹은 구현자 결과와 코드를 검토했으며 직접 재실행하지 않았다. 최신 XML은 검토자의 28개 실행 결과다.
+- 선택 보완 제안인 명시적 SELL 입력/출력 단위·Sold 이벤트 테스트는 후속 보강으로 남긴다. 검토에서 현재 SELL 분기 결함이 발견된 것은 아니다.
+- Tool과 RAG의 실제 Agent 연결·생성 평가·지식 문서 AI 구현 단계 설명/manifest/색인 동기화는 Phase 5 진입 시 처리한다. Phase 3의 측정 수치를 미래 corpus의 품질로 표시하지 않는다.
+- 서버 활성화에는 AI_TOOLS_ENABLED=true와 재시작이 필요하다. 사용자 환경 파일·실행 중 서버는 자동 변경하지 않았다.
+
+# AI Phase 4 승인 후: SELL 테스트·지식 갱신 / Phase 5 설계 제안
+
+> 2026-09-30. Phase 4 완료와 이번 후속 보완은 사용자 승인. Phase 5는 설계만 작성하고 구현 승인 대기.
+
+## 변경·결정
+
+- SELL Tool 단위/통합 테스트 2개를 추가해 토큰 입력·원화 출력/수수료, Sold 이벤트·단위·방향/입력 불일치, 인가·DB 불변성을 검증했다.
+- 기존 9개 지식 역할을 유지하고 authorization-policy/system-overview v3, transaction-recovery-runbook v2에 Tool 완료·Agent 미구현과 실제 권한/조회 한계를 반영했다. manifest 버전/내용 해시를 함께 갱신했다.
+- 현행 K 회귀 전용 KnowledgeRefreshEvaluationTest를 추가했다. 고정 golden/anchor와 과거 Phase 3 보고서를 보존하며 원래 A~L 실험을 새 corpus에서 baseline으로 재정의하지 않는다.
+- 로컬 AI DB의 새 활성 색인은 f13e19198c2bbc6386caafa9f0ec5e7f346acdac885c050c519df950d685211f, 9문서·53청크다. 정지한 기존 AI 컨테이너만 시작하고 기존 볼륨/거래 DB/Anvil은 변경하지 않았다. 사용자 .env와 실행 서버 설정은 보존했다.
+- Phase 5 설계는 docs/ai/phase-5-rag-tool-agent.md에 제안했다. 명시적 target·stateless 입력, 분류 1회/제한 실행, SQL 역할 필터, 근거/불확실성 분리와 예산이 핵심이다. Agent 제품 코드·endpoint·설정은 아직 없다.
+
+## 검증
+
+- 최초 문서 확장: hit 12/12, MRR 0.8778, 직접 근거 11/12. 긴 runbook 절이 정산 근거를 밀어 발행 전 assertion이 실패했다. 기존 정책과 새 Tool 계약을 제목별로 분리해 해결했다.
+- 최종 현재 corpus: hit@5 12/12, MRR@5 0.8819, 직접 근거 12/12, K 성공 회귀 0. 무관 후보 5/8·답변 오탐 0/8, 핵심 ANSWERED 2/2, 식별자 hit 6/8·MRR 0.6667. 동일 개발 세트 회귀이며 일반화 성능 주장이 아니다.
+- 실제 공급자/평가 AI DB에서 통과한 후 별도 opt-in으로 로컬 exchange_ai에 발행하고 활성 색인·문서 버전/권한을 SELECT로 확인했다. AI DB에만 쓰며 거래 원장은 건드리지 않는다.
+- SELL 포함 표적 33개 통과. 전체 backend 224개 중 214 통과·10 skipped·실패/오류 0(실제 pgvector 포함). skip 상세는 docs/ai/phase-4-knowledge-refresh.md에 기록했다. 이번 test/docs 변경에서 실제 거래 PostgreSQL/Anvil, forge/웹은 재실행하지 않았다.
+- 전체 회귀 뒤 MRR/식별자·문서 권한 assertion 보강 후 유료 평가 1개와 로더 9개, 총 10개 추가 실행 통과. 새 지식 평가의 실제 실행과 전체 회귀에서 opt-in 미설정 skip을 구분한다.
+
+## 검토·남은 작업
+
+- 별도 review_ai_phase4_refresh 결과는 발견된 필수 수정 없음이다. 9문서 정규화 해시·golden 해시, raw/공유 보고서 28행의 순위·유사도·직접 근거·인용, 생성 답변 2개·거절 8개, 최신 XML 10개와 diff 검사를 독립 확인했다. 테스트·유료 API·DB SELECT는 재실행하지 않았으며 전체 회귀/색인 SELECT는 제공 실행 기록으로 검토했다.
+- Phase 5 flag 조합을 명확히 하라는 제안을 반영했다. AI_AGENT_ENABLED와 AI_ENABLED를 함께 요구하고 Tool 비활성 시 선인가를 생략하지 않으며, 잘못된 AI 설정이 거래 서버 기동을 실패시키지 않도록 설계에 명시했다. 검토자는 최종 delta를 확인했다.
+- Phase 5는 설계 승인 후 구현한다. 현재 RAG는 ADMIN-only이며 USER metadata SQL 필터를 이미 구현했다고 표시하지 않는다. 상세 변경/결과는 docs/ai/phase-4-knowledge-refresh.md에 기록했다.
+
+# AI Phase 5: 제한된 RAG+Read-only Tool Agent — 구현·검증 완료 / 사용자 완료 승인 대기
+
+> 2026-09-30. 사용자 승인 설계를 구현한다. 거래·컨트랙트·UI 변경은 범위에서 제외한다.
+
+## 구현·결정
+
+- `ai/agent/`에 stateless API·선소유권 확인·닫힌 route/subject 분류·서버 고정 Tool 경로·근거 종합을 구현했다. USER/ADMIN 질문 API와 기존 ADMIN Basic RAG를 구분한다.
+- `AuthorizedKnowledgeRetrieval`과 pgvector SQL 후보 역할 필터, ToolDispatcher의 run context, strict Responses adapter를 추가했다. 모의 거래와 기존 Tool/RAG API 계약을 보존한다.
+- 최대 모델2/Tool4/검색1, worker2/대기열0, 전체40초·계획5초·종합10초, context24KiB/output64KiB를 적용한다. 기존 키/모델·별도 AI DB를 유지한다.
+- 성공 Tool 사실·문서 정책·불확실성을 분리한다. receipt/DB 상태 및 quote 소비/만료를 합치지 않는다. 모델 ID/사실 참조를 검증하지만 자연어의 완전한 진실성을 보장하지 않는다.
+- authorization-policy/system-overview v4와 manifest를 갱신했다. 9개 지식 구조·역할 및 기존 recovery runbook v2를 유지한다.
+- 실제 `.env`와 실행 서버를 변경하지 않았다. 기존 중지 컨테이너만 시작했으며 볼륨을 삭제하지 않았다. 재시작 Anvil은 블록 0이라 이번 실연동은 NOT_FOUND/불변성 경로와 기존 성공 receipt 평가를 구분한다.
+
+## 검증·수정 이력
+
+- Agent/기존 RAG 표적 42개 통과 후 provider·일관성·실제 DB 테스트를 추가했다. 이후 표적 PostgreSQL 포함 실행도 통과했다. 최종 전체 결과는 아래에 누적할 예정이다.
+- 실제 공급자에서 소유권이 확인된 target을 CLARIFY로 분류하여 targetKind 의미를 명확히 보완했다. ID를 모델에 노출하는 방향으로 바꾸지 않았다.
+- 실제 혼합 견적에서 consumedAt=null을 정상 사실로 인용했으나 검증기가 거부한 문제를 수정했다. 명시적 null과 존재하지 않는 JSON pointer를 구분하고 결정적 회귀를 추가했다. 안전한 PARTIAL은 정상 불확실성인지 종합 실패인지 따로 평가한다.
+- contracts `forge test -vv`: 36 통과. 웹 `npm test`: 30 통과, `npm run build`: 87모듈 빌드 성공. 거래 제품 코드는 수정하지 않았다.
+- Phase 5 전체 backend·golden·공급자·Anvil·별도 검토는 진행 중이다. 상세 위치와 재현은 `docs/ai/phase-5-rag-tool-agent.md`.
+
+## 남은 검증
+
+- 최종 전체 회귀, 실제 공급자 6시나리오, 고정 golden/USER 역할별 회귀, 로컬 AI 색인 동기화와 별도 검토를 완료한 뒤 결과를 기록한다.
+- 실제 체인의 성공 receipt MATCH는 새 거래 생성 없이 재검증할 수 없어 이번 미검증으로 남긴다. Skill·이벤트 자동 진단·AI UI·장기 기억은 구현하지 않는다.
+
+## 최종 실행 결과 (별도 검토 전)
+
+- backend 전체260 중251 통과·9 skip·실패/오류0. pgvector2·거래 테스트 PostgreSQL3·Agent Anvil1을 실제 실행했다. 기존 거래 전송/견적 동시성 및 성공 event가 필요한 테스트와 유료 opt-in은 skip하고 상세를 Phase 5 문서에 기록했다.
+- 실제 Agent 공급자6/6 route 정확. KNOWLEDGE2/STATE2 ANSWERED, MIXED2는 성공 Tool+정책 근거와 확인 불가 항목을 포함한 정상 PARTIAL. 종합/검색/계획 실패 PARTIAL은 없다. 타인 target404/모델0과 USER 공개 지식3문항도 검증했다.
+- 현행 golden hit12/12·MRR0.8819444444444443·직접 근거12/12·K회귀0, 무관 후보5/8·답변오탐0/8·핵심답변2/2·식별자6/8. 9문서54청크를 로컬 AI DB에 발행했고 fingerprint=1c94dd53978602b4c04a132777f65e1b893e8ded67675f4f0c40db316185630a다.
+- 실제 공급자 성공 실행 사용량 input10,174/output1,838 tokens는 이전 실패·embedding·golden 사용량을 포함하지 않는다. 공유 수치는 docs/ai/phase-5-results.json, 상세는 phase-5-rag-tool-agent.md.
+- 제품 코드와 테스트·문서 초안을 멈춘 뒤 별도 검토를 요청한다. 최종 XML이 표적 평가로 교체된 점은 전체 결과와 구분한다.
+
+## 최초 검토·보완 (2026-10-01)
+
+- review_ai_phase5는 격리 표적23개를 직접 실행한 뒤 필수 수정3건을 보고했다. 승인 검증 실패 뒤 문서 PARTIAL 반환, STATE의 오래된 가격 표시 누락, 실패 audit 수치 초기화다. 실제 공급자/공유 DB·체인·전체는 직접 재실행하지 않았다.
+- 세 지적을 모두 수용했다. 모든 문서 응답/부분 실패에서 승인 상태를 검증하고 실패 시 근거와 해석을 폐기한다. 성공 Tool만 유지하거나 안전하게503으로 실패한다. priceStatus와 포트폴리오 reference의 신선도 문제를 표시하되 기존 거래 기준은 그대로 둔다. 실패 audit에는 관측 호출·받은 사용량만 유지한다.
+- 결정적3개와 기존 거부/timeout assertions를 추가했으며 Agent/RAG 표적 통과. 제품 코드가 바뀌어 최종 전체/공급자 검증·재검토를 다시 진행한다. 최초260개 회귀와 결과를 구분한다.
+
+## 검토 수정 후 최종 검증 (2026-10-01)
+
+- backend263 중254 통과·9 skip·실패/오류0. 실제 pgvector/전용 거래 PostgreSQL/Agent Anvil 읽기를 다시 검증했다. corpus·retrieval·기존 거래/컨트랙트/웹은 수정하지 않아 최초 golden 및 forge/웹 결과와 구분해 유지한다.
+- 동일 실제 공급자6개 재실행 통과: route6/6, ANSWERED5·불확실성을 포함한 정상 PARTIAL1. 종합/검색/계획 실패 PARTIAL은 없다. quote 완료 설명은 체결 완료를 주장하지 않는다.
+- 최종 성공 실행 input10,153/output1,740 tokens, 지연1.569~10.638초. 모든 실패평가·embedding·golden 사용량을 포함한 총계가 아니다. 공유 phase-5-results.json을 최신화했다.
+- 제품·테스트·문서 변경을 멈추고 별도 재검토1회를 요청한다. 재검토 결과는 완료 후 기록한다.
+
+## 최종 별도 검토·완료 상태 (2026-10-01)
+
+- review_ai_phase5 재검토1회: 발견된 필수 수정 없음. 최초3건 해결과 수정 회귀를 독립 확인했다. AgentService19/AuthorizedKnowledgeRetrieval4/OpenAiAgentProvider3, 직접26개 재실행 통과·실패/오류/skip0. 최신 XML은 검토자26개 결과다.
+- 원시 공급자 보고서와 공유 수치를 대조했으며 전체263/공급자/DB/Anvil/forge/웹은 검토자가 재실행하지 않았다. 실제 구현자의 실행과 검토자의 직접 실행을 구분한다.
+- 구현·검증·문서/색인 동기화를 완료하고 사용자 완료 승인을 기다린다. 실제 Anvil 성공 MATCH 재검증과 자연어 진실성 보장 한계는 남으며 Skill/UI/자동진단/장기기억은 제외했다.
+- 실제 `.env`·실행 서버와 기존 변경을 보존했고 커밋하지 않았다. 최종 검토 뒤에는 이 결과·상태 기록만 추가했으며 제품 코드/테스트 변경은 없다.
+
+# AI Phase 5 사용자 완료 승인 / Phase 6 Skill 설계 제안
+
+> 2026-10-01. Phase 5 완료는 사용자 승인. Phase 6는 설계 제안이며 구현 승인 대기.
+
+- `docs/ai/phase-6-skills.md`에 master guide와 실제 Agent/Tool/RAG 경계를 기준으로 정의·registry·허용 Tool/domain·반복 진단 순서·trace·중단/예산·테스트 계획을 작성했다.
+- settlement-debugging ADMIN-only, signed-quote-diagnosis/market-availability-diagnosis USER/ADMIN을 제안했다. 기존 USER 본인 주문 설명은 유지하며 새 mutation·도구·DB·UI·자동 이벤트는 제외한다.
+- 현재 role-only SQL에 Skill domain 후보 제한이 필요하다는 차이를 명시했다. 정의·근거 무효화, failed receipt만으로 특정 원인 단정 금지, 만료·소비와 체결 완료 분리, 타인/미존재 동일404를 유지한다.
+- 명시적 Skill은 분류 생략, 자동 선택은 기존 분류1회 내에서 수행하며 한 run의 모델2/Tool4/검색1/worker2 예산을 공유하도록 제안했다.
+- 제품 코드·테스트·설정·Skill 정의·active 지식/manifest·색인·`.env`는 수정하지 않았다. 테스트/공급자/API/DB 재실행과 별도 검토는 문서 설계 제안에서 실행하지 않았으며 새 검증 결과로 표시하지 않는다.
+- 승인 후 설계 범위대로 구현하고 전체 회귀·실제 평가·별도 검토·지식/색인 동기화를 진행한다.

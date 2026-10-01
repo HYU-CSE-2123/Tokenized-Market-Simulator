@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-01",
+  "scope": "bounded read-only RAG+Tool orchestration",
+  "indexVersion": "1c94dd53978602b4c04a132777f65e1b893e8ded67675f4f0c40db316185630a",
+  "documents": 9,
+  "chunks": 54,
+  "phase2Baseline": {"hits": 10, "questions": 12},
+  "currentKRetrieval": {
+    "hits": 12, "questions": 12, "hitAt5": 1.0, "mrrAt5": 0.8819444444444443,
+    "regressionsFromK": 0, "directGoldenEvidence": 12,
+    "negativeRetrieved": 5, "negativeFalseAnswers": 0, "negativeQuestions": 8,
+    "criticalAnswered": 2, "identifierHits": 6, "identifierQuestions": 8
+  },
+  "liveProvider": {
+    "model": "gpt-5.6-terra", "scenarios": 6, "routeCorrect": 6,
+    "answered": 5, "partialWithValidatedFactsAndPolicy": 1,
+    "dependencyFailurePartial": 0,
+    "userPublicRetrievalChecks": 3, "foreignTargetHttpStatus": 404,
+    "inputTokensFinalSuccessfulRun": 10153, "outputTokensFinalSuccessfulRun": 1740,
+    "minimumLatencyMs": 1569, "maximumLatencyMs": 10638,
+    "stateSource": "isolated H2 fixtures and simulation market; real model and pgvector",
+    "limitation": "Usage excludes failed runs, embedding and golden evaluation; not a generalization or live Toss trading benchmark."
+  },
+  "regression": {
+    "backend": {"total": 263, "passed": 254, "skipped": 9, "failures": 0, "errors": 0},
+    "contracts": {"passed": 36, "failures": 0},
+    "web": {"passed": 30, "failures": 0, "buildModules": 87},
+    "realPgvector": "role filter before top-K verified",
+    "realTradingTestPostgres": "Agent read-only state and row invariance verified",
+    "realAnvil": "NOT_FOUND receipt with nonce, balance, block and DB invariance verified; no broadcast"
+  },
+  "publishedLocalAiDatabase": "exchange_ai",
+  "limitations": [
+    "Fresh Anvil has no existing trade event; successful receipt MATCH not rerun on the actual chain in this phase.",
+    "Natural-language interpretation is not proven truthful solely by citation and fact-pointer validation.",
+    "Skills, event diagnostics, persistent memory and AI UI excluded."
+  ],
+  "rawReports": [
+    "backend/build/reports/ai/phase5-agent-evaluation.json",
+    "backend/build/reports/ai/phase5-knowledge-refresh.json"
+  ],
+  "review": {
+    "reviewer": "review_ai_phase5",
+    "initialRequiredFixes": 3,
+    "reReviews": 1,
+    "conclusion": "No required changes found after fixes.",
+    "directReviewerTestsPassed": 26,
+    "limitation": "Reviewer reran isolated tests only; external evaluations and full regression were independently inspected, not rerun."
+  }
+}

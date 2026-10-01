@@ -6,7 +6,13 @@ AI Phase 2 Basic RAG는 기본 비활성인 ADMIN 전용 모듈입니다. 거래
 
 AI Phase 3은 문장 경계·순수 링크 청크 정리, 1200바이트 청크, similarity 0.25와 충분한 후보 이후 문서당 최대 2개 선택을 적용합니다. 기존 색인은 명시적으로 재생성해야 합니다. Hybrid는 서비스에 연결하지 않은 비교 실험입니다. 수치와 제한사항은 [검색 품질 보고서](../docs/ai/phase-3-retrieval.md)를 참고하세요.
 
+AI Phase 4는 `AI_TOOLS_ENABLED=true`로 켜는 독립 읽기 Tool 계층입니다(기본 false, 설정 후 서버 재시작). `POST /api/ai/tools/{toolName}`에 기존 JWT와 `{"arguments":{...}}`를 전달합니다. USER는 본인 데이터, ADMIN은 제한된 운영 조회를 사용할 수 있고 RAG 검색/답변 API는 ADMIN 전용을 유지합니다. 8개 Tool·요청/응답·실행 상한·실제 PostgreSQL/Anvil 검증은 [Phase 4 보고서](../docs/ai/phase-4-read-only-tools.md)를 참고하세요. 독립 Tool API는 외부 AI API/AI DB 없이 호출할 수 있으며, Phase 5의 Agent 연결은 아래 별도 경로입니다. AI UI는 아직 없습니다.
+
 ## 현재 구현 상태
+
+Phase 4 승인 후 SELL 테스트와 지식·색인 회귀를 갱신했습니다. [후속 보고서](../docs/ai/phase-4-knowledge-refresh.md)는 당시 결과입니다. [Phase 5 Agent](../docs/ai/phase-5-rag-tool-agent.md)는 구현·검증·별도 재검토와 사용자 완료 승인을 받았습니다. [Phase 6 Skill](../docs/ai/phase-6-skills.md)은 설계 제안이며 아직 구현하지 않았습니다.
+
+제한된 Agent는 `AI_ENABLED=true`, `AI_AGENT_ENABLED=true`로 활성화하며 상태 조회에는 `AI_TOOLS_ENABLED=true`도 필요합니다(설정 후 재시작). `POST /api/ai/agent/answers`에 기존 JWT와 `{"question":"이 주문이 왜 대기 중인가요?","target":{"orderId":153}}`를 전달합니다. 견적은 target.quoteId만 지정하며 정책·시장·본인 자산 질문은 target을 생략합니다. `history`, `userId`, `role`을 받지 않습니다. KNOWLEDGE는 역할별 RAG, STATE는 인가된 조회, MIXED는 두 근거를 결합합니다. USER의 검색 후보에서 ADMIN 문서를 SQL 단계에 제외하며 기존 RAG API는 ADMIN-only입니다. `answer`는 해석, `toolEvidence`는 서버가 복사한 사실, `uncertainties`는 부분 실패·불일치입니다. 기본 Agent 비활성·읽기 전용이며 Skill·AI UI·거래 실행은 포함하지 않습니다.
 
 - 자체 회원가입: `loginId`, `password`, `nickname`
 - 자체 로그인 및 JWT 액세스 토큰 발급

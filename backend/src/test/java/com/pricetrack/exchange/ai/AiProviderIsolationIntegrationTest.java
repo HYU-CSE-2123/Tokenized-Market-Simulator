@@ -12,13 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
-@SpringBootTest(properties={"app.ai.enabled=true","app.ai.knowledge-root=../docs/ai-knowledge",
+@SpringBootTest(properties={"app.ai.enabled=true","app.ai.tools.enabled=true","app.ai.knowledge-root=../docs/ai-knowledge",
         "app.ai.manifest=../docs/ai/ingest-manifest.json","app.blockchain.enabled=false"})
 class AiProviderIsolationIntegrationTest {
     @Autowired RagService rag;
     @Autowired UserRepository users;
     @Autowired WalletService wallets;
     @Autowired OrderService orders;
+    @Autowired com.pricetrack.exchange.ai.tool.ToolDispatcher tools;
     @MockBean PgKnowledgeStore store;
     @MockBean OpenAiProvider provider;
     @Test void aiProviderFailureDoesNotAffectCommittedTrade() {
@@ -28,6 +29,8 @@ class AiProviderIsolationIntegrationTest {
         User user=new User();user.setLoginId("ai-provider-"+System.nanoTime());user.setNickname("Provider isolation");
         user=users.saveAndFlush(user);wallets.initializeBalances(user.getId());wallets.faucet(user.getId());
         assertThat(orders.buy(user.getId(),"mSEC",new BigDecimal("10000"),null).getStatus().name()).isEqualTo("FILLED");
+        var result = tools.invoke(new com.pricetrack.exchange.auth.AuthenticatedUser(user.getId(),user.getLoginId(),UserRole.USER),
+                "getPortfolio", "{\"arguments\":{}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertThat(result.status()).isEqualTo("SUCCESS");
     }
 }
-

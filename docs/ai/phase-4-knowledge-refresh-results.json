@@ -1,0 +1,558 @@
+{
+  "createdAt": "2026-09-30T02:23:00.254318500Z",
+  "goldenHash": "22006b55ed6256672195c873399df99fae5741fd47a9ba4319484fb97dd881ac",
+  "indexVersion": "f13e19198c2bbc6386caafa9f0ec5e7f346acdac885c050c519df950d685211f",
+  "chunks": 53,
+  "settings": "K: CLEAN/1200/60/.25/40/5/2",
+  "phase2BaselineHitAt5": 0.8333333333333334,
+  "phase3BaselineMrrAt5": 0.8819444444444443,
+  "hits": 12,
+  "hitAt5": 1,
+  "mrrAt5": 0.8819444444444443,
+  "regressionsFromK": 0,
+  "directGoldenEvidence": 12,
+  "negativeRetrieved": 5,
+  "negativeFalseAnswers": 0,
+  "criticalAnswered": 2,
+  "identifierHits": 6,
+  "identifierMrrAt5": 0.6666666666666666,
+  "publishedLocalDatabase": "exchange_ai",
+  "publishedIndex": "f13e19198c2bbc6386caafa9f0ec5e7f346acdac885c050c519df950d685211f",
+  "rows": [
+    {
+      "question": "왜 주문이 바로 FILLED가 되지 않아?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "order-lifecycle.md",
+        "order-lifecycle.md",
+        "onchain-settlement-policy.md",
+        "transaction-recovery-runbook.md",
+        "transaction-recovery-runbook.md"
+      ],
+      "similarities": [
+        0.5957306236690052,
+        0.5244906785769431,
+        0.4433741143491765,
+        0.40436479617779086,
+        0.3715702240123566
+      ]
+    },
+    {
+      "question": "견적은 언제부터 30초 동안 유효해?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": "ANSWERED",
+      "paths": [
+        "signed-quote-policy.md"
+      ],
+      "similarities": [
+        0.29686753511902264
+      ]
+    },
+    {
+      "question": "다른 사람의 quoteId로 주문할 수 있어?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "authorization-policy.md",
+        "signed-quote-policy.md",
+        "authorization-policy.md",
+        "order-lifecycle.md",
+        "order-lifecycle.md"
+      ],
+      "similarities": [
+        0.41388772626038683,
+        0.3922607433881241,
+        0.3749141722376226,
+        0.37097196334814286,
+        0.3612508454155332
+      ]
+    },
+    {
+      "question": "서버 재시작 후 SIGNED 트랜잭션은 어떻게 복구돼?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "transaction-recovery-runbook.md",
+        "order-lifecycle.md",
+        "transaction-recovery-runbook.md",
+        "signed-quote-policy.md",
+        "signed-quote-policy.md"
+      ],
+      "similarities": [
+        0.4525931611330509,
+        0.40116524402310016,
+        0.3874271833633167,
+        0.37435706010414616,
+        0.36721825277068176
+      ]
+    },
+    {
+      "question": "RPC 전송 응답이 없으면 새 nonce로 보내도 돼?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "transaction-recovery-runbook.md",
+        "transaction-recovery-runbook.md",
+        "onchain-settlement-policy.md",
+        "error-and-status-guide.md",
+        "order-lifecycle.md"
+      ],
+      "similarities": [
+        0.5108159925662724,
+        0.4788101223975929,
+        0.3946447224835884,
+        0.39054246022904404,
+        0.386830308259995
+      ]
+    },
+    {
+      "question": "REVIEW_REQUIRED는 주문 상태야?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "order-lifecycle.md",
+        "error-and-status-guide.md",
+        "transaction-recovery-runbook.md",
+        "order-lifecycle.md",
+        "error-and-status-guide.md"
+      ],
+      "similarities": [
+        0.7267398173567783,
+        0.5808270651458827,
+        0.530162951038257,
+        0.5283290606862989,
+        0.4639418277126459
+      ]
+    },
+    {
+      "question": "성공 receipt만 확인하면 잔고를 지급해도 돼?",
+      "expectedRank": 3,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "error-and-status-guide.md",
+        "order-lifecycle.md",
+        "onchain-settlement-policy.md",
+        "transaction-recovery-runbook.md",
+        "onchain-settlement-policy.md"
+      ],
+      "similarities": [
+        0.40920754706017903,
+        0.38425730232921573,
+        0.35422252293019996,
+        0.3421997858933219,
+        0.3399210978543772
+      ]
+    },
+    {
+      "question": "CLOSED인데 LIVE로 표시될 수 있어?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "market-data-policy.md",
+        "market-data-policy.md",
+        "websocket-consistency-policy.md",
+        "onchain-settlement-policy.md",
+        "error-and-status-guide.md"
+      ],
+      "similarities": [
+        0.3947458520414602,
+        0.3747698918759286,
+        0.371513827975261,
+        0.3535711598052659,
+        0.34240715454712756
+      ]
+    },
+    {
+      "question": "소켓 연결이 끊기면 주문 결과를 어디에서 복구해?",
+      "expectedRank": 4,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": "ANSWERED",
+      "paths": [
+        "order-lifecycle.md",
+        "order-lifecycle.md",
+        "onchain-settlement-policy.md",
+        "websocket-consistency-policy.md",
+        "onchain-settlement-policy.md"
+      ],
+      "similarities": [
+        0.4946222591425268,
+        0.43753392664684954,
+        0.43357823728017486,
+        0.40263017972019055,
+        0.40249433420383074
+      ]
+    },
+    {
+      "question": "ADMIN이면 다른 사용자 주문 API를 바로 볼 수 있어?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "authorization-policy.md",
+        "authorization-policy.md",
+        "order-lifecycle.md",
+        "onchain-settlement-policy.md",
+        "order-lifecycle.md"
+      ],
+      "similarities": [
+        0.6321502998731787,
+        0.5932334163581068,
+        0.48190574812754516,
+        0.47619176144805664,
+        0.4702689158279001
+      ]
+    },
+    {
+      "question": "mSEC는 삼성전자 주주권을 주는 토큰이야?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "system-overview.md",
+        "signed-quote-policy.md",
+        "signed-quote-policy.md",
+        "system-overview.md",
+        "error-and-status-guide.md"
+      ],
+      "similarities": [
+        0.5467387625942991,
+        0.4031091534205118,
+        0.39452761925547497,
+        0.3761827607613544,
+        0.3337441664248286
+      ]
+    },
+    {
+      "question": "PRICE_QUOTE_UNAVAILABLE 오류는 무슨 의미야?",
+      "expectedRank": 1,
+      "directGoldenEvidence": true,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "signed-quote-policy.md",
+        "error-and-status-guide.md",
+        "signed-quote-policy.md",
+        "transaction-recovery-runbook.md",
+        "error-and-status-guide.md"
+      ],
+      "similarities": [
+        0.49434500789111646,
+        0.4908202236245356,
+        0.4457470341731351,
+        0.42533106434096857,
+        0.4212627996443953
+      ]
+    },
+    {
+      "question": "화성에서 감자를 재배하는 방법을 알려줘",
+      "expectedRank": null,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": false,
+      "answerStatus": "INSUFFICIENT_EVIDENCE",
+      "paths": [],
+      "similarities": []
+    },
+    {
+      "question": "김치찌개를 끓일 때 물은 얼마나 넣어?",
+      "expectedRank": null,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": false,
+      "answerStatus": "INSUFFICIENT_EVIDENCE",
+      "paths": [],
+      "similarities": []
+    },
+    {
+      "question": "양자역학의 슈뢰딩거 방정식을 풀어줘",
+      "expectedRank": null,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": true,
+      "answerStatus": "INSUFFICIENT_EVIDENCE",
+      "paths": [
+        "transaction-recovery-runbook.md",
+        "transaction-recovery-runbook.md",
+        "system-overview.md",
+        "system-overview.md",
+        "signed-quote-policy.md"
+      ],
+      "similarities": [
+        0.3125346044694741,
+        0.31045935517185874,
+        0.30729675485966523,
+        0.2975420525763206,
+        0.25638800596084055
+      ]
+    },
+    {
+      "question": "프랑스 비자 신청에 필요한 서류는 무엇이야?",
+      "expectedRank": null,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": false,
+      "answerStatus": "INSUFFICIENT_EVIDENCE",
+      "paths": [],
+      "similarities": []
+    },
+    {
+      "question": "거래소 VIP 등급별 수수료 할인율 표를 알려줘",
+      "expectedRank": null,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": true,
+      "answerStatus": "INSUFFICIENT_EVIDENCE",
+      "paths": [
+        "transaction-recovery-runbook.md",
+        "onchain-settlement-policy.md",
+        "order-lifecycle.md",
+        "system-overview.md",
+        "order-lifecycle.md"
+      ],
+      "similarities": [
+        0.38277438186787327,
+        0.3746995685073652,
+        0.3661732211056937,
+        0.3658732762467448,
+        0.345801711923582
+      ]
+    },
+    {
+      "question": "mSEC를 담보로 대출받을 때 연이율 계산식은?",
+      "expectedRank": null,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": true,
+      "answerStatus": "INSUFFICIENT_EVIDENCE",
+      "paths": [
+        "system-overview.md",
+        "signed-quote-policy.md",
+        "signed-quote-policy.md",
+        "error-and-status-guide.md",
+        "onchain-settlement-policy.md"
+      ],
+      "similarities": [
+        0.47978929948518856,
+        0.38414864125307846,
+        0.33996893323798594,
+        0.3209353490810962,
+        0.32032410790555754
+      ]
+    },
+    {
+      "question": "비트코인 반감기마다 채굴 보상은 어떻게 바뀌어?",
+      "expectedRank": null,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": true,
+      "answerStatus": "INSUFFICIENT_EVIDENCE",
+      "paths": [
+        "onchain-settlement-policy.md",
+        "transaction-recovery-runbook.md",
+        "transaction-recovery-runbook.md",
+        "onchain-settlement-policy.md",
+        "system-overview.md"
+      ],
+      "similarities": [
+        0.3359758743368877,
+        0.31479813541318935,
+        0.3017381350668398,
+        0.29069189485829305,
+        0.28271808249716235
+      ]
+    },
+    {
+      "question": "이 거래소 친구 초대 리워드 지급 조건은?",
+      "expectedRank": null,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": true,
+      "answerStatus": "INSUFFICIENT_EVIDENCE",
+      "paths": [
+        "websocket-consistency-policy.md",
+        "error-and-status-guide.md",
+        "signed-quote-policy.md",
+        "system-overview.md",
+        "order-lifecycle.md"
+      ],
+      "similarities": [
+        0.3471577863288928,
+        0.3062212737138832,
+        0.29717327222585443,
+        0.29648221228120153,
+        0.29558671420562055
+      ]
+    },
+    {
+      "question": "PENDING_ONCHAIN",
+      "expectedRank": 3,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "onchain-settlement-policy.md",
+        "transaction-recovery-runbook.md",
+        "order-lifecycle.md",
+        "order-lifecycle.md",
+        "transaction-recovery-runbook.md"
+      ],
+      "similarities": [
+        0.44505615141370547,
+        0.4419579218998071,
+        0.43307894648900436,
+        0.4144195490395879,
+        0.37669595188237337
+      ]
+    },
+    {
+      "question": "REVIEW_REQUIRED",
+      "expectedRank": 1,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "order-lifecycle.md",
+        "error-and-status-guide.md",
+        "transaction-recovery-runbook.md",
+        "transaction-recovery-runbook.md",
+        "onchain-settlement-policy.md"
+      ],
+      "similarities": [
+        0.5119454971813583,
+        0.4219158812416888,
+        0.40108486030109924,
+        0.3184009126382332,
+        0.3073775209173193
+      ]
+    },
+    {
+      "question": "PRICE_QUOTE_UNAVAILABLE",
+      "expectedRank": 1,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "signed-quote-policy.md",
+        "error-and-status-guide.md",
+        "transaction-recovery-runbook.md",
+        "signed-quote-policy.md",
+        "order-lifecycle.md"
+      ],
+      "similarities": [
+        0.37945808107221735,
+        0.3614768168315199,
+        0.3373708018917404,
+        0.3363165300335925,
+        0.3018705961196978
+      ]
+    },
+    {
+      "question": "INVALID_CREDENTIALS",
+      "expectedRank": 1,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "error-and-status-guide.md",
+        "authorization-policy.md",
+        "authorization-policy.md",
+        "error-and-status-guide.md",
+        "onchain-settlement-policy.md"
+      ],
+      "similarities": [
+        0.3898433831349766,
+        0.344215944524753,
+        0.3355722591495476,
+        0.32305475870155553,
+        0.3226438015630032
+      ]
+    },
+    {
+      "question": "BALANCE_NOT_INITIALIZED",
+      "expectedRank": 1,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "error-and-status-guide.md",
+        "error-and-status-guide.md",
+        "system-overview.md",
+        "authorization-policy.md",
+        "transaction-recovery-runbook.md"
+      ],
+      "similarities": [
+        0.42563108588220544,
+        0.3587145066335674,
+        0.3423778732671918,
+        0.33737489545698907,
+        0.33464256019140304
+      ]
+    },
+    {
+      "question": "INVALID_CANDLE_QUERY",
+      "expectedRank": 1,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "error-and-status-guide.md",
+        "error-and-status-guide.md",
+        "authorization-policy.md",
+        "authorization-policy.md",
+        "transaction-recovery-runbook.md"
+      ],
+      "similarities": [
+        0.4266636244056444,
+        0.32925146630427504,
+        0.3189655981189188,
+        0.2994129581554492,
+        0.2793458753780652
+      ]
+    },
+    {
+      "question": "QuoteAlreadyUsed",
+      "expectedRank": 0,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [],
+      "similarities": []
+    },
+    {
+      "question": "MinimumOutputNotMet",
+      "expectedRank": 0,
+      "directGoldenEvidence": null,
+      "negativeRetrieved": null,
+      "answerStatus": null,
+      "paths": [
+        "signed-quote-policy.md"
+      ],
+      "similarities": [
+        0.34687788947423537
+      ]
+    }
+  ],
+  "firstAttempt": {
+    "note": "First attempt: K unchanged; Tool explanation appended to existing runbook section displaced direct settlement evidence. No local exchange_ai publish.",
+    "hits": 12,
+    "mrrAt5": 0.8777777777777778,
+    "directGoldenEvidence": 11,
+    "negativeRetrieved": 5,
+    "negativeFalseAnswers": 0,
+    "criticalAnswered": 2,
+    "identifierHits": 6,
+    "regressionsFromK": 0
+  }
+}

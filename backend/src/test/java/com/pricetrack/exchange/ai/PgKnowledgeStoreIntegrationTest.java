@@ -10,6 +10,27 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 @EnabledIfEnvironmentVariable(named="AI_PGVECTOR_TESTS",matches="true")
 class PgKnowledgeStoreIntegrationTest {
+    @Test void roleFilterRunsBeforeTopKAndNeverReturnsAdminToUser() {
+        var p=AiFixtures.properties(Path.of("."),Path.of("manifest"),"jdbc:postgresql://127.0.0.1:5433/exchange_ai_test");
+        try(var store=new PgKnowledgeStore(p)){
+            store.initialize();String index=KnowledgeLoader.hash(UUID.randomUUID().toString());
+            var docs=new ArrayList<KnowledgeCorpus.Document>();var chunks=new ArrayList<KnowledgeCorpus.Chunk>();
+            for(String role:List.of("ADMIN","USER")){
+                String path=role.toLowerCase()+".md";
+                var meta=Map.of("title",role,"version","1","minimum_role",role,"domain","security","type","policy","updated_at","2026-09-30");
+                docs.add(new KnowledgeCorpus.Document(path,"hash",meta));
+                chunks.add(new KnowledgeCorpus.Chunk(role,path,role,"Heading","1",role,"security","policy","hash",role.equals("ADMIN")?"ADMIN_SECRET_CANARY":"PUBLIC_POLICY"));
+            }
+            var weaker=AiFixtures.vector(0);weaker[1]=.5f;
+            store.publish(new KnowledgeCorpus(index,docs,chunks),Map.of("ADMIN",AiFixtures.vector(0),"USER",weaker),p.embeddingModel());
+            assertThat(store.searchForRole(index,AiFixtures.vector(0),1,.2,com.pricetrack.exchange.user.UserRole.ADMIN,java.time.Duration.ofSeconds(5)))
+                    .extracting(KnowledgeHit::role).containsExactly("ADMIN");
+            assertThat(store.searchForRole(index,AiFixtures.vector(0),1,.2,com.pricetrack.exchange.user.UserRole.USER,java.time.Duration.ofSeconds(5)))
+                    .extracting(KnowledgeHit::content).containsExactly("PUBLIC_POLICY");
+            assertThatThrownBy(() -> store.searchForRole(index,AiFixtures.vector(0),1,.2,null,java.time.Duration.ofSeconds(5)))
+                    .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        }
+    }
     @Test void realVectorSearchAtomicReplacementRollbackAndEmptyIndex() {
         var p=AiFixtures.properties(Path.of("."),Path.of("manifest"),"jdbc:postgresql://127.0.0.1:5433/exchange_ai_test");
         try(var store=new PgKnowledgeStore(p)) {
@@ -37,4 +58,3 @@ class PgKnowledgeStoreIntegrationTest {
         }
     }
 }
-
