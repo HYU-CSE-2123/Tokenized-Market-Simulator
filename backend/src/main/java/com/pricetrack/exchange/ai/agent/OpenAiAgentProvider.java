@@ -64,6 +64,10 @@ public class OpenAiAgentProvider implements AgentModelProvider {
                 ANSWERED에는 실제 사용한 evidenceId를 citationIds에 적는다. MIXED에서 두 종류 근거가 제공되면 둘 다 인용한다.
                 현재 사실은 facts에 성공 Tool의 JSON pointer와 해당 scalar의 정확한 문자열 값을 적는다.
                 decimal 문자열의 소수점과 뒤의 0, 대소문자까지 그대로 복사한다. JSON pointer는 data를 기준으로 한다.
+                facts.pointer의 루트는 해당 evidenceId Tool의 data 객체 그 자체다. /data 접두사를 붙이지 않는다.
+                예: tools 항목의 data가 {"status":"PENDING_ONCHAIN","trade":null}이면
+                pointer="/status", value="PENDING_ONCHAIN" 또는 pointer="/trade", value="null"이다.
+                /data/status, /tools/0/data/status는 잘못된 pointer다. null은 문자열 "null"로 복사한다.
                 citationIds의 문서 ID는 knowledge의 id, Tool ID는 tools의 evidenceId를 그대로 복사한다.
                 MIXED에서 tools를 설명한다면 facts를 최소 하나 반환한다. KNOWLEDGE에서는 facts를 비운다.
                 interpretation은 정책과 현재 사실의 관계를 설명하되 실제 숫자는 facts를 가리킨다.

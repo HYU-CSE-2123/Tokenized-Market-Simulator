@@ -10,11 +10,25 @@ AI Phase 4는 `AI_TOOLS_ENABLED=true`로 켜는 독립 읽기 Tool 계층입니�
 
 ## 현재 구현 상태
 
-Phase 4 승인 후 SELL 테스트와 지식·색인 회귀를 갱신했습니다. [후속 보고서](../docs/ai/phase-4-knowledge-refresh.md)는 당시 결과입니다. [Phase 5 Agent](../docs/ai/phase-5-rag-tool-agent.md)는 구현·검증·별도 재검토와 사용자 완료 승인을 받았습니다. [Phase 6 Skill](../docs/ai/phase-6-skills.md)은 승인 설계에 따라 구현·회귀·평가·별도 검토를 완료했으며 사용자 완료 승인 대기입니다.
+AI Phase 7 자동 진단은 승인 범위의 구현·검증·별도 검토를 완료했으며 사용자 완료 승인 대기입니다. [상세 보고서](../docs/ai/phase-7-event-driven-diagnosis.md)의 결과와 미검증 범위를 확인하세요. 거래 DB의 커밋된 REVIEW_REQUIRED를 polling하고 결과는 별도 AI DB에 저장합니다. 자동 거래·복구는 없습니다. 기존 웹 기준 클라이언트에는 최소 ADMIN 진단 패널이 있으며 독립 챗봇 UI는 없습니다.
+
+설정과 활성화 순서:
+
+1. `.env.example`의 AI_DIAGNOSIS_* 설정을 참고해 실제 기존 ADMIN loginId와 원장 구분 namespace를 지정합니다. 같은 원장은 같은 namespace, 원장/체인 초기화 후에는 새 namespace를 사용합니다.
+2. AI_ENABLED/AI_AGENT_ENABLED/AI_TOOLS_ENABLED/AI_SKILLS_ENABLED=true로 기동하되 AI_AUTO_DIAGNOSIS_ENABLED=false로 유지합니다. AI 지식은 기존 ADMIN `POST /api/ai/index`로 명시적으로 색인합니다.
+3. ADMIN JWT로 `POST /api/ai/diagnoses/index`를 호출해 AI DB의 진단 schema만 명시적으로 초기화합니다. 거래 schema/JPA 초기화나 서버 시작에서는 수행하지 않습니다.
+4. AI_AUTO_DIAGNOSIS_ENABLED=true로 바꾸고 서버를 재시작하면 기존 REVIEW_REQUIRED도 제한된 backlog로 감지합니다. 5초/50건/queue100/day20/7일은 초기 안전값이며 설정으로 조정합니다. 하루 quota는 UTC 기준이며 BUSY 실행0 거절은 반환합니다.
+5. `GET /api/ai/diagnoses`와 `GET /api/ai/diagnoses/{id}`는 ADMIN 전용입니다. 웹 테스트 클라이언트 ADMIN 패널에서 수동 주문 Skill과 자동 이력·상세·trace를 확인합니다. 재진단/자동 복구 endpoint는 없습니다.
+
+자동 run은 기존 Agent의 worker2/40초/Tool4/검색1 예산을 공유하며 프로세스당 최대1개입니다. QUEUED 저장은 실행 queue와 다릅니다. 취소에 응하지 않는 실제 run은 종료까지 자동 gate를 점유하고 수동 슬롯을 보존합니다. AI DB claim lease는90초이며 불명확/만료 실행은 자동 재호출하지 않습니다. 초기 admission BUSY는 실행0 조건에서만10초 간격 최대3회입니다. 결과 JSON은7일 후 제거하되 dedup marker를 유지합니다. 활성화해도 진단 실패가 거래 정산 호출에 전파되지 않습니다. polling 사이에 사라진 상태 전환의 무손실 보장은 없습니다.
+
+현재 자동 진단 이력/평가 데이터는 RAG 지식이나 대화 기억으로 ingest하지 않습니다. 저장된 출처의 승인 hash/version을 확인할 수 없으면 정책 해석·인용을 숨기고 관측 자료만 보여줍니다. 이번 작업은 실제 `.env`를 자동 변경하지 않습니다.
+
+Phase 4 승인 후 SELL 테스트와 지식·색인 회귀를 갱신했습니다. [후속 보고서](../docs/ai/phase-4-knowledge-refresh.md)는 당시 결과입니다. [Phase 5 Agent](../docs/ai/phase-5-rag-tool-agent.md)와 [Phase 6 Skill](../docs/ai/phase-6-skills.md)은 구현·회귀·평가·별도 검토 및 사용자 완료 승인을 받았습니다.
 
 제한된 Agent는 `AI_ENABLED=true`, `AI_AGENT_ENABLED=true`로 활성화하며 상태 조회에는 `AI_TOOLS_ENABLED=true`도 필요합니다(설정 후 재시작). `POST /api/ai/agent/answers`에 기존 JWT와 `{"question":"이 주문이 왜 대기 중인가요?","target":{"orderId":153}}`를 전달합니다. 견적은 target.quoteId만 지정하며 정책·시장·본인 자산 질문은 target을 생략합니다. `history`, `userId`, `role`을 받지 않습니다. KNOWLEDGE는 역할별 RAG, STATE는 인가된 조회, MIXED는 두 근거를 결합합니다. USER의 검색 후보에서 ADMIN 문서를 SQL 단계에 제외하며 기존 RAG API는 ADMIN-only입니다. `answer`는 해석, `toolEvidence`는 서버가 복사한 사실, `uncertainties`는 부분 실패·불일치입니다. 기본 Agent 비활성·읽기 전용이며 AI UI·거래 실행은 포함하지 않습니다.
 
-Skill은 위 세 설정과 `AI_SKILLS_ENABLED=true`로 활성화합니다(기본 false, 실제 `.env`는 자동 변경하지 않음). 같은 Agent API에서 optional `skillId`를 지정하거나 자동 선택을 사용합니다. ADMIN의 `settlement-debugging`은 orderId, USER/ADMIN의 `signed-quote-diagnosis`는 quoteId, `market-availability-diagnosis`는 target 없이 요청합니다. 예: `{"question":"시장 가용성을 진단해주세요","skillId":"market-availability-diagnosis"}`. 정의는 resources/ai/skills의 세 Markdown과 manifest에 있으며 고정 registry/handler를 사용합니다. 응답의 `skill`은 id/version/definitionHash, 서버 관측 diagnosis, 안전한 단계 trace입니다. 일반 응답에서는 skill을 생략합니다. trace는 현재 응답과 감사 로그에만 제공하며 DB에 저장하지 않습니다. 정의 불일치는 해당 Skill만 비활성화하고 기존 질문 경로와 거래를 보존합니다.
+Skill은 위 세 설정과 `AI_SKILLS_ENABLED=true`로 활성화합니다(기본 false, 실제 `.env`는 자동 변경하지 않음). 같은 Agent API에서 optional `skillId`를 지정하거나 자동 선택을 사용합니다. ADMIN의 `settlement-debugging`은 orderId, USER/ADMIN의 `signed-quote-diagnosis`는 quoteId, `market-availability-diagnosis`는 target 없이 요청합니다. 예: `{"question":"시장 가용성을 진단해주세요","skillId":"market-availability-diagnosis"}`. 정의는 resources/ai/skills의 세 Markdown과 manifest에 있으며 고정 registry/handler를 사용합니다. 응답의 `skill`은 id/version/definitionHash, 서버 관측 diagnosis, 안전한 단계 trace입니다. 일반 응답에서는 skill을 생략합니다. 수동 호출의 trace는 응답/감사 로그에 제공하고 DB에 저장하지 않습니다. Phase 7 자동 진단의 안전한 trace는 별도 AI 이력에 결과와 함께 저장합니다. 정의 불일치는 해당 Skill만 비활성화하고 기존 질문 경로와 거래를 보존합니다.
 
 - 자체 회원가입: `loginId`, `password`, `nickname`
 - 자체 로그인 및 JWT 액세스 토큰 발급

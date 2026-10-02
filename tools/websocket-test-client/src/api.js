@@ -33,6 +33,22 @@ export class ApiClient {
     return this.#request('/api/me');
   }
 
+  diagnoses(orderId = null, before = null) {
+    const query = new URLSearchParams();
+    if (orderId) query.set('orderId', String(orderId));
+    if (before) query.set('before', String(before));
+    return this.#request(`/api/ai/diagnoses${query.size ? `?${query}` : ''}`);
+  }
+
+  diagnosis(id) { return this.#request(`/api/ai/diagnoses/${encodeURIComponent(id)}`); }
+
+  diagnoseOrder(orderId) {
+    return this.#request('/api/ai/agent/answers', {
+      method: 'POST', body: JSON.stringify({ question: '이 주문의 검토 필요 상태와 정산 근거를 조사해줘',
+        target: { orderId }, skillId: 'settlement-debugging' }),
+    });
+  }
+
   market() {
     return this.#request('/api/markets/mSEC');
   }

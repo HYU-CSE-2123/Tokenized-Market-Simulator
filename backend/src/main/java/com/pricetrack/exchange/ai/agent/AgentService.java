@@ -27,6 +27,8 @@ public final class AgentService implements AutoCloseable {
     private final ThreadPoolExecutor workers;
     private final SkillProperties skills;
     private final SkillRegistry registry;
+    // Retained until the actual worker exits, including a timed-out non-cooperative call.
+    private final java.util.concurrent.atomic.AtomicBoolean automaticRunning=new java.util.concurrent.atomic.AtomicBoolean();
     public AgentService(AgentProperties p,Supplier<AgentModelProvider> model,Supplier<AuthorizedKnowledgeRetrieval> retrieval,
                         ToolDispatcher tools,ObjectMapper json){this(p,model,retrieval,tools,json,Duration.ofSeconds(40));}
     public AgentService(AgentProperties p,Supplier<AgentModelProvider> model,Supplier<AuthorizedKnowledgeRetrieval> retrieval,
@@ -43,6 +45,17 @@ public final class AgentService implements AutoCloseable {
         },new ThreadPoolExecutor.AbortPolicy());
     }
     public AgentResponse answer(AuthenticatedUser principal,byte[] input){
+        return answer(principal,input,false);
+    }
+    /** Server-only fixed procedure. HTTP cannot supply an origin or an automatic execution plan. */
+    public AgentResponse answerAutomatic(AuthenticatedUser principal,long orderId){
+        if(principal==null || principal.role()!=com.pricetrack.exchange.user.UserRole.ADMIN || orderId<=0)
+            return AgentResponse.failure(UUID.randomUUID().toString(),"TOOL_FORBIDDEN",403);
+        byte[] input=("{\"question\":\"이 주문의 검토 필요 상태와 정산 근거를 조사해줘\",\"target\":{\"orderId\":"+orderId+"},\"skillId\":\"settlement-debugging\"}")
+            .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return answer(principal,input,true);
+    }
+    private AgentResponse answer(AuthenticatedUser principal,byte[] input,boolean automatic){
         String runId=UUID.randomUUID().toString();long start=System.nanoTime();Future<AgentResponse> work=null;AgentResponse result;Run run=null;
         try{
             if(principal==null || principal.userId()==null || principal.userId()<=0 || principal.role()==null)throw new AgentFailure("AUTHENTICATION_REQUIRED",401);
@@ -51,7 +64,14 @@ public final class AgentService implements AutoCloseable {
             var provider=model.get();
             if(provider==null)throw new AgentFailure("AGENT_CONFIGURATION_UNAVAILABLE",503);
             run=new Run(runId,principal,request,provider,start,start+totalBudget.toNanos());
-            work=workers.submit(run::execute);
+            if(automatic){
+                if(!automaticRunning.compareAndSet(false,true))throw new RejectedExecutionException();
+                final Run captured=run;
+                FutureTask<AgentResponse> task=new FutureTask<>(captured::execute){
+                    @Override public void run(){try{super.run();}finally{automaticRunning.set(false);}}
+                };
+                try{workers.execute(task);work=task;}catch(RejectedExecutionException e){automaticRunning.set(false);throw e;}
+            }else work=workers.submit(run::execute);
             result=work.get(Math.max(1,run.deadline-System.nanoTime()),TimeUnit.NANOSECONDS);
             if(json.writeValueAsBytes(result).length>65_536)throw new AgentFailure("AGENT_OUTPUT_LIMIT",503);
         }catch(AgentFailure e){result=failure(runId,e.code(),e.http(),run);}
@@ -61,6 +81,7 @@ public final class AgentService implements AutoCloseable {
         catch(Exception e){result=failure(runId,"AGENT_UNAVAILABLE",503,run);}
         finally{if(work!=null && !work.isDone())work.cancel(true);}
         var m=result.metrics();
+        if(automatic)log.info("AutomaticDiagnosis runId={} actorId={} origin=AUTO_DIAGNOSIS status={} code={}",runId,principal.userId(),result.status(),result.error());
         log.info("ReadAgent runId={} role={} route={} status={} code={} toolCalls={} retrievalCalls={} modelCalls={} inputTokens={} outputTokens={} latencyMs={}",
                 runId,principal==null?null:principal.role(),result.route(),result.status(),result.error(),m.toolCalls(),m.retrievalCalls(),m.modelCalls(),
                 m.inputTokens(),m.outputTokens(),TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start));

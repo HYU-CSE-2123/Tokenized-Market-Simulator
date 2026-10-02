@@ -1,6 +1,6 @@
 # AI Phase 6 — 제한된 Skill 진단 절차 설계안
 
-> 2026-10-01 / 구현·검증·별도 검토 완료, 사용자 완료 승인 대기. Phase 5는 사용자 완료 승인됨.
+> 2026-10-01 구현·검증·별도 검토 완료 / 2026-10-02 사용자 완료 승인. Phase 5는 사용자 완료 승인됨.
 > 기준: master guide의 Phase 6, 실제 AgentService/ToolRegistry/ToolReadFacade/ReadOnlyReceiptClient와 현재 지식 metadata.
 > 1~10절은 승인받은 설계 기준이다. 실제 구현과 검증 기록은 11절 이후에 누적한다.
 

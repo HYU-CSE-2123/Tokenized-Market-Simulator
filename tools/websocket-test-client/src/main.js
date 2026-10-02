@@ -1,5 +1,6 @@
 import './style.css';
 import { ApiClient, ApiError } from './api.js';
+import { DiagnosisPanel } from './diagnosis.js';
 import { MarketSocket } from './websocket.js';
 import {
   CandleHistoryCursor, CandleLoadBuffer, applyPriceTick, normalizeCandles, prependCandleHistory,
@@ -30,6 +31,12 @@ const elements = Object.fromEntries(
   [...document.querySelectorAll('[id]')].map((element) => [element.id, element]),
 );
 const marketChart = new MarketChart(elements['market-chart']);
+const diagnosisPanel = new DiagnosisPanel(api, { panel: elements['diagnosis-panel'], output: elements['diagnosis-output'],
+  order: elements['diagnosis-order'], id: elements['diagnosis-id'] });
+elements['diagnosis-manual'].addEventListener('click', () => diagnosisPanel.manual());
+elements['diagnosis-list'].addEventListener('click', () => diagnosisPanel.list());
+elements['diagnosis-older'].addEventListener('click', () => diagnosisPanel.older());
+elements['diagnosis-detail'].addEventListener('click', () => diagnosisPanel.detail());
 marketChart.onNeedHistory(loadOlderCandles);
 
 const socket = new MarketSocket({
@@ -77,6 +84,7 @@ async function authRequest(action) {
     socket.disconnect();
     resetUserState();
     api.setToken(result.body.accessToken);
+    void diagnosisPanel.authorize();
     renderToken();
     return result;
   });
@@ -484,6 +492,7 @@ function clearEvents() {
 }
 
 function resetUserState() {
+  diagnosisPanel.clear();
   clearEvents();
   lastOrder = null;
   tradeQuotes.BUY = null;

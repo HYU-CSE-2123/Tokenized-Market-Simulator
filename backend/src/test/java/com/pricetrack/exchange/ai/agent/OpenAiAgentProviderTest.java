@@ -52,6 +52,7 @@ class OpenAiAgentProviderTest {
         assertThat(result.status()).isEqualTo("ANSWERED");assertThat(result.facts()).hasSize(1);
         assertThat(result.usage().outputTokens()).isEqualTo(9);
         assertThat(json.readTree(requested).path("max_output_tokens").asInt()).isEqualTo(1600);
+        assertThat(requested).contains("/data 접두사를 붙이지 않는다", "/data/status");
         generated.put("role","ADMIN");output(generated);
         assertThatThrownBy(() -> provider().synthesize("왜?",Route.MIXED,json.createObjectNode(),Duration.ofSeconds(10)))
             .hasMessage("INVALID_AGENT_EVIDENCE");

@@ -2,10 +2,10 @@
 title: "시스템 책임과 지식의 경계"
 domain: architecture
 type: overview
-version: 5
+version: 6
 status: active
 minimum_role: USER
-updated_at: 2026-10-01
+updated_at: 2026-10-02
 ---
 
 # 시스템 책임과 지식의 경계
@@ -45,11 +45,13 @@ Phase 4에는 독립적인 읽기 Tool 8개를 구현했다. getOrder/getQuote/g
 
 RAG는 정적 규칙, Tool은 조회 시점의 사실을 제공한다. Phase 5의 제한된 RAG+Tool Agent는 KNOWLEDGE/STATE/MIXED로 질문을 분류하고 서버가 정한 읽기 경로만 실행한다. AI_AGENT_ENABLED 기본 false이며 USER/ADMIN의 POST /api/ai/agent/answers에 연결된다. 기존 Basic RAG의 현재 상태 질문은 여전히 LIVE_DATA_REQUIRED이며 Agent API와 구분한다.
 
-Agent는 명시적 주문/견적 target의 소유권을 모델 호출 전에 확인한다. 문서 규칙과 성공 Tool 사실을 분리하고 인용 ID·사실 값을 검증한다. 조회 실패나 DB/체인 불일치는 불확실성으로 제공하며 원인을 확정하거나 거래를 실행하지 않는다. 이벤트 자동 진단·AI UI·장기 기억은 아직 없다. 주문 실행·서명·강제 정산을 AI에 허용하지 않는다.
+Agent는 명시적 주문/견적 target의 소유권을 모델 호출 전에 확인한다. 문서 규칙과 성공 Tool 사실을 분리하고 인용 ID·사실 값을 검증한다. 조회 실패나 DB/체인 불일치는 불확실성으로 제공하며 원인을 확정하거나 거래를 실행하지 않는다. 주문 실행·서명·강제 정산을 AI에 허용하지 않는다.
 
 Phase 6의 Skill은 버전과 승인 hash가 있는 배포 정의와 고정 조사 handler다. settlement-debugging은 ADMIN 전용 주문 조사, signed-quote-diagnosis는 인가된 견적 조사, market-availability-diagnosis는 단일 시장 가격 스냅샷 조사다. AI_SKILLS_ENABLED 기본 false이며 Agent와 Tool 경계를 그대로 사용한다. 명시 skillId는 분류를 생략하고 자동 선택은 기존 분류 한 번에서만 한다. 같은 run의 Tool 최대4, 검색1, 모델2 예산과 worker2를 공유한다. 반복 polling과 재계획은 없다.
 
-Skill은 역할과 허용 domain을 SQL 후보 단계에서 동시에 제한한다. 정책이 없으면 검색 범위를 넓히지 않는다. 안전한 단계 trace와 서버 관측 분류를 반환하며 현재 만료와 소비를 별도로 표시한다. 실패 receipt만으로 서명, 만료 또는 최소 수령량 오류의 원인을 확정하지 않는다. 조회 연결이 불일치하면 후속 분기를 중단하며 자동 복구와 진단 영속 저장은 하지 않는다.
+Skill은 역할과 허용 domain을 SQL 후보 단계에서 동시에 제한한다. 정책이 없으면 검색 범위를 넓히지 않는다. 안전한 단계 trace와 서버 관측 분류를 반환하며 현재 만료와 소비를 별도로 표시한다. 실패 receipt만으로 서명, 만료 또는 최소 수령량 오류의 원인을 확정하지 않는다. 조회 연결이 불일치하면 후속 분기를 중단하며 자동 복구는 하지 않는다.
+
+Phase 7은 커밋된 blockchain_transactions의 REVIEW_REQUIRED를 별도 polling으로 감지하고 settlement-debugging을 자동 실행한다. 주문 상태에 REVIEW_REQUIRED를 추가한 것이 아니다. AI_AUTO_DIAGNOSIS_ENABLED는 기본 false이며 기존 ADMIN 계정을 확인하고 Agent 예산을 공유한다. 중복 예약·claim·결과는 거래 DB가 아닌 AI DB에 기록한다. 자동 작업은 실제 Agent 실행 최대1개로 제한하고, 실행 여부가 불명확한 작업을 자동 재호출하지 않는다. ADMIN 전용 진단 이력과 최소 웹 패널에서 관측 시각·출처·trace·불확실성을 확인하며 자동 수정은 없다. 진단 이력은 RAG 지식이나 대화 기억이 아니다. 장시간 대기 자동 진단·범용 챗봇·장기 기억은 구현하지 않았다.
 
 현재 가격, 특정 계정 잔고, 주문 상태, txHash·receipt는 이 문서에서 알 수 없다. 최신 인가 조회가 없으면 확인 불가로 설명한다. 승인된 Phase 2 선택은 기존 Boot 내부 어댑터, 별도 pgvector DB, text-embedding-3-small 1536차원과 gpt-5.6-terra다. 거래 DB와 AI DB 사이의 분산 트랜잭션은 없다.
 

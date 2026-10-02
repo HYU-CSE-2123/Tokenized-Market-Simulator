@@ -163,6 +163,17 @@
           <div id="portfolio-events" class="event-list empty" data-empty="포트폴리오 이벤트가 없습니다."></div>
         </article>
       </section>
+      <section class="panel" id="diagnosis-panel" hidden>
+        <h2>ADMIN 읽기 전용 진단</h2>
+        <p>실행 당시 관측입니다. 현재 거래 상태와 다를 수 있으며 자동 수정·재전송은 하지 않습니다.</p>
+        <label>주문 ID <input id="diagnosis-order" type="number" min="1" /></label>
+        <button id="diagnosis-manual">주문 수동 진단</button>
+        <button id="diagnosis-list">자동 진단 이력 조회</button>
+        <button id="diagnosis-older">이전 이력 페이지</button>
+        <label>진단 ID <input id="diagnosis-id" type="number" min="1" /></label>
+        <button id="diagnosis-detail">상세·근거·trace 조회</button>
+        <pre id="diagnosis-output"></pre>
+      </section>
     </main>
 
     <script type="module" src="/src/main.js"></script>

@@ -70,9 +70,9 @@ class KnowledgeLoaderTest {
         assertThat(corpus.documents().stream().filter(d -> d.metadata().get("minimum_role").equals("ADMIN")))
                 .extracting(KnowledgeCorpus.Document::path).containsExactly("transaction-recovery-runbook.md");
         assertThat(corpus.documents().stream().filter(d -> d.path().equals("authorization-policy.md") || d.path().equals("system-overview.md")))
-                .allSatisfy(d -> assertThat(d.metadata().get("version")).isEqualTo("5"));
+                .allSatisfy(d -> assertThat(d.metadata().get("version")).isEqualTo("6"));
         assertThat(corpus.chunks().stream().map(KnowledgeCorpus.Chunk::content).reduce("", String::concat))
-                .contains("Phase 4", "getPortfolio", "제한된 RAG+Tool Agent", "settlement-debugging", "AI_SKILLS_ENABLED", "이벤트 자동 진단·AI UI·장기 기억은 아직 없다")
+                .contains("Phase 4", "getPortfolio", "제한된 RAG+Tool Agent", "settlement-debugging", "AI_SKILLS_ENABLED", "AI_AUTO_DIAGNOSIS_ENABLED", "장기 기억은 구현하지 않았다")
                 .doesNotContain("개인 데이터 Tool은 아직 구현되지 않았다", "Tool·Agent는 아직 구현하지 않았다");
         assertThat(corpus.chunks()).allSatisfy(c -> {
             assertThat(c.content().getBytes(StandardCharsets.UTF_8).length).isLessThanOrEqualTo(800);

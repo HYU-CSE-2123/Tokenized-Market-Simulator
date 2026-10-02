@@ -31,6 +31,15 @@ server:
 # 애플리케이션 커스텀 설정
 app:
   ai:
+    diagnosis:
+      enabled: ${AI_AUTO_DIAGNOSIS_ENABLED:false}
+      actor-login-id: ${AI_DIAGNOSIS_ACTOR_LOGIN_ID:}
+      source-namespace: ${AI_DIAGNOSIS_SOURCE_NAMESPACE:}
+      poll-interval-ms: ${AI_DIAGNOSIS_POLL_INTERVAL_MS:5000}
+      batch-size: ${AI_DIAGNOSIS_BATCH_SIZE:50}
+      queue-limit: ${AI_DIAGNOSIS_QUEUE_LIMIT:100}
+      daily-limit: ${AI_DIAGNOSIS_DAILY_LIMIT:20}
+      retention-days: ${AI_DIAGNOSIS_RETENTION_DAYS:7}
     skills:
       enabled: ${AI_SKILLS_ENABLED:false}
     agent:

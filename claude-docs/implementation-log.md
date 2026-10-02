@@ -2142,3 +2142,33 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 검토자 직접 실행57개(SkillService22/Registry4/HTTP3, AgentService19/AuthorizedKnowledgeRetrieval5/OpenAiAgentProvider4) 모두 통과, 실패·오류·skip0. diff 검사도 통과. 현재 XML은 이 표적57개이며 구현자 최종 전체298개 결과와 구분한다.
 - 실제 공급자·scoped·golden 원시 수치를 대조했다. 검토자는 공유 DB/Anvil/공급자/forge/웹을 재실행하지 않았고 `.env`·키를 읽지 않았다. 실제 Anvil 성공 MATCH/운영 Toss 장애·사용자 거래/자연어 진실성 한계는 그대로 남긴다.
 - 검토 후 제품·테스트 변경 없이 완료·검토 기록만 반영했다. AI Phase 6 구현·검증·별도 검토 완료, 사용자 완료 승인 대기. Phase 7은 시작하지 않았으며 실제 `.env`와 기본 Skill 비활성 설정을 보존했고 커밋은 실행하지 않았다.
+
+# AI Phase 6 사용자 완료 승인 / Phase 7 자동 진단 설계 제안
+
+> 2026-10-02. 사용자 Phase 6 완료 승인. 시작 HEAD5f114db, 작업 트리 깨끗함. Phase 7 구현 승인 대기.
+
+- master guide Phase7과 실제 코드를 대조해 docs/ai/phase-7-event-driven-diagnosis.md에 범위·시점·중복·격리·저장·권한·웹·테스트 계획을 제안했다.
+- REVIEW_REQUIRED는 OrderStatus가 아니라 BlockchainTransactionStatus라는 실제 경계를 반영했다. source state version/전환 시각이 없다는 한계를 명시하고 기존 거래 상태/schema를 변경하지 않는 커밋 상태 polling을 제안했다.
+- AI DB 작업/이력, 고유 사건·원자 claim·불명확 실행 자동 재호출 금지, ADMIN actor, 공유 Agent 예산과 자동 run 상한, 결과 TTL+dedup marker, 최소 ADMIN 웹 패널은 제안이며 구현되지 않았다.
+- 읽기 전용 조사와 설계/승인 기록만 갱신했다. 제품·테스트·설정·active 지식/manifest/색인·DB·실제 .env 변경과 공급자/테스트 실행은 없다. 동작 없는 문서 제안으로 별도 검토는 구현 후 수행한다.
+- 사용자 승인 후 제안 범위를 구현하며 자동 복구·장시간 대기 trigger·Kafka/outbox·새 Tool은 제외한다.
+
+# AI Phase 7: 운영 이벤트 자동 진단 — 구현·검증/별도 검토 준비
+
+> 2026-10-02. 사용자 설계 승인. HEAD5f114db, 이전 설계/Phase6 승인 문서 변경을 보존했다.
+
+- ai/diagnosis에서 독립 polling/dispatcher, non-locking JPA projection과 DB ADMIN actor, private AI JDBC pool, unique 예약/claim/UTC quota/lease/TTL marker, 안전한 결과 DTO·승인 guard, ADMIN 조회/명시 schema 초기화를 구현했다.
+- Agent의 서버 고정 settlement-debugging 경로와 실제 worker 종료까지 유지되는 자동 gate를 추가했다. 거래 entity/schema/service/Tool 목록/컨트랙트는 변경하지 않았다. 초기 안전값은 설정이며 실제 .env는 변경하지 않았다.
+- 웹 기존 클라이언트 최소 ADMIN 수동 Skill/자동 이력·keyset 페이지/상세·trace 패널, 안전한 텍스트 출력과 계정 교체 stale 응답 차단을 추가했다. 지식9개 구조 유지, system/authorizationv6와 manifest/hash를 갱신했다.
+- 신규24개 실행 통과(동시 예약/claim·quota·BUSY3회·lease·TTL·commit/rollback·권한·승인·non-cooperative gate·실제 PostgreSQL/Anvil 불변성). 전체323 중312통과/11skip/실패·오류0, forge36·웹34/build88 통과. live Java1은 별도 opt-in이다.
+- 실제 공급자 자동3시나리오 정상 PARTIAL/지정 Skill·trace8·Tool4/모델1/검색1과 저장·중복 억제 확인. 기존 공급자 회귀의 /data/status 잘못된 포인터를 발견해 지침 예시를 보강하고 동일 Agentroute6/6·Skill선택6/6을 통과했다. assertions/서버 검증을 완화하지 않았다. Agent ANSWERED3/PARTIAL3이며 이전4/2와 구분한다.
+- golden12/12·MRR0.8819444444444443·직접근거12/12·K회귀0·무관답변0/8·핵심ANSWERED2/2·식별자6/8·scoped3/3 유지. 지식9문서57청크, local exchange_ai index6aa55b18266a78c1e86430144dadc78578cab775f4277c7bd44ec977446994ba 발행.
+- 전용 PostgreSQL 모의 buy6회씩 중앙값18.1837ms/AI DB 장애 중19.98405ms. 작은 표본이며 온체인/SLA/무영향을 보장하지 않는다. 실제 운영 Toss/사용자 거래/Anvil 성공 MATCH/브라우저 수동 시연/프로세스 kill·다중 서버 chaos는 미검증이다.
+- 상세 파일·명령·실패/보강·raw 보고서·한계는 docs/ai/phase-7-event-driven-diagnosis.md에 누적했다. 최종 동결 후 독립 검토를 요청하며 아직 완료로 표시하지 않는다. 커밋·Phase8 구현은 하지 않았다.
+
+## 최종 별도 검토·완료 상태 (2026-10-02)
+
+- 독립 review_ai_phase7: 발견된 필수 수정 없음. 신규 제품8파일/SQL/테스트8클래스와 Agent/Provider/설정/웹/지식/manifest/문서/공유 결과를 직접 확인했다. 거래 원장 불변, ADMIN/출처 승인, 중복/claim/lease/quota, 취소 불응 gate 및 불명확 실행 재호출 금지 경계를 검토했다.
+- 검토자 직접 웹34/34 및 diff 검사 통과. 격리 Java는 Gradle cache lock 권한 오류/승인 미완료로 실행하지 못했다. 전체323 중312통과/11skip는 구현자 결과이며 검토자 직접 재실행 결과와 구분한다. 원시 평가 수치는 대조했으며 공유 DB/Anvil/외부 공급자/.env/키에는 접근하지 않았다.
+- 선택 제안: 결과 본문 없는 invalid SKIPPED/최종 BUSY FAILED marker의 내부 tx_hash/claimed_by도 다른 종료 경로와 TTL을 통일할 수 있다. 승인된7일 결과 본문 계약 위반은 아니며 이번 제품은 추가 변경하지 않았다. 상세 제안과 미검증 항목은 Phase7 보고서에 남긴다.
+- 최종 검토 이후 완료/검토 기록과 안내 상태만 갱신했다. AI Phase7 구현·검증·별도 검토 완료, 사용자 완료 승인 대기. 실제 .env와 운영 진단 schema는 활성화/초기화하지 않았으며 커밋·Phase8은 진행하지 않았다.

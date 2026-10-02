@@ -1,0 +1,29 @@
+{
+  "phase": "AI Phase 7", "date": "2026-10-02", "status": "completed-awaiting-user-acceptance",
+  "initialSafetyLimits": {"pollIntervalMs":5000,"batchSize":50,"queued":100,"dailyClaimsUtc":20,"resultRetentionDays":7,"leaseSeconds":90,"busyMaxAdmissions":3,"busyDelaySeconds":10},
+  "backend": {"tests":323,"passed":312,"skipped":11,"failures":0,"errors":0,"diagnosisExecuted":24},
+  "contracts": {"passed":36,"failures":0}, "web": {"passed":34,"failures":0,"buildModules":88},
+  "retrieval": {
+    "phase2Baseline":"10/12","hits":12,"total":12,"mrrAt5":0.8819444444444443,"directEvidence":12,
+    "regressionsFromK":0,"negativeCandidates":5,"negativeFalseAnswers":0,"negativeTotal":8,"criticalAnswered":2,
+    "identifierHits":6,"identifierTotal":8,"scopedHits":3,"scopedTotal":3,"documents":9,"chunks":57,
+    "publishedLocalIndex":"6aa55b18266a78c1e86430144dadc78578cab775f4277c7bd44ec977446994ba"
+  },
+  "liveDiagnosis": {
+    "model":"gpt-5.6-terra","completed":3,"normalPartial":3,"dependencyFailures":0,
+    "stateSource":"isolated H2 and receipt fixtures; actual model/embedding/pgvector/history database",
+    "inputTokens":9129,"outputTokens":2185,"minLatencyMs":7262,"maxLatencyMs":9631,
+    "usageScope":"Final three-scenario automatic diagnosis run only; excludes prior runs, embedding, golden and Agent/Skill regression",
+    "scenarios":[
+      {"scenario":"RECEIPT_NOT_FOUND","classification":"REVIEW_REQUIRED_OBSERVED","toolCalls":4,"modelCalls":1,"retrievalCalls":1,"traceSteps":8},
+      {"scenario":"EVENT_MISMATCH","classification":"INCONSISTENCY_OBSERVED","toolCalls":4,"modelCalls":1,"retrievalCalls":1,"traceSteps":8},
+      {"scenario":"FAILED_RECEIPT","classification":"REVIEW_REQUIRED_OBSERVED","toolCalls":4,"modelCalls":1,"retrievalCalls":1,"traceSteps":8}
+    ]
+  },
+  "liveRegression":{"agentRoutes":6,"agentTotal":6,"agentAnswered":3,"agentPartial":3,"previousAgentAnswered":4,"previousAgentPartial":2,"skillSelections":6,"skillTotal":6,"skillPartial":6,"dependencyFailures":0},
+  "tradingLatency":{"sampleCountPerMode":6,"baselineMedianMs":18.1837,"aiUnavailableMedianMs":19.98405,"source":"dedicated PostgreSQL simulated buy, unavailable AI DB","notSlaOrStatisticalGuarantee":true},
+  "verification":{"concurrentReservations":8,"reservationWinners":1,"concurrentClaims":2,"claimWinners":1,"uncertainExecutionReplay":0,"transactionRowsAndQuoteAndLockedBalanceUnchanged":true,"anvilNonceBalanceBlockUnchanged":true},
+  "review":{"status":"no-mandatory-findings","independent":true,"reviewer":"review_ai_phase7","directWebPassed":34,"directDiffCheckPassed":true,"directJavaExecuted":false,"javaNotExecutedReason":"Gradle cache lock permission failure and escalation not completed","sharedServicesOrProviderRerun":false,"suggestion":"Unify metadata TTL for result-free invalid SKIPPED and terminal AGENT_BUSY FAILED markers; current result-body retention contract is met"},
+  "unverified":["Actual Anvil successful MATCH and production Toss/live-user incident diagnosis","Process-kill and multi-server long-running chaos; lease/cancellation boundaries were simulated","Browser manual ADMIN panel demonstration","Natural-language truthfulness and every incident cause","Polling cannot preserve transient state transitions removed before detection"],
+  "notes":["Actual env and production diagnosis schema were not activated/initialized","First live Agent/Skill regression rejected /data-prefixed fact pointers; prompt examples were clarified without weakening validation, then unchanged scenarios passed","Historical shared Phase 5/6 result JSON was not overwritten; ignored raw reports now contain current regression runs","Latest test XML may be replaced by subsequent targeted live/reviewer executions"]
+}

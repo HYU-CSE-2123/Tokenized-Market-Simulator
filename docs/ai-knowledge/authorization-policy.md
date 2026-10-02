@@ -2,10 +2,10 @@
 title: "사용자 데이터와 관리자 권한 경계"
 domain: security
 type: policy
-version: 5
+version: 6
 status: active
 minimum_role: USER
-updated_at: 2026-10-01
+updated_at: 2026-10-02
 ---
 
 # 사용자 데이터와 관리자 권한 경계
@@ -41,6 +41,8 @@ getReceiptSummary는 인가된 orderId에서 저장된 txHash를 찾는다. 임�
 Phase 6의 settlement-debugging Skill은 ADMIN-only이며 USER의 기존 본인 주문 설명을 대체하거나 차단하지 않는다. signed-quote-diagnosis는 본인 견적과 서버가 검증한 연결 주문만 조사하고 market-availability-diagnosis는 공개 시장 스냅샷만 조사한다. 정의와 모델은 코드 registry의 역할·Tool·domain 상한을 넓힐 수 없다. 검색은 기존 minimum_role과 Skill domain을 후보 단계에서 함께 적용하며 근거가 없을 때 전체 검색으로 우회하지 않는다. trace에는 ID, 전체 DTO, txHash, 서명, 키와 모델 사고 과정을 담지 않는다.
 
 비밀키·JWT·비밀번호·signature·raw transaction을 모델에 전달하지 않는다. 인가된 요약 DTO만 읽기 Tool 대상으로 삼는다. 로그인·견적 신규 발급·주문·faucet·서명·전송·강제 정산은 읽기 Tool이 아니다.
+
+Phase 7 자동 진단은 서버가 설정한 기존 ADMIN 계정의 현재 DB 역할을 확인하고 고정 settlement-debugging만 실행한다. 이벤트나 요청 body가 role·Skill 절차·실행 origin을 바꾸지 못한다. 자동 진단 이력 조회·명시적 AI DB schema 초기화는 ADMIN 전용이며 USER에게 제공하지 않는다. 이력은 허용된 관측·출처 metadata·해석·trace만 AI DB에 저장하고 비밀값·RAG 본문·provider 원문은 저장하지 않는다. 승인 문서 hash/version을 재확인할 수 없으면 저장된 정책 해석·인용을 숨긴다. 이력 저장과 자산·주문 상태 변경은 서로 다른 행위이며 자동 재거래·복구 권한은 없다.
 
 현재 사용자나 특정 주문 소유권을 문서만으로 판정할 수 없다. 인가 조회에 실패하면 접근 범위를 넓히거나 관리자 역할을 가정하지 않고 확인할 수 없다고 응답한다.
 
