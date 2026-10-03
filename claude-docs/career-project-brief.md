@@ -1,6 +1,6 @@
 # 자소서 작성용 프로젝트 브리프 — Tokenized Market Simulator
 
-> 작성 기준일: 2026-09-27
+> 작성 기준일: 2026-10-03 (AI Phase8 구현·평가·별도 검토 완료, 사용자 완료 승인 대기)
 > 용도: 자기소개서·이력서·면접 답변을 작성하는 사람 또는 AI 에이전트에게 전달하는 사실 기준 문서  
 > 중요: `[계획]`, `[진행 중]`, `[담당 외]` 항목을 완료된 성과처럼 서술하지 않는다.
 
@@ -22,6 +22,7 @@ Ethereum ERC-20 기반 모의 원화 `mKRW`로 삼성전자 실시간 기준 가
 - 실제 시세 REST·WebSocket 연동과 OHLCV 집계
 - 전체 MVP 흐름을 실행하는 브라우저 REST·STOMP 검증 클라이언트
 - 기술 설계, 테스트 전략, 실행 및 인수인계 문서
+- 별도 pgvector 지식 검색, 권한 기반 read-only Tool·Agent·Skill, 운영 이벤트 자동 진단과 AI 평가/보안/관측성
 
 Android 앱의 실제 구현은 다른 담당자의 범위이며 현재 개발 우선순위에서도 제외되어 있다. 백엔드·컨트랙트의 모든 기능을 먼저 웹에서 검증하고, 자소서에서는 Android를 직접 구현했다고 쓰지 않고 “Android 담당자가 연결할 수 있도록 REST·STOMP 계약과 웹 검증 클라이언트를 제공했다”라고 표현한다.
 
@@ -140,6 +141,16 @@ Smart Contracts
 - Toss 휴장 중 신규 견적이 `409 MARKET_CLOSED`로 차단되는 실제 정책 확인
 - 실제 Toss 장중 브라우저 매수·매도 전체 시연과 백엔드·RPC 장애 복구 수동 인수는 아직 대기
 
+### 4.9 AI 조회·진단 확장 `[Phase1~7 완료 승인·Phase8 검증/별도 검토 완료·사용자 완료 승인 대기]`
+
+- 기존 Spring Boot 내부 모듈과 얇은 provider adapter, 거래 DB/JPA와 별도의 PostgreSQL+pgvector/volume을 사용한다. Spring AI·Kafka·Redis·외부 검색 서버는 도입하지 않았다.
+- 승인 지식9개를 role/domain·version/content hash/manifest/indexVersion으로 관리하고, Markdown 청크와 text-embedding-3-small1536 semantic 검색을 구현했다. Hybrid는 비교 실험이며 기본 경로가 아니다.
+- gpt-5.6-terra 기반 KNOWLEDGE/STATE/MIXED Agent가 승인 정책과8개 읽기 Tool의 관측 사실을 결합한다. USER 본인 조회·ADMIN 운영 조회를 서버에서 강제하고 Tool4/검색1/모델2·40초·worker2로 제한한다.
+- settlement-debugging, signed-quote-diagnosis, market-availability-diagnosis의3개 고정 Skill/registry/handler와 안전한 단계 trace를 구현했다.
+- 커밋된 REVIEW_REQUIRED를 독립 polling하고 AI DB fingerprint unique·claim/lease/quota로 자동 settlement-debugging과 ADMIN 이력을 연결한다. 자동 복구·거래·잔고 변경은 없다.
+- `[구현·회귀 검증]` Phase8의 종료 marker 메타 TTL 보완, 고정 label 관측 집계/ADMIN API, 질문·문서·Tool 주입 및 secret canary 검증을 추가했다. 실제 공급자 최종 평가와 별도 검토 상태는 [AI 평가 보고서](../docs/ai/EVALUATION_REPORT.md)를 따른다.
+- 진단 state/receipt fixture와 실제 모델/embedding/pgvector 평가를 운영 Toss·실사용자 장애 검증으로 서술하지 않는다. 완전한 자연어 정확성·무손실 polling·프로덕션 SLA를 보장하지 않는다.
+
 ## 5. 정량적으로 확인된 검증
 
 - Solidity Foundry 테스트: 36개 통과
@@ -147,11 +158,13 @@ Smart Contracts
 - Anvil 선택 통합 테스트: 실제 EIP-712 서명 견적, 컨트랙트 읽기, buy·sell 전송·Vault 정산과 receipt 처리 검증
 - PostgreSQL 선택 통합 테스트: 동일 견적을 동시에 소비해 한 요청만 성공하는지 검증
 - 실제 STOMP 통합 테스트: 공개 가격·체결, JWT 개인 queue, SockJS, 사용자 간 메시지 격리 검증
-- 웹 단위 테스트: 30개 통과, 실패 0개
+- 웹 단위 테스트: 34개 통과, 실패 0개
 - Vite production build 성공
 - 실제 Toss 연동에서 현재가 변화, 여섯 캔들 주기, 페이지 중복 없는 과거 봉 조회와 WebSocket 실시간 갱신 확인
 
 테스트 개수는 이후 코드가 변경되면 최신 테스트 결과로 갱신해야 한다.
+
+AI Phase8 최종 전체 회귀: backend334 중322통과/12skip/실패·오류0. skip은 pass가 아니다. AI 검색은 Phase2 hit@5 10/12에서 채택 K의12/12, MRR0.8819로 개선했고 Phase8도 직접근거12/12·무관 오답0/8과 함께 유지했다. 실제 공급자 대표8개는 정상응답6개(ANSWERED2/PARTIAL4)·기대한 안전거부2개로 통과했다. 작은 고정/fixture 평가이며 운영 정확도·모든 질문의 안전성을 보증하지 않는다.
 
 ## 6. 핵심 문제와 해결 경험
 
@@ -319,6 +332,7 @@ Smart Contracts
 | 외부 API 연동 | Toss REST·WebSocket 인증, 현재가·시장 상태·캔들 수신, 공급자 장애와 가격 신선도 처리 |
 | 실시간 데이터 | REST 과거 봉과 WebSocket tick 병합, OHLCV 다중 주기 집계, UTC 저장·KST 표시 |
 | 협업·인수인계 | 역할별 패키지·주석·공통 문서, Android와 독립적으로 실행 가능한 웹 검증 클라이언트 |
+| AI 시스템 안전성 | 승인 지식·권한/domain 검색, read-only Tool, 고정 Skill, 호출 예산·관측·자동 진단 중복/불명확 실행 차단 |
 
 ## 10. STAR 소재
 
@@ -384,6 +398,7 @@ Smart Contracts
 8. Toss 시세 연동과 웹 차트는 완료 기능이지만 실제 삼성전자 주식 거래 기능이라고 표현하지 않는다.
 9. 향후 계획은 문항이 개선점·입사 후 계획·확장성을 요구할 때만 사용한다.
 10. Phase 6.3의 자동 경계 검증은 완료됐지만 실제 Toss 장중 브라우저 매수·매도와 장애 복구 수동 인수는 완료됐다고 쓰지 않는다.
+11. AI는 거래 자동 실행/복구나 투자 조언이 아닌 조회·설명·진단이다. 검색 hit와 답변 정확도, fixture 평가와 운영 장애 검증을 구분하고, Hybrid/Spring AI/별도 모니터링 서버를 사용했다고 쓰지 않는다. Phase8 최종 평가/검토의 완료 여부는 평가 보고서에 따르며 자연어 정확도100%를 주장하지 않는다.
 
 ## 13. 추가로 사용자에게 확인해야 할 정보
 
@@ -407,3 +422,4 @@ Smart Contracts
 - `코드 구조 및 역할.md`: 컨트랙트와 백엔드 코드 해설
 - `backend/README.md`: 실행 환경, REST·WebSocket, 온체인 연동 방법
 - `tools/websocket-test-client/README.md`: 브라우저 연동 검증 절차
+- `docs/ai/AI_ARCHITECTURE.md`, `EVALUATION_REPORT.md`, `RUNBOOK.md`: AI 구조·검증·운영과 미검증 경계

@@ -27,6 +27,8 @@ public final class AgentService implements AutoCloseable {
     private final ThreadPoolExecutor workers;
     private final SkillProperties skills;
     private final SkillRegistry registry;
+    private com.pricetrack.exchange.ai.observability.AiObservability observation;
+    public AgentService observe(com.pricetrack.exchange.ai.observability.AiObservability value){observation=value;return this;}
     // Retained until the actual worker exits, including a timed-out non-cooperative call.
     private final java.util.concurrent.atomic.AtomicBoolean automaticRunning=new java.util.concurrent.atomic.AtomicBoolean();
     public AgentService(AgentProperties p,Supplier<AgentModelProvider> model,Supplier<AuthorizedKnowledgeRetrieval> retrieval,
@@ -67,11 +69,11 @@ public final class AgentService implements AutoCloseable {
             if(automatic){
                 if(!automaticRunning.compareAndSet(false,true))throw new RejectedExecutionException();
                 final Run captured=run;
-                FutureTask<AgentResponse> task=new FutureTask<>(captured::execute){
+                FutureTask<AgentResponse> task=new FutureTask<>(()->observedRun(runId,captured)){
                     @Override public void run(){try{super.run();}finally{automaticRunning.set(false);}}
                 };
                 try{workers.execute(task);work=task;}catch(RejectedExecutionException e){automaticRunning.set(false);throw e;}
-            }else work=workers.submit(run::execute);
+            }else {final Run captured=run;work=workers.submit(()->observedRun(runId,captured));}
             result=work.get(Math.max(1,run.deadline-System.nanoTime()),TimeUnit.NANOSECONDS);
             if(json.writeValueAsBytes(result).length>65_536)throw new AgentFailure("AGENT_OUTPUT_LIMIT",503);
         }catch(AgentFailure e){result=failure(runId,e.code(),e.http(),run);}
@@ -81,6 +83,11 @@ public final class AgentService implements AutoCloseable {
         catch(Exception e){result=failure(runId,"AGENT_UNAVAILABLE",503,run);}
         finally{if(work!=null && !work.isDone())work.cancel(true);}
         var m=result.metrics();
+        if(observation!=null){
+            String dependency=result.uncertainties().stream().filter(c->Set.of("SYNTHESIS_UNAVAILABLE","PLAN_UNAVAILABLE","RAG_UNAVAILABLE","KNOWLEDGE_APPROVAL_UNVERIFIED","AGENT_CONTEXT_LIMIT").contains(c)).findFirst().orElse(null);
+            observation.record("AGENT",result.route(),runId,start,result.httpStatus()<400 && dependency==null,
+                result.error()!=null?result.error():dependency!=null?dependency:result.status(),0,null,null);
+        }
         if(automatic)log.info("AutomaticDiagnosis runId={} actorId={} origin=AUTO_DIAGNOSIS status={} code={}",runId,principal.userId(),result.status(),result.error());
         log.info("ReadAgent runId={} role={} route={} status={} code={} toolCalls={} retrievalCalls={} modelCalls={} inputTokens={} outputTokens={} latencyMs={}",
                 runId,principal==null?null:principal.role(),result.route(),result.status(),result.error(),m.toolCalls(),m.retrievalCalls(),m.modelCalls(),
@@ -90,6 +97,7 @@ public final class AgentService implements AutoCloseable {
                 result.skill().trace().stream().map(t -> t.stepId()+":"+t.status()+":"+t.resultCode()).toList());
         return result;
     }
+    private AgentResponse observedRun(String id,Run run){return observation==null?run.execute():observation.correlated(id,run::execute);}
     private AgentResponse failure(String id,String code,int http,Run run){
         if(run==null)return AgentResponse.failure(id,code,http);
         return new AgentResponse(id,"ERROR",run.route,"요청을 처리할 수 없습니다.",null,List.of(),List.of(),List.of(),

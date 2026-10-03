@@ -1,0 +1,16 @@
+{
+  "phase":"AI Phase 8","date":"2026-10-03","status":"completed-awaiting-user-acceptance",
+  "eventKey":{"existingFormat":"SHA-256 lowercase hex fingerprint of namespace:transactionId:normalizedTxHash:REVIEW_REQUIRED","rawCompositePersisted":false,"identityFormatChanged":false,"terminalMetadataTtlUnified":true,"legacyBackfill":true,"dedupAfterPurge":true},
+  "initialFullBackend":{"tests":333,"passed":321,"skipped":12,"failures":0,"errors":0},
+  "finalFullBackend":{"tests":334,"passed":322,"skipped":12,"failures":0,"errors":0,"newDeterministicExecuted":10},
+  "contracts":{"passed":36,"failures":0},"web":{"passed":34,"failures":0,"buildModules":88},
+  "retrieval":{"phase2Hits":10,"hits":12,"total":12,"mrrAt5":0.8819444444444443,"directEvidence":12,"regressionsFromK":0,"negativeCandidates":5,"negativeFalseAnswers":0,"negativeTotal":8,"criticalAnswered":2,"identifierHits":6,"identifierTotal":8,"scopedHits":3,"scopedTotal":3,"documents":9,"chunks":57,"knowledgeAndManifestAndServiceIndexChanged":false},
+  "live":{"representativeRequests":8,"expectedOutcomes":8,"normalAnswered":2,"normalPartial":4,"safeRefusals":2,"dependencyFailures":0,"skillTypes":3,"javaOptInTestsPassed":2,"stateSource":"isolated H2 and receipt fixtures; actual provider/embedding/pgvector/history",
+    "modelHttpCalls":17,"chatInputTokens":24920,"chatOutputTokens":3171,"chatUsageUnknown":0,"embeddingHttpCalls":8,"embeddingInputTokens":170,"embeddingUsageUnknown":0,"goldenQueryVectorsReused":true,
+    "agentLatency":{"sampleCount":7,"minMs":1358,"medianMs":6130,"p95NearestRankMs":7726,"maxMs":7726,"notSla":true},
+    "usageScope":"This one final knowledge regression and eight representative evaluation only; excludes prior phase/development agent usage","rawObservationPreFinalLabelClarification":true},
+  "security":{"families":8,"deterministicQuestionRagToolInjection":true,"recursiveSecretCanary":true,"safeProviderErrorLogAndObservationCanary":true,"observabilityAdminOnly":true,"naturalLanguageTruthProven":false},
+  "review":{"status":"no-mandatory-findings","independent":true,"reviewer":"review_ai_phase8","directTests":{"tests":34,"passed":34,"failures":0,"errors":0,"skipped":0},"diffCheckPassed":true,"rawEvaluationCompared":true,"fullAndSharedIntegrationRerunByReviewer":false,"latestXmlScope":"reviewer targeted 34 tests"},
+  "unverified":["production Toss/live-user incident and automated Anvil successful MATCH","process-kill and multi-server long-running chaos","browser manual ADMIN demonstration","arbitrary secret patterns and every prompt injection","long-term SLA and complete natural-language truthfulness"],
+  "activation":{"actualEnvChanged":false,"productionDiagnosisSchemaInitialized":false,"automaticDiagnosisActivated":false,"committed":false}
+}

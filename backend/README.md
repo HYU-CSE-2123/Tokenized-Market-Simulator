@@ -10,7 +10,9 @@ AI Phase 4는 `AI_TOOLS_ENABLED=true`로 켜는 독립 읽기 Tool 계층입니�
 
 ## 현재 구현 상태
 
-AI Phase 7 자동 진단은 승인 범위의 구현·검증·별도 검토를 완료했으며 사용자 완료 승인 대기입니다. [상세 보고서](../docs/ai/phase-7-event-driven-diagnosis.md)의 결과와 미검증 범위를 확인하세요. 거래 DB의 커밋된 REVIEW_REQUIRED를 polling하고 결과는 별도 AI DB에 저장합니다. 자동 거래·복구는 없습니다. 기존 웹 기준 클라이언트에는 최소 ADMIN 진단 패널이 있으며 독립 챗봇 UI는 없습니다.
+AI Phase8은 최종 평가·보안·관측성/문서화의 구현·검증·별도 검토를 완료했고 사용자 완료 승인 대기입니다. [AI 아키텍처](../docs/ai/AI_ARCHITECTURE.md), [평가 보고서](../docs/ai/EVALUATION_REPORT.md), [RUNBOOK](../docs/ai/RUNBOOK.md)을 참고하세요. ADMIN `GET /api/ai/observability`는 프로세스 내 고정 label의 호출/시간/실패·검색 문서 수·보고 토큰/unknown usage와 설정 모델을 제공합니다. AI DB 장애에도 local 집계는 반환하고 진단 queue/quota는 UNAVAILABLE로 구분합니다. 비영속 통계이며 별도 모니터링 서버는 없습니다.
+
+AI Phase 7 자동 진단은 승인 범위의 구현·검증·별도 검토 및 사용자 완료 승인을 받았습니다. [상세 보고서](../docs/ai/phase-7-event-driven-diagnosis.md)의 결과와 미검증 범위를 확인하세요. 거래 DB의 커밋된 REVIEW_REQUIRED를 polling하고 결과는 별도 AI DB에 저장합니다. 자동 거래·복구는 없습니다. 기존 웹 기준 클라이언트에는 최소 ADMIN 진단 패널이 있으며 독립 챗봇 UI는 없습니다.
 
 설정과 활성화 순서:
 

@@ -91,7 +91,7 @@ Android 앱 구현 자체는 Phase 6의 완료 조건이 아니다. Phase 6에�
 
 ## 핵심 설계 원칙
 
-### AI 확장 상태 (2026-09-30, 거래소 Phase와 별도)
+### AI 확장 상태 (2026-10-03, 거래소 Phase와 별도)
 
 AI Phase 2와 Phase 3은 사용자 완료 승인을 받았다. Phase 3은 고정 golden 12개에서 hit@5 10/12→12/12, MRR@5 0.7778→0.8819로 개선하고 검증·별도 검토를 마쳤다. RAG의 ADMIN-only·별도 AI DB 경계는 유지한다. Hybrid는 식별자 검색 개선과 자연어 근거 회귀가 함께 나타나 비교 실험으로만 남겼다. 검색 후보 오탐 5/8과 작은 개발 평가 세트라는 한계가 있다. 자세한 조건은 [AI Phase 3 보고서](../docs/ai/phase-3-retrieval.md)를 따른다. 핵심 2문항의 ANSWERED assertion도 후속 보강·실제 검증했다.
 
@@ -99,7 +99,9 @@ AI Phase 2와 Phase 3은 사용자 완료 승인을 받았다. Phase 3은 고정
 
 AI Phase 4도 사용자 완료 승인을 받았다. [후속 보완](../docs/ai/phase-4-knowledge-refresh.md)에서 SELL 테스트와 지식·manifest·로컬 AI 색인을 갱신했다. [Phase 5](../docs/ai/phase-5-rag-tool-agent.md)는 제한된 RAG+Tool Agent의 구현·검증·별도 재검토와 사용자 완료 승인을 받았다. USER/ADMIN용 stateless 질문 API, 선소유권 확인·SQL 역할 필터·Tool 최대4/모델 최대2/검색1 경계이며 거래 실행·Skill·AI UI는 제외한다. 지식9개·54청크, 2개 v4 갱신과 로컬 색인 동기화 후 K hit12/12·MRR0.8819·직접근거12/12·오탐0/8을 유지했다. backend254통과/9skip, 실제 공급자6/6 route 확인이며 실제 체인 성공 MATCH 재검증 한계는 보고서에 명시한다.
 
-[Phase 6 Skill](../docs/ai/phase-6-skills.md)은 버전/hash 정의3개, 고정 handler, SQL 역할+domain 후보 제한과 trace를 구현·검증·별도 검토했고 사용자 완료 승인을 받았다. Agent Tool4/검색1/모델2/40초/worker2 예산을 공유한다. [Phase 7](../docs/ai/phase-7-event-driven-diagnosis.md)은 승인 범위의 커밋된 REVIEW_REQUIRED polling, 독립 AI DB 중복/claim/이력, ADMIN 자동 settlement-debugging과 최소 웹 패널의 구현·검증·별도 검토를 완료했고 사용자 완료 승인 대기다. 기본 AI_AUTO_DIAGNOSIS_ENABLED=false, 자동 복구/재거래는 없고 실제 상태·평가·미검증은 보고서에서 구분한다.
+[Phase 6 Skill](../docs/ai/phase-6-skills.md)은 버전/hash 정의3개, 고정 handler, SQL 역할+domain 후보 제한과 trace를 구현·검증·별도 검토했고 사용자 완료 승인을 받았다. Agent Tool4/검색1/모델2/40초/worker2 예산을 공유한다. [Phase 7](../docs/ai/phase-7-event-driven-diagnosis.md)은 승인 범위의 커밋된 REVIEW_REQUIRED polling, 독립 AI DB 중복/claim/이력, ADMIN 자동 settlement-debugging과 최소 웹 패널의 구현·검증·별도 검토 및 사용자 완료 승인을 받았다. 기본 AI_AUTO_DIAGNOSIS_ENABLED=false, 자동 복구/재거래는 없고 실제 상태·평가·미검증은 보고서에서 구분한다.
+
+[Phase8](../docs/ai/phase-8-evaluation-security-observability.md)은 eventKey가 기존 SHA-256 fingerprint임을 확인하고 terminal 메타 TTL, 최소 ADMIN 관측, 주입/secret 및8분류 평가를 보강했다. 최종 backend334 중322통과/12skip, forge36·웹34/build88, 실제 대표8개 기대 결과와 고정 hit12/12·MRR0.8819를 검증했다. 별도 검토의 필수 수정 없음·직접34개 통과를 확인했고 사용자 완료 승인 대기다. [AI 아키텍처](../docs/ai/AI_ARCHITECTURE.md), [평가 보고서](../docs/ai/EVALUATION_REPORT.md), [RUNBOOK](../docs/ai/RUNBOOK.md)이 최종 설명·실행·미검증 안내다. 과거 Phase별 수치/제외 범위는 당시 기록이며 Skill/자동 진단/ADMIN 패널은 Phase6/7에서 추가됐다.
 
 ### 거래 시스템 원칙
 

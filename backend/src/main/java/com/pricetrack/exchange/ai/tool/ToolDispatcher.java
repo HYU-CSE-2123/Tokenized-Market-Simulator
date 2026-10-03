@@ -19,6 +19,8 @@ public final class ToolDispatcher implements AutoCloseable {
     private final ObjectMapper json;
     private final ThreadPoolExecutor workers;
     private final Duration timeout;
+    private com.pricetrack.exchange.ai.observability.AiObservability observation;
+    public ToolDispatcher observe(com.pricetrack.exchange.ai.observability.AiObservability value){observation=value;return this;}
 
     public ToolDispatcher(ToolProperties properties, ToolRegistry registry, ToolReadFacade reads,
                           ReceiptReader receipts, ToolAudit audit, ObjectMapper json) {
@@ -70,6 +72,7 @@ public final class ToolDispatcher implements AutoCloseable {
         catch (RuntimeException e) { result = ToolResult.failure(safeName(name), "TOOL_UNAVAILABLE"); }
         finally { if (work != null && !work.isDone()) work.cancel(true); }
         audit.record(context, name, result, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+        if(observation!=null)observation.record("TOOL",safeName(name),runId,start,"SUCCESS".equals(result.status()),result.error()==null?"OK":result.error(),0,null,null);
         return result;
     }
     private JsonNode execute(ToolContext context, String name, ToolRegistry.Arguments args) {

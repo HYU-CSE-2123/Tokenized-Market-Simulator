@@ -27,7 +27,8 @@ class KnowledgeRefreshEvaluationTest {
     @Test void currentCorpusPreservesRetrievalAndCanPublishApprovedLocalIndex() throws Exception {
         var p = properties("exchange_ai_test");
         assertThat(p.apiKey()).as("API key configured; value is never printed").isNotBlank();
-        var provider = new OpenAiProvider(p, json);
+        var observation=new com.pricetrack.exchange.ai.observability.AiObservability();
+        var provider = new OpenAiProvider(p, json).observe(observation);
         var loader = new KnowledgeLoader(p, json);
         var corpus = loader.load();
         var baseline = json.readTree(Path.of("../docs/ai/phase-3-results.json").toFile());
@@ -61,7 +62,7 @@ class KnowledgeRefreshEvaluationTest {
         int hits = 0, direct = 0, negativeRetrieved = 0, falseAnswers = 0, criticalAnswered = 0;
         int regressions = 0, identifierHits = 0; double reciprocal = 0, identifierReciprocal = 0;
         try (var store = new PgKnowledgeStore(p)) {
-            var service = new RagService(p, loader, store, embedding, provider);
+            var service = new RagService(p, loader, store, embedding, provider).observe(observation);
             service.ingest(AiFixtures.ADMIN);
             assertThat(service.ingest(AiFixtures.ADMIN).unchanged()).isTrue();
             var user = new AuthenticatedUser(2L, "unused", UserRole.USER);
@@ -103,7 +104,7 @@ class KnowledgeRefreshEvaluationTest {
             report.put("negativeRetrieved", negativeRetrieved); report.put("negativeFalseAnswers", falseAnswers);
             report.put("criticalAnswered", criticalAnswered); report.put("identifierHits", identifierHits);
             report.put("identifierMrrAt5", identifierReciprocal/8);
-            write(report);
+            report.put("observability",observation.snapshot());write(report);
             assertThat(hits).isEqualTo(12); assertThat(regressions).isZero(); assertThat(direct).isEqualTo(12);
             assertThat(reciprocal/12).as("MRR must not regress before publication")
                     .isGreaterThanOrEqualTo(previousK.path("mrrAt5").asDouble() - 1e-8);
@@ -128,7 +129,7 @@ class KnowledgeRefreshEvaluationTest {
         }
     }
     void write(Map<String,Object> report) throws Exception {
-        Path path = Path.of("build/reports/ai/" + ("true".equals(System.getenv("AI_PHASE7_EVALUATION"))?"phase7-knowledge-refresh.json":"true".equals(System.getenv("AI_PHASE6_EVALUATION"))?"phase6-knowledge-refresh.json":"true".equals(System.getenv("AI_PHASE5_EVALUATION"))
+        Path path = Path.of("build/reports/ai/" + ("true".equals(System.getenv("AI_PHASE8_EVALUATION"))?"phase8-knowledge-refresh.json":"true".equals(System.getenv("AI_PHASE7_EVALUATION"))?"phase7-knowledge-refresh.json":"true".equals(System.getenv("AI_PHASE6_EVALUATION"))?"phase6-knowledge-refresh.json":"true".equals(System.getenv("AI_PHASE5_EVALUATION"))
                 ? "phase5-knowledge-refresh.json" : "phase4-knowledge-refresh.json"));
         Files.createDirectories(path.getParent()); json.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), report);
     }

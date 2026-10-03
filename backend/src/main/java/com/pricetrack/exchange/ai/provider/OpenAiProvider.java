@@ -18,6 +18,8 @@ public class OpenAiProvider implements EmbeddingProvider, ChatModelProvider {
     private final ObjectMapper json;
     private final HttpClient http;
     private final AtomicInteger requests = new AtomicInteger();
+    private com.pricetrack.exchange.ai.observability.AiObservability observation;
+    public OpenAiProvider observe(com.pricetrack.exchange.ai.observability.AiObservability value){observation=value;return this;}
     public OpenAiProvider(AiProperties properties, ObjectMapper json) {
         this.properties = properties; this.json = json;
         http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
@@ -86,6 +88,18 @@ public class OpenAiProvider implements EmbeddingProvider, ChatModelProvider {
         return post(path,body,Duration.ofSeconds(properties.timeoutSeconds()));
     }
     private JsonNode post(String path, Object body, Duration timeout) {
+        long start=System.nanoTime();JsonNode response=null;String code="OTHER_FAILURE";
+        try{response=postInternal(path,body,timeout);code="OK";return response;}
+        catch(RuntimeException e){code=e.getMessage();throw e;}
+        finally{if(observation!=null)try{
+            JsonNode usage=response==null?null:response.path("usage");
+            String inputKey="embeddings".equals(path)?"prompt_tokens":"input_tokens";
+            Long in=usage!=null && usage.path(inputKey).isIntegralNumber()?Long.valueOf(usage.path(inputKey).longValue()):null;
+            Long out=usage!=null && "embeddings".equals(path)?Long.valueOf(0):usage!=null && usage.path("output_tokens").isIntegralNumber()?Long.valueOf(usage.path("output_tokens").longValue()):null;
+            observation.record("embeddings".equals(path)?"EMBEDDING":"LLM","call",null,start,response!=null,code,0,in,out);
+        }catch(RuntimeException ignored){/* Preserve the original provider result/failure. */}}
+    }
+    private JsonNode postInternal(String path, Object body, Duration timeout) {
         if (properties.apiKey().isBlank()) throw new AiFailure("AI_API_KEY_MISSING");
         // 개발용 프로세스 수명당 상한. 지속 예산 관리로 오인하지 않는다.
         if (requests.incrementAndGet() > 500) throw new AiFailure("AI_PROVIDER_CALL_LIMIT");

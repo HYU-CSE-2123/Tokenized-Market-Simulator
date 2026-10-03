@@ -68,4 +68,28 @@ class PgDiagnosisStoreIntegrationTest {
         try(var second=new PgDiagnosisStore(ai,new DiagnosisProperties(true,"admin",other,5000,50,100,20,7))){assertThat(second.enqueue(target(1))).isTrue();}
         try(var c=connection();var s=c.prepareStatement("delete from ai.diagnoses where source_namespace=?")){s.setString(1,other);s.executeUpdate();}
     }
+    @Test void fingerprintAndAllTerminalMetadataExpireWithoutLosingDedupOrLiveJobs()throws Exception{
+        sql("delete from ai.diagnosis_daily_usage where usage_date=(now() at time zone 'UTC')::date");
+        var malformed=new Target(91,null,"0x"+"b".repeat(64),"REVIEW_REQUIRED","BUY");
+        store.enqueue(malformed);
+        var skipped=store.list(null,null,Long.MAX_VALUE,20).getFirst();
+        try(var c=connection();var s=c.prepareStatement("select event_key,tx_hash,retention_expires_at from ai.diagnoses where id=?")){
+            s.setLong(1,skipped.id());try(var r=s.executeQuery()){r.next();assertThat(r.getString(1)).matches("[0-9a-f]{64}").doesNotContain(malformed.txHash(),namespace,":");assertThat(r.getTimestamp(3)).isNotNull();}
+        }
+        store.enqueue(target(92));
+        for(int i=0;i<3;i++){var j=store.claim("worker-secret-marker");store.busy(j);sql("update ai.diagnoses set available_at=now() where source_namespace='"+namespace+"'");}
+        var failed=store.list(null,"FAILED",Long.MAX_VALUE,20).getFirst();
+        // Simulates the Phase 7 legacy terminal rows without expiry, not a migration of live jobs.
+        sql("update ai.diagnoses set retention_expires_at=null,completed_at=now()-interval '8 days',claim_token='old',claimed_by='old' where source_namespace='"+namespace+"'");
+        store.enqueue(target(93));
+        store.purge();
+        try(var c=connection();var s=c.prepareStatement("select event_key,tx_hash,claimed_by,claim_token,job_status from ai.diagnoses where id in (?,?)")){
+            s.setLong(1,skipped.id());s.setLong(2,failed.id());try(var r=s.executeQuery()){int count=0;while(r.next()){count++;assertThat(r.getString(1)).matches("[0-9a-f]{64}");assertThat(r.getString(2)).isNull();assertThat(r.getString(3)).isNull();assertThat(r.getString(4)).isNull();assertThat(r.getString(5)).isIn("SKIPPED","FAILED");}assertThat(count).isEqualTo(2);}
+        }
+        assertThat(store.enqueue(malformed)).isFalse();assertThat(store.enqueue(target(92))).isFalse();
+        assertThat(store.list(93L,null,Long.MAX_VALUE,20)).singleElement().satisfies(r->assertThat(r.jobStatus()).isEqualTo("QUEUED"));
+        assertThat(store.observation().get("queuedGlobal")).isGreaterThanOrEqualTo(1L);
+        // A non-expired terminal remains intact until the boundary, including when purge runs repeatedly.
+        var j=store.claim("a");store.finish(j,"COMPLETED",null,"{}",1L,false);store.purge();assertThat(store.detail(j.id()).result()).isEqualTo("{}");
+    }
 }

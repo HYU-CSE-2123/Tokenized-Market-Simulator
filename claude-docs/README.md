@@ -31,6 +31,8 @@
 - [AI Phase 5 Agent 설계·구현](../docs/ai/phase-5-rag-tool-agent.md) — 역할 필터·제한된 RAG/Tool orchestration·근거 응답, 실행 결과·별도 검토·남은 한계
 - [AI Phase 6 Skill 설계·구현](../docs/ai/phase-6-skills.md) — 승인된 반복 진단 정의·고정 handler·역할/domain·trace와 이번 검증 기록
 - [AI Phase 7 자동 진단 설계·구현](../docs/ai/phase-7-event-driven-diagnosis.md) — 커밋된 검토 상태 감지·중복/claim·거래 격리·AI 이력·ADMIN 조회와 검증 기록
+- [AI Phase 8 최종 평가·보안·관측성](../docs/ai/phase-8-evaluation-security-observability.md) — 종합 평가·공격/민감정보·최소 관측·marker TTL·최종 문서와 실제 검증/검토 상태
+- [AI 최종 아키텍처](../docs/ai/AI_ARCHITECTURE.md), [평가](../docs/ai/EVALUATION_REPORT.md), [RUNBOOK](../docs/ai/RUNBOOK.md) — 지식/Tool 보안/Skill 안내를 포함한 설명·실행·한계
 
 ## 단일 출처(Source of Truth)
 

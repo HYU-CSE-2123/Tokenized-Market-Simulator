@@ -16,6 +16,8 @@ public class AuthorizedKnowledgeRetrieval {
     private final KnowledgeLoader loader;
     private final KnowledgeStore store;
     private final EmbeddingProvider embedding;
+    private com.pricetrack.exchange.ai.observability.AiObservability observation;
+    public AuthorizedKnowledgeRetrieval observe(com.pricetrack.exchange.ai.observability.AiObservability value){observation=value;return this;}
     public AuthorizedKnowledgeRetrieval(AiProperties p, KnowledgeLoader loader, KnowledgeStore store, EmbeddingProvider embedding) {
         this.p=p; this.loader=loader; this.store=store; this.embedding=embedding;
     }
@@ -36,6 +38,12 @@ public class AuthorizedKnowledgeRetrieval {
         return search(principal,question,budget,bounded,null);
     }
     private Evidence search(AuthenticatedUser principal,String question,Duration budget,boolean bounded,Set<String> domains) {
+        long start=System.nanoTime();Evidence result=null;String code="OTHER_FAILURE";
+        try{result=searchInternal(principal,question,budget,bounded,domains);code="OK";return result;}
+        catch(RuntimeException e){code=e.getMessage();throw e;}
+        finally{if(observation!=null)observation.record("RETRIEVAL","search",null,start,result!=null,code,result==null?0:result.hits().size(),null,null);}
+    }
+    private Evidence searchInternal(AuthenticatedUser principal,String question,Duration budget,boolean bounded,Set<String> domains) {
         if (principal == null || principal.userId() == null || principal.userId() <= 0 || principal.role() == null)
             throw new org.springframework.security.access.AccessDeniedException("Authentication required");
         if (question == null || question.isBlank() || question.length() > 1000) throw new AiFailure("AI_INPUT_LIMIT");

@@ -2172,3 +2172,30 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 검토자 직접 웹34/34 및 diff 검사 통과. 격리 Java는 Gradle cache lock 권한 오류/승인 미완료로 실행하지 못했다. 전체323 중312통과/11skip는 구현자 결과이며 검토자 직접 재실행 결과와 구분한다. 원시 평가 수치는 대조했으며 공유 DB/Anvil/외부 공급자/.env/키에는 접근하지 않았다.
 - 선택 제안: 결과 본문 없는 invalid SKIPPED/최종 BUSY FAILED marker의 내부 tx_hash/claimed_by도 다른 종료 경로와 TTL을 통일할 수 있다. 승인된7일 결과 본문 계약 위반은 아니며 이번 제품은 추가 변경하지 않았다. 상세 제안과 미검증 항목은 Phase7 보고서에 남긴다.
 - 최종 검토 이후 완료/검토 기록과 안내 상태만 갱신했다. AI Phase7 구현·검증·별도 검토 완료, 사용자 완료 승인 대기. 실제 .env와 운영 진단 schema는 활성화/초기화하지 않았으며 커밋·Phase8은 진행하지 않았다.
+
+# AI Phase 7 사용자 완료 승인 / Phase 8 설계 제안
+
+> 2026-10-02. 사용자 Phase7 완료 승인. HEAD8547b99, 시작 작업 트리 깨끗함. Phase8 구현 승인 대기.
+
+- master guide8.1~8.7과 실제 코드/기존 평가를 확인하고 docs/ai/phase-8-evaluation-security-observability.md에 종합8분류 평가, 고정 golden 유지, 주입/권한/민감정보, 최소 관측성, 종료 marker 메타 TTL 및 최종6문서를 제안했다.
+- TTL 보완은 dedup marker를 유지하면서 불필요한 메타만 정리하도록 제안한다. 기존 거래/권한/예산/초기 안전값과 지식9개 구조는 유지한다.
+- 설계/사용자 승인 기록만 변경했다. 제품·테스트·DB·실제 .env·지식/manifest/색인·공급자 호출은 변경/실행하지 않았다. 동작 없는 설계 문서이며 별도 검토는 승인 후 구현 시 수행한다.
+
+# AI Phase 8: 최종 평가·보안·관측성 — 구현·검증/별도 검토 준비
+
+> 2026-10-03. 사용자 설계 승인과 eventKey 저장 형식 우선 확인 조건. HEAD8547b99, 기존 설계 문서 변경을 보존했다.
+
+- eventKey는 기존 SHA-256 fingerprint64자리이며 raw composite/txHash는 저장하지 않음을 코드/schema로 확인했다. identity 변경 없이 terminal 메타 TTL/legacy backfill/claim-only purge와 재예약0 경계를 보강했다.
+- ai/observability 고정 label/process-local 집계와 ADMIN GET API, RAG/retrieval/provider/Tool/Agent 경계에 best-effort 관측을 추가했다. 보고 없는 usage/DB 장애는 UNKNOWN/UNAVAILABLE로 구분한다. 원문/비밀/사용자 식별자를 새 label에 넣지 않았다.
+- 질문·RAG·Tool 주입, recursive secret canary·provider 오류 로그, USER/ADMIN/장애·관측 동시성과8분류 manifest/frozen golden 검증을 보강했다. provider usage null의 unboxing 오류를 표적 검증에서 발견해 원래 오류 보존을 수정했다.
+- 최종 전체334 중322통과/12skip/실패·오류0, 신규 결정적10개 포함. forge36·웹34/build88 통과. 유료 Java2개 별도 통과: 대표8/8(정상ANSWERED2/PARTIAL4·안전거부2)·의존성 실패0, hit12/12·MRR0.8819444444·직접근거12/12·무관오답0/8·critical2/2·식별자6/8·scoped3/3 유지.
+- 실제 model17회/input24920/output3171, embedding8회/input170; query cache 재사용을 실제 호출로 세지 않았다. 대표 Agent7표본 median6130ms/p95nearest-rank7726ms. 작은 fixture 평가이며 운영 SLA/자연어 완전 정확성 보증이 아니다.
+- 최종6문서와 career brief에 구현/평가/계획/미검증을 구분했다. 기존 지식9개/manifest/서비스 index·거래 코드/schema/컨트랙트/Tool 목록·실제 .env·운영 AI 초기화는 변경하지 않았다. 운영 Toss/실사용자·실제자동MATCH·kill/다중서버chaos·브라우저 수동 시연은 미검증이다.
+- 제품·테스트·문서 초안을 동결 후 별도 검토를 요청하며 완료로 표시하지 않는다. 상세는 Phase8 문서/EVALUATION_REPORT와 phase-8-results.json이다. 커밋은 하지 않았다.
+
+## 최종 별도 검토·완료 상태 (2026-10-03)
+
+- 독립 review_ai_phase8: 발견된 필수 수정 없음. 제품 diff·신규 파일·테스트·최종6문서/career brief, fingerprint/TTL/dedup·ADMIN 관측·고정 label/민감정보 경계를 직접 확인했다.
+- 검토자 직접 AiObservability*/AgentServiceTest/OpenAiProviderTest/FinalEvaluationManifestTest 총34개 통과·실패/오류/skip0, diff 검사 통과. raw2개와 공유 수치·대표 답변의 관측/정책/불확실성 구분을 대조했다. 최신 XML은 검토자34개이며 구현자 최종 전체334개와 구분한다.
+- 전체334·공유 PostgreSQL TTL/Anvil·유료 공급자·forge·웹은 구현자 실행 결과이며 검토자는 재실행하지 않았다. 운영 Toss/실사용자 장애·실제 자동 MATCH·kill/다중서버 chaos·브라우저 수동 인수·자연어 완전 진실성 한계는 유지한다.
+- 최종 검토 후 제품·테스트 변경 없이 검토 결과/완료 상태만 기록했다. Phase8 구현·검증·별도 검토 완료, 사용자 완료 승인 대기. 실제 .env/운영 진단 schema/자동 진단은 활성화하지 않았으며 스테이징·커밋하지 않았다.

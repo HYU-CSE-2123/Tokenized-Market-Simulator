@@ -32,15 +32,16 @@ public final class PgDiagnosisStore implements AutoCloseable {
         }catch(DiagnosisFailure e){throw e;}catch(Exception e){throw unavailable();}
     }
     public boolean enqueue(Target t){
+        // Only the irreversible SHA-256 fingerprint is persisted, never the raw composite.
         String key=KnowledgeLoader.hash(properties.sourceNamespace()+":"+t.transactionId()+":"+(t.txHash()==null?"MISSING":t.txHash().toLowerCase(Locale.ROOT))+":REVIEW_REQUIRED");
         return transaction(c->{
             lock(c);
             if(scalar(c,"select count(*) from ai.diagnoses where job_status='QUEUED'")>=properties.queueLimit())return false;
             return update(c,"""
-                insert into ai.diagnoses(source_namespace,event_key,transaction_id,order_id,tx_hash,job_status,error_code,completed_at)
-                values(?,?,?,?,?,?,?,case when ? then now() else null end) on conflict(event_key) do nothing
+                insert into ai.diagnoses(source_namespace,event_key,transaction_id,order_id,tx_hash,job_status,error_code,completed_at,retention_expires_at)
+                values(?,?,?,?,?,?,?,case when ? then now() else null end,case when ? then now()+(? * interval '1 day') else null end) on conflict(event_key) do nothing
                 """,properties.sourceNamespace(),key,t.transactionId(),t.orderId(),t.txHash(),t.valid()?"QUEUED":"SKIPPED",
-                    t.valid()?null:"SKIPPED_INVALID_LINK",!t.valid())>0;
+                    t.valid()?null:"SKIPPED_INVALID_LINK",!t.valid(),!t.valid(),properties.retentionDays())>0;
         });
     }
     public Job claim(String worker){return transaction(c->{
@@ -62,9 +63,10 @@ public final class PgDiagnosisStore implements AutoCloseable {
         lock(c);
         int changed=update(c,"""
             update ai.diagnoses set job_status=?,error_code=?,completed_at=case when ? then now() else null end,
-                available_at=now()+interval '10 seconds',claim_token=null,lease_until=null
+                available_at=now()+interval '10 seconds',claim_token=null,lease_until=null,
+                retention_expires_at=case when ? then now()+(? * interval '1 day') else null end
             where id=? and claim_token=? and job_status='RUNNING' and lease_until>now()
-            """,j.admissionAttempts()<3?"QUEUED":"FAILED",j.admissionAttempts()<3?null:"AGENT_BUSY",j.admissionAttempts()>=3,j.id(),j.claimToken());
+            """,j.admissionAttempts()<3?"QUEUED":"FAILED",j.admissionAttempts()<3?null:"AGENT_BUSY",j.admissionAttempts()>=3,j.admissionAttempts()>=3,properties.retentionDays(),j.id(),j.claimToken());
         if(changed>0)update(c,"update ai.diagnosis_daily_usage set starts=greatest(0,starts-1) where usage_date=(select (started_at at time zone 'UTC')::date from ai.diagnoses where id=?)",j.id());
         return changed>0;
     });}
@@ -78,8 +80,16 @@ public final class PgDiagnosisStore implements AutoCloseable {
             """,status,error,result,actorId,stale,properties.retentionDays(),j.id(),j.claimToken())>0);
     }
     public void purge(){transaction(c->{
-        update(c,"update ai.diagnoses set result=null,actor_user_id=null,claim_token=null,claimed_by=null,tx_hash=null where retention_expires_at<=now() and (result is not null or actor_user_id is not null or tx_hash is not null)");
+        // Backfill old result-free terminal markers without touching queued/running jobs or identity.
+        update(c,"update ai.diagnoses set retention_expires_at=coalesce(completed_at,detected_at)+(? * interval '1 day') where retention_expires_at is null and job_status in ('COMPLETED','FAILED','INTERRUPTED','SKIPPED')",properties.retentionDays());
+        update(c,"update ai.diagnoses set result=null,actor_user_id=null,claim_token=null,claimed_by=null,tx_hash=null where retention_expires_at<=now() and (result is not null or actor_user_id is not null or tx_hash is not null or claim_token is not null or claimed_by is not null)");
         return null;
+    });}
+    /** Bounded AI-only operational snapshot; never substitutes zero for a database outage. */
+    public Map<String,Long> observation(){return transaction(c->{
+        try(var s=statement(c,"select count(*) filter (where job_status='QUEUED'),count(*) filter (where job_status='RUNNING'),coalesce((select starts from ai.diagnosis_daily_usage where usage_date=(now() at time zone 'UTC')::date),0) from ai.diagnoses");var r=s.executeQuery()){
+            r.next();return Map.of("queuedGlobal",r.getLong(1),"runningGlobal",r.getLong(2),"claimsTodayUtcGlobal",r.getLong(3));
+        }
     });}
     public List<Row> list(Long order,String status,long before,int limit){
         if(limit<1 || limit>50 || before<=0 || order!=null && order<=0 || status!=null && !Set.of("QUEUED","RUNNING","COMPLETED","FAILED","INTERRUPTED","SKIPPED").contains(status))throw new DiagnosisFailure("INVALID_DIAGNOSIS_QUERY");

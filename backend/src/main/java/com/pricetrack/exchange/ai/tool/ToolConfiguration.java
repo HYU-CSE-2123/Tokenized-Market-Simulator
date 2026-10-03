@@ -23,7 +23,7 @@ public class ToolConfiguration {
         return new ReadOnlyReceiptClient(blockchain, reconciliation, parser, json);
     }
     @Bean(destroyMethod = "close") ToolDispatcher toolDispatcher(ToolProperties p, ToolRegistry registry,
-            ToolReadFacade reads, ReceiptReader receipts, ToolAudit audit, ObjectMapper json) {
-        return new ToolDispatcher(p, registry, reads, receipts, audit, json);
+            ToolReadFacade reads, ReceiptReader receipts, ToolAudit audit, ObjectMapper json,com.pricetrack.exchange.ai.observability.AiObservability observation) {
+        return new ToolDispatcher(p, registry, reads, receipts, audit, json).observe(observation);
     }
 }

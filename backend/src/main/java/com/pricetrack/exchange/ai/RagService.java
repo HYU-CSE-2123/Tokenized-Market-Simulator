@@ -21,6 +21,8 @@ public class RagService {
     private final AuthorizedKnowledgeRetrieval retrieval;
     private final Semaphore requests = new Semaphore(2);
     private final AtomicBoolean indexing = new AtomicBoolean();
+    private com.pricetrack.exchange.ai.observability.AiObservability observation;
+    public RagService observe(com.pricetrack.exchange.ai.observability.AiObservability value){observation=value;retrieval.observe(value);return this;}
     public RagService(AiProperties properties, KnowledgeLoader loader, KnowledgeStore store,
             EmbeddingProvider embedding, ChatModelProvider chat) {
         this.properties=properties; this.loader=loader; this.store=store; this.embedding=embedding; this.chat=chat;
@@ -52,11 +54,17 @@ public class RagService {
         } finally { indexing.set(false); }
     }
     public List<KnowledgeHit> search(AuthenticatedUser principal,String question) {
+        return observation==null?searchInternal(principal,question):observation.measure("RAG","search",()->searchInternal(principal,question));
+    }
+    private List<KnowledgeHit> searchInternal(AuthenticatedUser principal,String question) {
         authorize(principal); validate(question);
         if(!requests.tryAcquire())throw new AiFailure("AI_BUSY");
         try { return retrieve(principal,question).hits(); } finally {requests.release();}
     }
     public Answer answer(AuthenticatedUser principal,String question) {
+        return observation==null?answerInternal(principal,question):observation.correlated(UUID.randomUUID().toString(),()->observation.measure("RAG","answer",()->answerInternal(principal,question)));
+    }
+    private Answer answerInternal(AuthenticatedUser principal,String question) {
         authorize(principal); validate(question);
         if(!requests.tryAcquire())throw new AiFailure("AI_BUSY");
         try {
