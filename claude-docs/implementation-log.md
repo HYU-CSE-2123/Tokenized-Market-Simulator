@@ -2199,3 +2199,19 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 검토자 직접 AiObservability*/AgentServiceTest/OpenAiProviderTest/FinalEvaluationManifestTest 총34개 통과·실패/오류/skip0, diff 검사 통과. raw2개와 공유 수치·대표 답변의 관측/정책/불확실성 구분을 대조했다. 최신 XML은 검토자34개이며 구현자 최종 전체334개와 구분한다.
 - 전체334·공유 PostgreSQL TTL/Anvil·유료 공급자·forge·웹은 구현자 실행 결과이며 검토자는 재실행하지 않았다. 운영 Toss/실사용자 장애·실제 자동 MATCH·kill/다중서버 chaos·브라우저 수동 인수·자연어 완전 진실성 한계는 유지한다.
 - 최종 검토 후 제품·테스트 변경 없이 검토 결과/완료 상태만 기록했다. Phase8 구현·검증·별도 검토 완료, 사용자 완료 승인 대기. 실제 .env/운영 진단 schema/자동 진단은 활성화하지 않았으며 스테이징·커밋하지 않았다.
+
+# AI Phase 8 완료 확인 / 취업용 사실 원본 점검 (2026-10-04)
+
+## 정리
+
+- 사용자의 Phase8 완료 확인과 취업용 원본 정리 요청을 반영했다. 시작 HEAD7a7f045, 작업 트리 깨끗함. 기존 Phase8 당시의 승인 대기·미커밋 기록은 해당 시점 이력으로 보존한다.
+- career-project-brief를 프로젝트 마스터에 단독 전달할 최신 사실 원본으로 갱신했다. 완료 구현(4절), 날짜/실행별 검증(5절), 미검증 인수/미구현 확장(8절)을 분리했다.
+- 이미 제공한 계약·payload·실행/인수 문서를 계획에서 제거하고 실제 담당자 인수·장중 시연만 남겼다. 견적 정보 제공과 서명 원문 비노출, quoteId 주문 제출을 구분했다.
+- AI Phase1~8, 8개 조회 Tool·3개 Skill·ADMIN 패널/최소 관측, fingerprint·TTL과 기본 비활성 경계를 반영했다. 검색 hit와 답변 정확도, 실제 모델과 상태/receipt fixture, receipt 정산과 준비금 대사, Toss OAuth와 사용자 OAuth를 구분했다.
+- AI STAR/서술 초안·기술 스택·근거 코드 위치를 추가하되 프로젝트 성과를 본인의 직접 작성·기여 비율로 단정하지 않도록 명시했다.
+
+## 점검·한계
+
+- 최종 AI6문서/결과JSON·거래소 Phase6.3 인수 기록·계약README, QuoteController/PriceQuoteService·Vault/Oracle·Tool registry/관측 코드와 대조했다. Phase3 baseline MRR도 기존 보고서로 확인했다.
+- 동작 없는 문서 정리만 수행했다. 테스트/유료 평가/운영 상태를 재실행하지 않았고 제품·DB·manifest/index·.env는 변경하지 않았다. 별도 검토는 공통 지침의 문서 수정 예외에 따라 생략했고 자체 사실 대조로 기록한다. 구현 당시 독립 검토 결과와 혼동하지 않는다.
+- 기존 검증 수치와 미검증 운영/수동 인수는 그대로 유지했다. 커밋/스테이징은 하지 않았다.
