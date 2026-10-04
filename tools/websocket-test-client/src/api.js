@@ -33,6 +33,17 @@ export class ApiClient {
     return this.#request('/api/me');
   }
 
+  agent(question, target = null, skillId = null) {
+    return this.#request('/api/ai/agent/answers', {
+      method: 'POST',
+      body: JSON.stringify({ question, ...(target ? { target } : {}), ...(skillId ? { skillId } : {}) }),
+    });
+  }
+
+  observation() { return this.#request('/api/ai/observability'); }
+
+  order(id) { return this.#request(`/api/orders/${encodeURIComponent(id)}`); }
+
   diagnoses(orderId = null, before = null) {
     const query = new URLSearchParams();
     if (orderId) query.set('orderId', String(orderId));

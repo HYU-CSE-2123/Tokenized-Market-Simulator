@@ -1,6 +1,43 @@
-# WebSocket Test Client
+# Tokenized Market — 제품형 모의 거래 웹
 
-Android 연동 전에 백엔드 REST, JWT, STOMP WebSocket 이벤트를 실제 브라우저에서 검증하는 개발 도구입니다. 제품용 웹 프론트엔드가 아닙니다.
+기존 Vite + JavaScript 검증 클라이언트를 서비스형 UI로 전환했습니다. 디렉터리 이름은 호환성을 위해 유지합니다. 실제 삼성전자 주식·원화 거래가 아닌 모의 자산 서비스이며 Android의 실행 가능한 REST/STOMP 기준 클라이언트 역할도 유지합니다.
+
+## 현재 사용자 흐름 (2026-10-05)
+
+- 비로그인: 시장·캔들·공개 체결을 자동 조회/구독합니다. 개인 화면은 로그인으로 안내합니다.
+- 로그인/회원가입: 기존 토큰 응답으로 자동 로그인하고 `/api/me`로 신원·역할을 확인합니다. 원래 선택한 화면으로 돌아갑니다. JWT를 화면이나 localStorage/sessionStorage에 저장하지 않으며 새로고침 후 재로그인합니다.
+- 시장: 기준 가격·전일 대비·장 상태·공급자·갱신 시각과 6주기 차트/과거 봉, 최근 공개 모의 체결을 제공합니다.
+- 거래: 매수 금액/매도 수량 → 견적 → 최종 확인 dialog(모바일 bottom sheet) → 접수 상태 → 내역. 가격·수수료·예상/최소 수령량·유효 시간을 확인합니다. 입력 변경·계정 변경·만료는 견적을 무효화하며 단순 시세 변화는 발급 견적 가격을 바꾸지 않습니다.
+- 주문/체결: 서버 주문 상태와 실제 Trade를 구분합니다. Order.outputAmount는 예상 수령량, 최종 체결가는 Trade.price입니다. 주문 상세에서 AI 설명/ADMIN 정산 진단으로 이어집니다.
+- 내 자산: 서버의 mKRW/mSEC 잔고·평균 매수가·평가액·미실현 손익·총 평가액을 사용합니다. 잠금/가용 잔고나 실현 손익은 추정하지 않습니다. '모의 자금 받기'는 기존 faucet 호출입니다.
+- AI: 기존 stateless Agent와 USER/ADMIN Skill을 연결합니다. 설명/관측 사실/정책 출처/불확실성/trace를 텍스트로 분리합니다. 서버 flag 비활성·503·403은 거래 실패/로그아웃과 혼동하지 않습니다.
+- ADMIN: 역할 확인 후 주문 수동 진단·자동 진단 이력/이전 페이지/상세·최소 관측성을 제공합니다. schema 초기화·index·자동 복구·재전송 기능은 추가하지 않습니다.
+- STOMP 자동 연결·기존 1~30초 재연결과 REST 복구를 유지합니다. Native/SockJS 선택은 footer 연결 설정으로 이동했고 JWT·debug·JSON dump·테스트 버튼 화면은 제거했습니다.
+
+네트워크/5xx로 주문 결과를 확정할 수 없으면 자동 재전송하지 않고 새 견적/주문을 잠급니다. 내역 조회 후 사용자가 중복 위험 안내를 확인한 경우에만 **새 견적을 통한 별도 주문**을 준비할 수 있습니다. 입력량/방향이 같다고 같은 주문이라고 추정하지 않습니다. 이 UI는 서버의 새 idempotency 계약을 만들어내지 않습니다.
+
+`src/state.js`(요청별 ticket/세션 세대), `ui.js`(안전한 구조화 표시), `chart-controller.js`(기존 캔들/커서 재사용), `main.js`(화면·세션·거래/AI 연결), `api.js`/`websocket.js`가 책임을 나눕니다. 이전 `diagnosis.js`는 기존 4개 회귀용 adapter이며 현재 서비스 화면에는 import하지 않습니다.
+
+## 검증·배포
+
+`npm test`: 기존 34개를 변경/제외하지 않고 신규 13개를 추가한 47개 통과. 신규 3개는 실제 main.js 함수를 실행하여 주문 상세 terminal 유지/이벤트 갱신, ADMIN 교차 응답, 상세 404의 이전 결과 폐기를 검증합니다. `npm run build`: 90 modules, 정적 dist 생성. `npm run test:browser`: 실제 headless Chrome에서 빌드 UI를 실행하는 독립 REST/STOMP fixture smoke입니다. Node 22 이상과 로컬 Chrome이 필요하며 다른 경로는 CHROME_PATH로 지정합니다. 스크린샷/전용 브라우저 profile은 ignored `dist/.smoke/`에 남습니다. 사용자 프로필이나 기존 브라우저를 종료/삭제하지 않습니다.
+
+Chrome desktop1440/mobile360의 시장·내역·자산·AI·ADMIN, 가입 자동 로그인·견적·만료·pending/terminal 이벤트·로그아웃 후 늦은 응답·AI 장애·관측 Map 계약·불명확 전송을 검증했습니다. fixture는 실제 거래 DB/Anvil/Toss/유료 모델이나 실제 WebSocket 네트워크 종단간 검증이 아닙니다. 최종 Docker 이미지 빌드와 Nginx1.28 컨테이너의 envsubst 후 `nginx -t`도 통과했습니다. 독립 검토의 두 상태 race를 수정하고 재검토에서 필수 수정 없음으로 확인했습니다. 외부 공개 배포·HTTPS 인증서·실제 Toss 장중/운영 AI 및 다양한 실기기 인수는 별도입니다.
+
+### 정적 서비스 배포 준비
+
+```powershell
+docker build -t tokenized-market-web:local .
+docker run --rm -p 8090:80 -e BACKEND_UPSTREAM=host.docker.internal:8082 tokenized-market-web:local
+```
+
+이미 실행 중인 로컬 백엔드를 사용하는 예시이며 백엔드/DB를 실행·초기화하지 않습니다. 배포 Docker network에서 백엔드 서비스 이름은 BACKEND_UPSTREAM으로 지정합니다(기본 backend:8082). 호스트는 운영자가 제어하는 host:port이며 scheme/path/secret을 넣지 않습니다. 이미지는 npm ci/build 후 Nginx가 dist를 제공하고 `/api`, `/ws`, `/ws-sockjs`는 같은 origin의 백엔드로 proxy합니다. JS 번들에 키/JWT를 넣지 않습니다. hash 내비게이션이라 별도 SPA rewrite는 불필요합니다.
+
+운영 인터넷 공개 전에는 외부 ingress/reverse proxy에서 HTTPS 인증서를 구성하고 해당 origin에 기존 `WEBSOCKET_ALLOWED_ORIGINS`를 제한합니다. 브라우저는 HTTPS에서 기존 wss 경로를 사용합니다. API는 no-store 대상으로 운영하며 dist/index는 재검증, hash assets는 캐시합니다. proxy read timeout은 Agent40초/heartbeat를 수용합니다. Vite dev/preview를 운영 서버로 사용하지 않습니다. 이 작업에서 실제 `.env`·백엔드/DB·AI manifest/index는 변경하지 않았습니다.
+
+---
+
+아래는 전환 이전 개발 도구의 이력입니다. 버튼/JSON/JWT 확인 절차는 현재 UI에 적용하지 않습니다. 계약·destination·차트/재연결 규칙의 기존 설명을 보존합니다.
 
 ## 실행
 

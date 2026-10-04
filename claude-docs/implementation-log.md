@@ -2215,3 +2215,19 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 최종 AI6문서/결과JSON·거래소 Phase6.3 인수 기록·계약README, QuoteController/PriceQuoteService·Vault/Oracle·Tool registry/관측 코드와 대조했다. Phase3 baseline MRR도 기존 보고서로 확인했다.
 - 동작 없는 문서 정리만 수행했다. 테스트/유료 평가/운영 상태를 재실행하지 않았고 제품·DB·manifest/index·.env는 변경하지 않았다. 별도 검토는 공통 지침의 문서 수정 예외에 따라 생략했고 자체 사실 대조로 기록한다. 구현 당시 독립 검토 결과와 혼동하지 않는다.
 - 기존 검증 수치와 미검증 운영/수동 인수는 그대로 유지했다. 커밋/스테이징은 하지 않았다.
+
+# 제품형 웹 UI 전환 — 구현·검증/독립 검토 준비 (2026-10-05)
+
+- 사용자 설계 승인과 사전3계약 확인 조건을 반영했다. 시작 HEADb5d83bd, 작업 트리 깨끗함. AuthService.signup JWT 반환/가입 자동 로그인, GET market/candles 및 공개 STOMP 익명 접근, Portfolio 평균 매수가/미실현 손익/총평가액을 실제 코드로 확인했다.
+- Vite/JS 디렉터리/REST·STOMP·백엔드 기능을 유지하고 제품형 화면과 요청별/세션 상태로 전환했다. 신규 backend/DB/AI 도구 기능은 없다. 시장·거래·내역·자산·USER AI/Skill·ADMIN 정산/이력/trace/관측과 모바일 nav/견적 sheet, 구조화 안전 텍스트/자동 연결·복구를 구현했다.
+- 신규 state/ui/chart-controller 책임 분리와 기존 캔들/quote/WS 재사용, 전송 불명확 시 재주문 금지/조회/명시 확인, JWT 비영속·role/출처/과거 관측 경계를 적용했다.
+- 기존34 테스트 수정/제외 없이 신규10=44통과/실패0/skip0, build90modules. 실제 Chrome UI fixture desktop/mobile smoke와 screenshot 직접 확인, Nginx envsubst/nginx -t 통과. 첫 browser assertion은 USER socket 이벤트를 logout 후 ADMIN 서버 스냅샷으로 오인한 fixture 기대를 수정했다. sandbox build/Docker 접근은 승인 후 재실행했다.
+- Dockerfile/동일 origin API·WS/SockJS proxy·보안 header/캐시/timeout 예시와 모듈 README/overview/상세 web-product-ui 문서를 작성했다. 실제 .env·거래/AI DB·manifest/index·컨트랙트·백엔드 소스는 변경하지 않았다. 외부 배포·실제 Toss 장중/운영AI/네트워크 STOMP·다양한 실기기 인수는 미검증이다.
+- 제품/테스트/문서 초안을 동결해 별도 검토를 요청한다. 아직 완료로 기록하지 않으며 커밋/스테이징하지 않았다.
+
+## 제품형 웹 최종 보완·검토 — 완료 (2026-10-05)
+
+- 독립 검토 review_web_product가 실제 main 함수 harness로 상세 주문 terminal 역행과 ADMIN 교차 응답/404 stale 본문을 재현했다. canonical 주문 공통 렌더/상세 이벤트 갱신, ADMIN 공통 결과 ticket·이전 본문 폐기·대상 ID로 보완했다.
+- 기존34 그대로 + 신규13(보완3 포함)=전체47통과/실패0/skip0. build90modules, 전체 Chrome fixture smoke 및 최종 Docker 이미지 빌드 통과. Nginx envsubst/nginx -t도 통과. 실제 backend proxy 네트워크/DB/Anvil/Toss/유료 AI/공개 TLS·실기기 인수는 미검증이다.
+- 재검토1 필수 수정 없음. 검토자 직접47/build90/diff 통과. 검토자의 최초 browser 실행은 환경 대기로 중단했으며 구현자의 Chrome/Docker/Nginx 통과와 구분한다.
+- 이후 제품 변경 없이 web-product-ui.md와 모듈 README에 완료·테스트·배포·한계를 반영했다. 백엔드/컨트랙트/DB/실제.env/manifest/index 변경 없음. 커밋/스테이징하지 않았다.

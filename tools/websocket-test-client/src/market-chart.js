@@ -14,14 +14,14 @@ export class MarketChart {
     this.#chart = createChart(container, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: '#101722' },
-        textColor: '#9aa8bb',
+        background: { type: ColorType.Solid, color: '#ffffff' },
+        textColor: '#52627b',
         // lightweight-charts의 TradingView 저작자 표시와 링크를 유지한다.
         attributionLogo: true,
       },
       grid: {
-        vertLines: { color: '#202a38' },
-        horzLines: { color: '#202a38' },
+        vertLines: { color: '#f1f4f8' },
+        horzLines: { color: '#f1f4f8' },
       },
       rightPriceScale: { borderColor: '#334155' },
       timeScale: {

@@ -1,181 +1,32 @@
 <!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Tokenized Market Simulator REST/STOMP integration test client" />
-    <title>Tokenized Market · WebSocket Test Client</title>
-  </head>
-  <body>
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">DEVELOPMENT TOOL</p>
-        <h1>Market Stream Console</h1>
-        <p class="subtitle">REST, JWT, Native WebSocket와 SockJS를 한 화면에서 검증합니다.</p>
-      </div>
-      <div class="status-cluster">
-        <span id="auth-status" class="badge neutral">로그인 안 됨</span>
-        <span id="socket-status" class="badge neutral">DISCONNECTED</span>
-      </div>
-    </header>
-
-    <main>
-      <section class="panel controls-panel">
-        <div class="section-heading">
-          <div>
-            <p class="step">01</p>
-            <h2>계정과 REST 요청</h2>
-          </div>
-          <button id="clear-token" class="button subtle" type="button">JWT 지우기</button>
-        </div>
-
-        <div class="form-grid auth-grid">
-          <label>아이디<input id="login-id" value="webtester" autocomplete="username" /></label>
-          <label>비밀번호<input id="password" type="password" value="password123" autocomplete="current-password" /></label>
-          <label>닉네임<input id="nickname" value="Web Tester" /></label>
-        </div>
-        <div class="button-row">
-          <button id="signup" class="button primary" type="button">회원가입</button>
-          <button id="login" class="button" type="button">로그인</button>
-          <button id="me" class="button" type="button">내 정보</button>
-          <button id="market" class="button" type="button">시장 상태 조회</button>
-          <button id="faucet" class="button" type="button">mKRW Faucet</button>
-          <button id="portfolio" class="button" type="button">포트폴리오 조회</button>
-          <button id="orders" class="button" type="button">주문 조회</button>
-          <button id="trades" class="button" type="button">체결 내역 조회</button>
-        </div>
-
-        <div class="trade-workspace">
-          <article class="trade-card buy-card">
-            <h3>mSEC 매수</h3>
-            <label>사용할 mKRW<input id="buy-amount" type="number" min="0" step="any" value="100000" /></label>
-            <div class="button-row">
-              <button id="quote-buy" class="button" type="button">매수 견적 받기</button>
-              <button id="buy" class="button buy" type="button" disabled>견적대로 매수</button>
-            </div>
-            <div id="buy-quote" class="quote-card empty" data-empty="아직 발급한 매수 견적이 없습니다."></div>
-          </article>
-          <article class="trade-card sell-card">
-            <h3>mSEC 매도</h3>
-            <label>판매할 mSEC<input id="sell-amount" type="number" min="0" step="any" value="1" /></label>
-            <div class="button-row">
-              <button id="quote-sell" class="button" type="button">매도 견적 받기</button>
-              <button id="sell" class="button sell" type="button" disabled>견적대로 매도</button>
-            </div>
-            <div id="sell-quote" class="quote-card empty" data-empty="아직 발급한 매도 견적이 없습니다."></div>
-          </article>
-        </div>
-
-        <div id="trade-status" class="trade-status neutral">견적을 발급받은 뒤 주문을 실행하세요.</div>
-
-        <details class="token-details">
-          <summary>현재 JWT 확인</summary>
-          <code id="token-value">없음</code>
-        </details>
-        <pre id="rest-output" class="rest-output">REST 실행 결과가 여기에 표시됩니다.</pre>
-      </section>
-
-      <section class="panel socket-panel">
-        <div class="section-heading">
-          <div>
-            <p class="step">02</p>
-            <h2>STOMP 연결</h2>
-          </div>
-          <button id="clear-events" class="button subtle" type="button">이벤트 비우기</button>
-        </div>
-
-        <div class="socket-controls">
-          <label class="radio"><input type="radio" name="transport" value="native" checked /> Native `/ws`</label>
-          <label class="radio"><input type="radio" name="transport" value="sockjs" /> SockJS `/ws-sockjs`</label>
-          <label class="checkbox"><input id="stomp-debug" type="checkbox" /> STOMP debug</label>
-          <button id="connect" class="button primary" type="button">연결</button>
-          <button id="disconnect" class="button" type="button">연결 해제</button>
-        </div>
-        <p class="hint">JWT가 있으면 공개·개인 채널을 구독하고, 없으면 공개 채널만 구독합니다.</p>
-        <p id="sync-status" class="sync-status neutral">REST 상태 동기화 대기</p>
-        <details class="sync-details">
-          <summary>최근 REST 복구 결과</summary>
-          <pre id="sync-output" class="rest-output">아직 동기화하지 않았습니다.</pre>
-        </details>
-      </section>
-
-      <section class="metrics">
-        <article class="metric-card price-card">
-          <p>mSEC CURRENT PRICE</p>
-          <strong id="current-price">—</strong>
-          <span id="change-rate">가격 이벤트 대기 중</span>
-          <span id="market-health" class="badge neutral">시장 상태 조회 전</span>
-        </article>
-        <article class="metric-card">
-          <p>LAST EVENT</p>
-          <strong id="last-event">—</strong>
-          <span id="event-count">0 events received</span>
-        </article>
-        <article class="metric-card order-card">
-          <p>LAST ORDER</p>
-          <strong id="last-order-status">—</strong>
-          <span id="last-order-detail">주문 전</span>
-          <span id="last-fill-price">최종 체결 가격 —</span>
-        </article>
-      </section>
-
-      <section class="panel chart-panel">
-        <div class="section-heading chart-heading">
-          <div>
-            <p class="step">LIVE CHART</p>
-            <h2>mSEC 가격과 거래량</h2>
-          </div>
-          <div class="chart-actions">
-            <div class="interval-switch" role="group" aria-label="차트 주기">
-              <button class="button interval active" type="button" data-interval="1m">1분</button>
-              <button class="button interval" type="button" data-interval="5m">5분</button>
-              <button class="button interval" type="button" data-interval="15m">15분</button>
-              <button class="button interval" type="button" data-interval="30m">30분</button>
-              <button class="button interval" type="button" data-interval="1h">1시간</button>
-              <button class="button interval" type="button" data-interval="1d">1일</button>
-            </div>
-            <button id="reload-chart" class="button subtle" type="button">새로고침</button>
-          </div>
-        </div>
-        <div class="chart-meta">
-          <span id="chart-status" class="badge neutral">캔들 불러오는 중</span>
-          <span id="chart-updated">마지막 갱신 —</span>
-        </div>
-        <div id="market-chart" class="market-chart" aria-label="mSEC 캔들 차트"></div>
-        <p class="hint">차트를 왼쪽 끝으로 이동하면 과거 봉을 이어서 불러옵니다. 연결 후 현재 봉은 <code>PRICE_UPDATED</code>의 실제 관측 시각으로 갱신합니다.</p>
-      </section>
-
-      <section class="stream-grid">
-        <article class="panel stream-panel">
-          <h2>실시간 가격 <code>/topic/markets/mSEC/price</code></h2>
-          <div id="price-events" class="event-list empty" data-empty="가격 이벤트가 없습니다."></div>
-        </article>
-        <article class="panel stream-panel">
-          <h2>공개 체결 <code>/topic/markets/mSEC/trades</code></h2>
-          <div id="trade-events" class="event-list empty" data-empty="체결 이벤트가 없습니다."></div>
-        </article>
-        <article class="panel stream-panel private">
-          <h2>내 주문 <code>/user/queue/orders</code></h2>
-          <div id="order-events" class="event-list empty" data-empty="주문 이벤트가 없습니다."></div>
-        </article>
-        <article class="panel stream-panel private">
-          <h2>내 포트폴리오 <code>/user/queue/portfolio</code></h2>
-          <div id="portfolio-events" class="event-list empty" data-empty="포트폴리오 이벤트가 없습니다."></div>
-        </article>
-      </section>
-      <section class="panel" id="diagnosis-panel" hidden>
-        <h2>ADMIN 읽기 전용 진단</h2>
-        <p>실행 당시 관측입니다. 현재 거래 상태와 다를 수 있으며 자동 수정·재전송은 하지 않습니다.</p>
-        <label>주문 ID <input id="diagnosis-order" type="number" min="1" /></label>
-        <button id="diagnosis-manual">주문 수동 진단</button>
-        <button id="diagnosis-list">자동 진단 이력 조회</button>
-        <button id="diagnosis-older">이전 이력 페이지</button>
-        <label>진단 ID <input id="diagnosis-id" type="number" min="1" /></label>
-        <button id="diagnosis-detail">상세·근거·trace 조회</button>
-        <pre id="diagnosis-output"></pre>
-      </section>
-    </main>
-
-    <script type="module" src="/src/main.js"></script>
-  </body>
-</html>
+<html lang="ko"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="삼성전자 기준 가격을 추종하는 모의 자산 거래 서비스. 실제 주식과 원화를 거래하지 않습니다." /><title>Tokenized Market · 모의 자산 거래</title></head>
+<body>
+<a class="skip" href="#main">본문으로 이동</a>
+<header class="header"><a class="brand" href="#market"><span class="brand-mark" aria-hidden="true">T</span><span>Tokenized Market<small>삼성전자 기준 모의 자산 거래</small></span></a><div class="header-actions"><span id="connection" role="status">연결 준비 중</span><span id="identity"></span><button id="auth-open" class="button small">로그인</button><button id="logout" class="button small secondary" hidden>로그아웃</button></div></header>
+<nav class="navigation" aria-label="주요 메뉴"><a href="#market" data-route="market">시장</a><a href="#history" data-route="history">주문·체결</a><a href="#portfolio" data-route="portfolio">내 자산</a><a href="#ai" data-route="ai">AI 도움</a><a href="#admin" data-route="admin" id="admin-nav" hidden>ADMIN 운영</a></nav>
+<main id="main" tabindex="-1">
+<p class="disclaimer">학습용 모의 거래 서비스입니다. mSEC는 실제 삼성전자 주식이 아니며 주주권·배당·실제 원화 상환권을 제공하지 않습니다.</p>
+<section id="view-market" class="view">
+<div class="page-heading"><div><p class="eyebrow">MARKET / mSEC</p><h1>시장을 보고, 견적을 확인하고.</h1><p class="muted">삼성전자 기준 가격을 따라 움직이는 모의 토큰을 거래하세요.</p></div><span id="provider" class="pill">시세 확인 중</span></div>
+<div id="market-message" class="notice" role="status"></div>
+<div class="market-layout"><div class="market-main">
+<section class="card chart-card"><div class="price-header"><div><p class="eyebrow">삼성전자 가격 추종 토큰 · mSEC</p><strong id="price" class="price">—</strong><p id="price-change" class="muted">전일 대비 확인 중</p></div><div class="market-time"><span id="market-state" class="pill">확인 중</span><p id="price-time" class="muted">갱신 시각 —</p></div></div>
+<div class="chart-toolbar"><div class="intervals" role="group" aria-label="차트 주기"><button data-interval="1m" aria-pressed="true">1분</button><button data-interval="5m" aria-pressed="false">5분</button><button data-interval="15m" aria-pressed="false">15분</button><button data-interval="30m" aria-pressed="false">30분</button><button data-interval="1h" aria-pressed="false">1시간</button><button data-interval="1d" aria-pressed="false">1일</button></div><button id="chart-reload" class="button small secondary">다시 불러오기</button></div>
+<div id="market-chart" class="market-chart" aria-label="mSEC 기준 가격 캔들·거래량 차트"></div><p id="chart-message" class="muted chart-caption" role="status">차트를 불러오는 중입니다.</p><p class="muted chart-caption">한국 시간 기준 · 왼쪽으로 이동해 과거 봉 조회 · 거래량은 공급자 체결량(시뮬레이션은 tick 수)입니다.</p></section>
+<section class="card"><div class="section-heading"><h2>최근 모의 자산 체결</h2><span class="pill">공개 스트림</span></div><div id="public-trades"><p class="empty">연결 이후 체결이 표시됩니다.</p></div><p class="muted">이 서비스의 mSEC 체결입니다. 삼성전자 주식 체결 내역이 아닙니다.</p></section>
+</div><aside class="card trade-panel" aria-label="매수·매도"><div class="section-heading"><h2>mSEC 거래</h2><span class="pill">모의 자산</span></div>
+<div class="trade-tabs" role="group" aria-label="주문 방향"><button id="side-buy" aria-pressed="true">매수</button><button id="side-sell" aria-pressed="false">매도</button></div><p id="balance-hint" class="muted">로그인 후 내 잔고를 확인할 수 있습니다.</p>
+<form id="trade-form"><label id="amount-label" for="trade-amount">사용할 모의 원화 (mKRW)</label><input id="trade-amount" inputmode="decimal" autocomplete="off" placeholder="예: 100000" required /><p class="muted">매수는 금액 기준, 매도는 mSEC 수량 기준입니다.</p><button id="quote-request" class="button full" type="submit">견적 확인</button></form>
+<div id="quote-summary" class="quote-summary"><p class="empty">입력량에 맞는 견적을 먼저 확인하세요.</p></div><p id="quote-timer" class="muted" role="status"></p><button id="quote-confirm" class="button full" disabled>이 견적으로 매수 확정</button><button id="quote-diagnose" class="button full secondary" hidden>이 견적 AI 진단</button>
+<p class="muted">표시 시세와 견적 가격은 다를 수 있습니다. 유효한 견적 가격으로 주문하며 최종 체결까지 시간이 걸립니다.</p><div id="trade-message" class="notice" role="status">견적 → 확인 → 주문 확정</div><button id="resolve-order" class="button full secondary" hidden>주문 내역으로 결과 확인</button><button id="acknowledge-order" class="button full secondary" hidden>내역 확인 후 새 주문 준비</button><div id="latest-order"></div></aside></div>
+</section>
+<section id="view-history" class="view" hidden><div class="page-heading"><div><p class="eyebrow">ACTIVITY</p><h1>주문과 체결</h1><p class="muted">접수된 주문과 실제 체결을 구분해 확인하세요.</p></div><button id="history-refresh" class="button secondary">최신 내역 확인</button></div><div class="tabs"><button id="history-orders" aria-pressed="true">주문</button><button id="history-trades" aria-pressed="false">체결</button></div><p id="history-message" class="notice" role="status"></p><div id="history-list" class="record-grid"></div><section id="order-detail" class="card" hidden></section></section>
+<section id="view-portfolio" class="view" hidden><div class="page-heading"><div><p class="eyebrow">MY ASSETS</p><h1>내 모의 자산</h1><p class="muted">손익은 평가 기준 가격으로 계산하며 실제 원화가 아닙니다.</p></div><button id="portfolio-refresh" class="button secondary">자산 새로고침</button></div><p id="portfolio-message" class="notice" role="status"></p><div id="portfolio-summary" class="asset-grid"></div><section class="card funding"><div><h2>모의 자금으로 시작하세요</h2><p class="muted">mKRW는 테스트용 자산입니다. 실제 입금·출금이나 현금 전환 기능이 아닙니다.</p></div><button id="faucet" class="button">모의 자금 받기</button></section><p id="faucet-message" class="notice" role="status"></p></section>
+<section id="view-ai" class="view" hidden><div class="page-heading"><div><p class="eyebrow">READ-ONLY ASSISTANT</p><h1>AI 도움·진단</h1><p class="muted">서비스 정책과 조회 사실을 구분해 설명합니다. 투자 조언이나 거래 실행은 하지 않습니다.</p></div></div><div class="ai-layout"><section class="card"><div class="ai-presets"><button id="ask-policy" class="button secondary">거래 방식 알아보기</button><button id="ask-market" class="button secondary">시장 거래 가능 여부</button></div><form id="ai-form"><label for="ai-question">궁금한 내용</label><textarea id="ai-question" rows="5" maxlength="1200" required placeholder="예: 견적과 실제 체결은 어떤 관계인가요?"></textarea><label for="ai-kind">진단 대상</label><select id="ai-kind"><option value="general">일반 서비스 질문</option><option value="order">내 주문 조회·설명</option><option value="quote">견적 진단</option><option value="market">시장 가용성 진단</option></select><div id="ai-target-wrap" hidden><label for="ai-target">대상 번호</label><input id="ai-target" autocomplete="off" /><p class="muted">주문 내역이나 발급 견적에서 선택할 수 있습니다.</p></div><button id="ai-submit" class="button full" type="submit">읽기 전용 분석 요청</button></form><p class="muted">대화 기억 없이 매 요청을 독립 분석합니다. 응답에 수십 초가 걸릴 수 있습니다.</p></section><section class="card"><p id="ai-message" class="notice" role="status"></p><div id="ai-result"><p class="empty">질문하거나 진단 대상을 선택해 주세요.</p></div></section></div></section>
+<section id="view-admin" class="view" hidden><div class="page-heading"><div><p class="eyebrow">ADMIN / OPERATIONS</p><h1>운영 진단</h1><p class="muted">과거 분석은 현재 상태와 다를 수 있습니다. 재거래·자동 복구 기능은 없습니다.</p></div></div><div class="admin-layout"><section class="card"><h2>주문 정산 진단</h2><form id="admin-manual"><label for="admin-order">주문 번호</label><input id="admin-order" inputmode="numeric" required /><button id="admin-run" class="button full" type="submit">정산 근거 분석</button></form><h2>자동 분석 이력</h2><form id="admin-filter"><label for="admin-filter-order">주문 번호 필터 (선택)</label><input id="admin-filter-order" inputmode="numeric" /><button id="admin-history-refresh" class="button full secondary" type="submit">이력 확인</button></form><div id="admin-history"></div><button id="admin-older" class="button full secondary" disabled>이전 이력 더 보기</button></section><section class="card"><p id="admin-message" class="notice" role="status"></p><div id="admin-result"><p class="empty">분석 이력을 선택해 상세를 확인하세요.</p></div></section></div><section class="card"><div class="section-heading"><h2>AI 실행 관측</h2><button id="observation-refresh" class="button small secondary">관측 새로고침</button></div><p class="muted">프로세스 재시작 시 초기화되는 통계입니다. 거래 원장이나 SLA가 아닙니다.</p><div id="observation"></div></section></section>
+<footer><span>Tokenized Market · 교육용 모의 거래</span><details><summary>연결 설정</summary><label for="transport">실시간 연결 방식</label><select id="transport"><option value="native">Native WebSocket</option><option value="sockjs">SockJS</option></select><button id="reconnect" class="button small secondary">연결 다시 시도</button></details></footer>
+</main>
+<dialog id="auth-dialog" aria-labelledby="auth-title"><form id="auth-form"><div class="section-heading"><div><p class="eyebrow">WELCOME</p><h2 id="auth-title">로그인</h2></div><button id="auth-close" class="button secondary" type="button" aria-label="로그인 창 닫기">닫기</button></div><p class="muted">모의 자산으로 거래를 경험하세요.</p><label for="login-id">아이디</label><input id="login-id" autocomplete="username" required maxlength="30" /><label for="password">비밀번호</label><input id="password" type="password" autocomplete="current-password" required maxlength="72" /><div id="nickname-wrap" hidden><label for="nickname">닉네임</label><input id="nickname" autocomplete="nickname" maxlength="30" /></div><p id="auth-message" class="notice" role="status"></p><button id="auth-submit" class="button full" type="submit">로그인</button><button id="auth-switch" class="button full secondary" type="button">처음이신가요? 회원가입</button><p class="muted">로그인은 현재 페이지 메모리에만 유지됩니다. 새로고침 후 다시 로그인해 주세요.</p></form></dialog>
+<dialog id="quote-dialog" class="quote-dialog" aria-labelledby="quote-review-title"><div class="section-heading"><h2 id="quote-review-title">최종 견적 확인</h2><button id="quote-close" class="button secondary">닫기</button></div><div id="quote-review"></div><p id="quote-review-timer" role="status"></p><p class="notice">이 견적을 한 번 사용해 주문합니다. 접수 후 블록체인 확인까지 시간이 걸릴 수 있습니다.</p><button id="quote-submit" class="button full">주문 확정</button></dialog>
+<div id="toast" class="toast" role="status" hidden></div><script type="module" src="/src/main.js"></script>
+</body></html>
