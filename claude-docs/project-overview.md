@@ -91,6 +91,10 @@ Android 앱 구현 자체는 Phase 6의 완료 조건이 아니다. Phase 6에�
 
 ## 핵심 설계 원칙
 
+### 공개 합성 시장 보완 (2026-10-06)
+
+사용자는 공개 simulated/Toss 코드 보존·공개 비활성화를 확정하고 최소 개선 범위를 승인했다. 합성 seed/Clock 가격·가상 수량, 전일 기준, DB checkpoint/재시작과 commit 후 가격/WS, public Toss guard, 최대2일 초기 합성 이력·6주기 차트와 최소 asOf 보완을 구현하고 통합 검증·독립 검토를 마쳤다. backend346 중333통과/13skip, 웹48통과이며 필수 검토 지적은 없었다. 긴 중단 catch-up과30일 이력은 제외한다. 실제 공개 배포·사용자 완료 승인과는 구분하며 선택 UI 보완과 검증 한계는 [최신 설계/실행 기록](synthetic-market-design.md)을 따른다.
+
 ### AI 확장 상태 (2026-10-03, 거래소 Phase와 별도)
 
 AI Phase 2와 Phase 3은 사용자 완료 승인을 받았다. Phase 3은 고정 golden 12개에서 hit@5 10/12→12/12, MRR@5 0.7778→0.8819로 개선하고 검증·별도 검토를 마쳤다. RAG의 ADMIN-only·별도 AI DB 경계는 유지한다. Hybrid는 식별자 검색 개선과 자연어 근거 회귀가 함께 나타나 비교 실험으로만 남겼다. 검색 후보 오탐 5/8과 작은 개발 평가 세트라는 한계가 있다. 자세한 조건은 [AI Phase 3 보고서](../docs/ai/phase-3-retrieval.md)를 따른다. 핵심 2문항의 ANSWERED assertion도 후속 보강·실제 검증했다.

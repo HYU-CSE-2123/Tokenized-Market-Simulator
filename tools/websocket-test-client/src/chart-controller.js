@@ -5,6 +5,7 @@ const COUNTS = { '1m': 100, '5m': 100, '15m': 50, '30m': 30, '1h': 20, '1d': 100
 export class ChartController {
   interval = '1m'; candles = []; request = 0;
   buffer = new CandleLoadBuffer(); history = new CandleHistoryCursor();
+  syntheticAsOf = null;
   constructor(api, container, message) { this.api = api; this.message = message; this.chart = new MarketChart(container); this.chart.onNeedHistory(() => this.older()); }
   async load() {
     const request = ++this.request; const interval = this.interval;
@@ -13,7 +14,9 @@ export class ChartController {
     try {
       const { body } = await this.api.candles(interval, COUNTS[interval]);
       if (request !== this.request) return;
-      const result = this.buffer.resolve(load, normalizeCandles(body.candles)); if (!result) return;
+      const result = this.buffer.resolve(load, normalizeCandles(body.candles), body.provider === 'SIMULATED' ? body.asOf : null); if (!result) return;
+      this.syntheticAsOf = body.provider === 'SIMULATED' && body.asOf ? new Date(body.asOf).getTime() : null;
+      if (this.syntheticAsOf !== null && result.latestObservedAt) this.syntheticAsOf = Math.max(this.syntheticAsOf, result.latestObservedAt);
       this.candles = result.candles; this.history.reset(interval, body.nextBefore); this.chart.setData(this.candles);
       this.message.textContent = this.candles.length ? `${this.candles.length}개 봉 · 왼쪽으로 이동해 과거 조회` : '표시할 캔들이 없습니다.';
     } catch { if (request !== this.request) return; this.buffer.reject(load); this.message.textContent = '차트를 불러오지 못했습니다. 다시 불러오기를 눌러주세요.'; }
@@ -31,7 +34,13 @@ export class ChartController {
     } catch { if (this.history.reject(load)) this.message.textContent = '과거 봉 조회 실패 · 차트를 다시 이동해 재시도할 수 있습니다.'; }
   }
   tick(tick) {
-    try { if (this.buffer.buffer(tick) !== null) return; const result = applyPriceTick(this.candles, tick, this.interval); if (result.changed) { this.candles = result.candles; this.chart.update(this.candles.at(-1)); } }
+    try {
+      if (this.buffer.buffer(tick) !== null) return;
+      const at = new Date(tick.observedAt).getTime();
+      if (tick.provider === 'SIMULATED' && this.syntheticAsOf !== null && at <= this.syntheticAsOf) return;
+      const result = applyPriceTick(this.candles, tick, this.interval);
+      if (result.changed) { this.candles = result.candles; this.chart.update(this.candles.at(-1)); if (tick.provider === 'SIMULATED') this.syntheticAsOf = at; }
+    }
     catch { this.message.textContent = '시세를 반영하지 못했습니다. 차트를 다시 불러와주세요.'; }
   }
 }

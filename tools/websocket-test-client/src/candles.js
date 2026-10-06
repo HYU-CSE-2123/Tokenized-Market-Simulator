@@ -81,13 +81,22 @@ export class CandleLoadBuffer {
     return this.#active.ticks.length;
   }
 
-  resolve(load, candles) {
+  resolve(load, candles, asOf = null) {
     if (!this.#active || this.#active.id !== load.id) return null;
-    const ticks = this.#active.ticks;
+    // eventId cannot identify ticks already included in a REST snapshot.
+    const cutoff = asOf ? new Date(asOf).getTime() : null;
+    const seen = new Set();
+    const ticks = this.#active.ticks.filter((tick) => {
+      const at = new Date(tick.observedAt).getTime();
+      if (cutoff === null) return true; // Preserve Toss, where multiple trades can share a timestamp.
+      if (at <= cutoff || seen.has(at)) return false;
+      seen.add(at); return true;
+    });
     this.#active = null;
     return {
       candles: applyBufferedTicks(candles, ticks, load.interval),
       tickCount: ticks.length,
+      latestObservedAt: ticks.length ? Math.max(...ticks.map((tick) => new Date(tick.observedAt).getTime())) : null,
     };
   }
 

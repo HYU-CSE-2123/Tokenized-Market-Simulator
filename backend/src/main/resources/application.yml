@@ -72,6 +72,9 @@ app:
   price:
     provider: ${PRICE_PROVIDER:simulated}
     update-interval-ms: ${PRICE_INTERVAL_MS:1000}  # 기획서 §8.1 가격 시뮬레이터 주기
+    simulation:
+      seed: ${SIMULATION_SEED:20261006}
+      bootstrap-days: ${SIMULATION_BOOTSTRAP_DAYS:0}
     toss:
       base-url: ${TOSS_API_BASE_URL:https://openapi.tossinvest.com}
       client-id: ${TOSS_CLIENT_ID:}

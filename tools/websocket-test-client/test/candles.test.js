@@ -5,6 +5,17 @@ import {
   normalizeCandles, prependCandleHistory,
 } from '../src/candles.js';
 
+test('synthetic REST asOf excludes included ticks and repeated timestamps without dropping Toss trades', () => {
+  const buffer = new CandleLoadBuffer(); const load = buffer.begin('1m');
+  const included = { price: '100', volume: '9', observedAt: '2026-09-16T00:00:10Z' };
+  const fresh = { price: '101', volume: '2', observedAt: '2026-09-16T00:00:11Z' };
+  buffer.buffer(included); buffer.buffer(fresh); buffer.buffer(fresh);
+  const result = buffer.resolve(load, normalizeCandles([candle('2026-09-16T00:00:00Z', '100')]), included.observedAt);
+  assert.equal(result.tickCount, 1); assert.equal(result.candles[0].volume, 3);
+  const toss = buffer.begin('1m'); buffer.buffer(fresh); buffer.buffer(fresh);
+  assert.equal(buffer.resolve(toss, []).candles[0].volume, 4);
+});
+
 test('normalizes REST candles in chronological order', () => {
   const result = normalizeCandles([
     candle('2026-09-16T00:01:00Z', '102'),

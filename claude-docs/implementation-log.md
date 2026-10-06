@@ -2231,3 +2231,45 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 기존34 그대로 + 신규13(보완3 포함)=전체47통과/실패0/skip0. build90modules, 전체 Chrome fixture smoke 및 최종 Docker 이미지 빌드 통과. Nginx envsubst/nginx -t도 통과. 실제 backend proxy 네트워크/DB/Anvil/Toss/유료 AI/공개 TLS·실기기 인수는 미검증이다.
 - 재검토1 필수 수정 없음. 검토자 직접47/build90/diff 통과. 검토자의 최초 browser 실행은 환경 대기로 중단했으며 구현자의 Chrome/Docker/Nginx 통과와 구분한다.
 - 이후 제품 변경 없이 web-product-ui.md와 모듈 README에 완료·테스트·배포·한계를 반영했다. 백엔드/컨트랙트/DB/실제.env/manifest/index 변경 없음. 커밋/스테이징하지 않았다.
+
+# 외부 배포 설계 — 사용자 승인 대기 (2026-10-05)
+
+- 실제 Docker/Nginx/backend/Compose·보안/AI 초기화·faucet/서명 TTL 계약을 읽고 external-deployment-design.md에 EC2 단일4GiB/Compose·TLS·영속 데이터/backup·운영 secret·공개 API·초기 인수 제한·비공개 Anvil/후속 Sepolia를 제안했다.
+- 공식 Toss docs→llms.txt→overview/FAQ를 확인했다. 비상업적 제3자 배포도 금지하는 데이터 정책 때문에 공개 시세는 기존 simulated 공급자를 권장하고 Toss 실제 시세 공개는 허용 확인 전 제외했다. 검색 실패를 제3자 스펙으로 대체하지 않았다.
+- AWS 공식 단가의 미국 동부 참고/서울 추정 예산/확정 견적을 구분했고 IPv4·EBS·AI·domain·잔존 비용 및 저가 Lightsail 대안을 기록했다.
+- 동작 없는 설계 문서만 추가/연결했다. 인프라/도메인/배포/실제 설정·DB·체인·제품·테스트 변경 없음. 구현 승인과 실제 유료 자원 생성 권한은 별도이며 단순 조사/설계 문서 작업의 독립 구현 검토는 생략했다.
+
+# 공개 국내 시장 데이터 공급자 조사 — 배포 구현 보류 (2026-10-05)
+
+- 사용자 요청에 따라 Toss provider 유지, simulated 공개 운영을 확정하지 않고 KRX/코스콤·LSEG·Twelve Data·EODHD·KIS·금융위원회 데이터의 공식 라이선스/커버리지/가격을 조사했다. public-market-data-research.md에 근거 URL·확정/미확정·문의 문안을 기록했다.
+- 코스콤 웹사이트 라이선스도 API/가공/저장 수단 제한이 있어 현재 REST/STOMP·모의 가격·온체인 기록 허용은 별도 확인한다. 개인 API 교체/공공 무료 자료/replay는 자동 우회책이 아니다. 국내 Twelve Data는 EOD이며 API 접근 가격을 공개 feed 총 견적으로 쓰지 않는다.
+- 실제 provider 경계는 MarketPriceProvider/MarketCandleProvider 두 개. replay는 PriceReportIssuer의 관측5초/TTL30초와 과거 원본 clock·차트 tick 의미 분리가 추가로 필요하다고 제안했다. 거래 검증을 느슨하게 만들거나 updatePrice를 복원하지 않는다.
+- 문서 조사만 수행했다. 기존 미커밋 배포 설계 문서를 보존/보류 표시하고 제품/.env/DB/provider 구현·배포·테스트·계정 생성·공급자 문의/구매는 하지 않았다. 독립 구현 검토는 단순 조사 예외로 생략했다.
+
+# 공개 simulated 확정 / Synthetic Market 개선 설계 — 구현 승인 대기 (2026-10-06)
+
+- 사용자가 공개 simulated 선택과 Toss 기능 보존/공개 비활성화를 확정했다. 실제 데이터 계약/replay는 현재 선행 작업에서 제외한다. 인프라 구현/외부 자원 생성과 합성 개선 구현은 아직 승인되지 않았다.
+- 실제 simulated 가격/캔들/테스트·MarketPriceService·PriceReportIssuer·REST/STOMP·웹 코드에서 ±0.3%/1초·tick 수 volume·직전 tick previousClose·메모리 reset/DB 이력 불연속·current 선공개·REST buffer 중복 가능성을 확인했다.
+- synthetic-market-design.md에 seed/version 합성 엔진·활동/변동성·가상 수량·공통6주기/전일 기준·30일 초기 합성 이력·영속 checkpoint/catch-up·최소 watermark·공개 Toss guard·정확한 SIMULATED UI·승인 후 평가/독립 검토 범위를 제안했다.
+- 기존 외부 배포 문서의 후속 결정을 갱신하고 공급자 조사를 이력으로 구분했다. 제품/.env/DB/체인/active AI 지식·manifest/index는 변경하지 않았다. 코드 읽기/설계 문서만 작성했고 테스트·공급자/DB 실행·커밋·배포는 하지 않았다. 독립 검토는 설계 문서 예외로 생략하며 구현 후 수행한다.
+
+# Synthetic Market 최소 보완 — 구현/검증·독립 검토 준비 (2026-10-06)
+
+- 사용자 축소 승인 후 가격/가상 수량·결정적 seed/Clock·previousClose·checkpoint·commit 후 current/WS·public Toss guard와 UI 합성 표기를 구현했다. 실제 .env/Toss 코드/컨트랙트/주문 서명 경계는 그대로다.
+- 초기 합성 이력은 public 신규 DB 최대2일로 축소, local 기본0. 중단 catch-up/30일 이력/공개 sequence/simulationId는 제외. eventId/bucket만으로 REST의 포함 tick을 식별할 수 없어 timestamp-only optional asOf를 최소 추가하고 DB snapshot 조회/웹 dedup을 연결했다.
+- 엔진4/public2/persistence5와 실제 PostgreSQL+격리 Anvil E2E1 통과. JWT/REST/STOMP/6주기·asOf/실제 서명 매수·매도/receipt가격/재사용 거부/잠금0 확인. 전용exchange_synthetic_test와18545 사용, 기존 거래 DB/8545체인 보존.
+- 웹48(기존47보존)/build90/Chrome desktop·mobile fixture smoke, forge -q 통과. 전체 회귀에서 기동 publisher 호출의 정산 무호출 assertion 충돌을 발견해 기동 초기화는 REST만 공개하도록 보완하고 전체 회귀를 재실행 중이다. 신규 테스트 fixture/메서드/고정시각 assertion 오류도 바로잡았다.
+- 상세 파일/변경 경계/실행·한계는 synthetic-market-design.md. 현재 독립 검토 전이며 구현 완료로 표시하지 않는다. 기존 미커밋 설계 문서를 보존했고 스테이징·커밋·외부 배포는 하지 않았다.
+
+## 최종 회귀 / 독립 검토 요청
+
+- 전체backend346 중333통과/13skip/실패·오류0. 실제 pgvector/거래PostgreSQL/Anvil읽기 및 합성E2E 포함. 기존 ToolAnvil의8545최근체결 event 없음은 준비된18545 RPC를 테스트 env로 선택하도록 보완했고 MATCH/불변성 assertion을 유지했다.
+- persistence6(Clock stale/rollback 추가), 웹48와build90·최종Chrome 합성표기/desktop/mobile fixture 통과. Chrome 고정sleep 만료 race를 bounded waitText로 실제 UI 만료 상태를 기다리는 방식으로 고쳤다. forge -q와diff check 통과.
+- 제품·테스트·문서 초안을 동결해 독립 검토를 요청한다. 외부 배포/실제.env/AI active 지식·manifest/index와기존거래DB/8545체인은 변경하지 않았다. 임시 검증 Anvil과전용DB는 reviewer가 mutation 없이 확인할 수 있도록 일단 유지한다.
+
+## 독립 검토 완료 / 인계 (2026-10-06)
+
+- 별도 `review_synthetic_market` 결과: 축소 승인 범위에서 발견된 필수 수정 없음. 엔진·checkpoint·commit 이후 공개·public Toss guard·asOf와 서명 거래 보존을 독립 확인했다.
+- 검토자 직접 실행 backend15/웹48 통과. 직전 전체 XML346/13skip/실패0 및 실제E2E1 통과 증거를 확인했다. 선택 재실행으로 현재 XML은15개 결과이며 전체 실행 이력과 구분한다. 유료 공급자 평가·브라우저·forge·공유 DB/체인은 검토자가 재실행하지 않았다.
+- README의 옛 tick-count volume 문구를 가상 수량 합계로 바로잡았다. 최초 통신 전 SIMULATED 고정 표시와 시장/차트 provider 불일치 차단은 선택 보완 미구현으로 설계 기록에 남겼다. 현재 미확인 표기는 실제 시세라고 주장하지 않는다.
+- 구현/통합 검증/독립 검토 완료이며 사용자 완료 승인·외부 배포는 별개다. AI 지식/manifest/index 갱신·운영 장애/부하·장중 Toss 수동 인수는 이번에 수행하지 않았다. 전용 검증 DB는 보존하며 임시18545 Anvil만 정리한다. 기존 환경·사용자 데이터 보존, 미커밋 상태로 인계한다.

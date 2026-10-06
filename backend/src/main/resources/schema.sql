@@ -168,6 +168,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_blockchain_transactions_sender_nonce
     ON blockchain_transactions (sender_address, nonce);
 
 -- 초기 자산 데이터 (기획서 §11.2)
+CREATE TABLE IF NOT EXISTS synthetic_market_state (
+    symbol VARCHAR(255) PRIMARY KEY,
+    engine_version VARCHAR(255) NOT NULL,
+    seed BIGINT NOT NULL,
+    step BIGINT NOT NULL,
+    price DECIMAL(30,8) NOT NULL,
+    previous_close DECIMAL(30,8) NOT NULL,
+    observed_at TIMESTAMP NOT NULL,
+    activity DOUBLE PRECISION NOT NULL,
+    trend DOUBLE PRECISION NOT NULL
+);
+
 INSERT INTO assets (symbol, name, contract_address, decimals)
 VALUES ('mKRW', 'Mock Korean Won', NULL, 18)
 ON CONFLICT (symbol) DO NOTHING;

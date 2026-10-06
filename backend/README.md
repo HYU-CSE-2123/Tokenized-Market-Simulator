@@ -57,6 +57,16 @@ Skill은 위 세 설정과 `AI_SKILLS_ENABLED=true`로 활성화합니다(기본
 
 Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않았습니다. 온체인 주문은 사용자별 서명 견적, 비동기 전송·정산과 장애 복구까지 구현됐습니다.
 
+## 공개 Synthetic Market 모드 (2026-10-06)
+
+`SPRING_PROFILES_ACTIVE=public`은 `PRICE_PROVIDER=simulated`로 동작하며 Toss client를 등록하지 않습니다. 더 높은 우선순위에서 toss를 강제하면 기동을 거부합니다. Toss 코드와 로컬 `.env`는 유지하며 공개 배포에 Toss 키/데이터를 복사하지 않습니다.
+
+합성 가격·가상 거래량을 자체 생성하고 24시간 운영합니다. `SIMULATION_SEED` 기본20261006, 로컬 초기 이력0일/public 신규 DB2일(최대2일). `synthetic_market_state`와1m/1d 봉을 같은 DB transaction으로 저장하고 commit 후 현재가와 WS를 공개합니다. seed/version을 기존 DB와 다르게 바꾸면 자동 reset하지 않습니다. 재시작은 checkpoint에서 이어지며 긴 중단 구간의 봉/이벤트 catch-up은 없습니다. 갱신 중단5초 이후 STALE이고 새 서명 견적을 허용하지 않습니다.
+
+합성 캔들 응답의 `asOf`는 OHLCV에 포함된 마지막 checkpoint 관측 시각입니다. 웹은 이 시각 이하의 buffered tick을 다시 합산하지 않습니다. Toss 응답은 기존 계약에 `asOf=null`만 추가되며 같은 시각 여러 체결을 삭제하지 않습니다. EIP-712 quoteId 주문/키 분리/만료/정산·복구 계약은 그대로입니다.
+
+실제 통합 검증은 opt-in `SYNTHETIC_E2E_TESTS=true`와 `SyntheticMarketPostgresAnvilE2ETest`를 사용합니다. 전용 `exchange_synthetic_test` PostgreSQL DB와18545 임시 Anvil/테스트 공개키·배포 주소가 필요합니다. 기존 DB/체인으로 바꾸지 않습니다. 상세 상태/제한은 `claude-docs/synthetic-market-design.md`를 참고합니다.
+
 ## 인증 API
 
 | Method | Path | 인증 | 설명 |
@@ -108,7 +118,7 @@ Google OAuth, 이메일 인증과 리프레시 토큰은 아직 구현하지 않
 
 - Toss 모드는 공식 수정주가 캔들 API의 가격과 거래량을 사용합니다.
 - Toss 1분봉의 `timestamp`는 봉 종료 경계이므로 내부 `startedAt`에서는 60초를 빼 시작 시각으로 정규화합니다. 그래야 WebSocket 체결 tick과 같은 봉에 병합됩니다.
-- 시뮬레이션 모드는 `market_candles`에 1분봉·일봉만 갱신하고 상위 분봉은 조회 시 집계합니다. `volume`은 실제 거래량이 아닌 해당 구간의 가격 tick 개수입니다.
+- 시뮬레이션 모드는 `market_candles`에 1분봉·일봉만 갱신하고 상위 분봉은 조회 시 집계합니다. `volume`은 합성 엔진이 생성한 가상 mSEC 수량의 합계이며 실제 시장 거래량이나 사용자 체결량이 아닙니다.
 - 잘못된 주기·개수는 HTTP 400 `INVALID_CANDLE_QUERY`, mSEC 이외 심볼은 `UNSUPPORTED_SYMBOL`입니다.
 
 ## 모의 거래 API

@@ -72,7 +72,9 @@ try {
   await command('Page.addScriptToEvaluateOnNewDocument', { source: `window.__sockets=[];window.WebSocket=class{static OPEN=1;constructor(){this.readyState=0;this.subs={};window.__sockets.push(this);setTimeout(()=>{this.readyState=1;this.onopen?.({});},20);}send(frame){if(typeof frame!=='string')frame=new TextDecoder().decode(frame);if(frame.startsWith('CONNECT'))setTimeout(()=>this.onmessage?.({data:'CONNECTED\\nversion:1.2\\nheart-beat:0,0\\n\\n\\0'}),5);if(frame.startsWith('SUBSCRIBE')){const id=frame.match(/id:([^\\n]+)/)?.[1],dest=frame.match(/destination:([^\\n]+)/)?.[1];this.subs[dest]=id;}if(frame.startsWith('DISCONNECT')){const r=frame.match(/receipt:([^\\n]+)/)?.[1];if(r)this.onmessage?.({data:'RECEIPT\\nreceipt-id:'+r+'\\n\\n\\0'});}}close(){this.readyState=3;this.onclose?.({});}emit(dest,event){const sub=this.subs[dest];if(sub)this.onmessage?.({data:'MESSAGE\\nsubscription:'+sub+'\\nmessage-id:fixture\\ndestination:'+dest+'\\n\\n'+JSON.stringify(event)+'\\0'});}};` });
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await command('Page.navigate', { url: `http://127.0.0.1:${port}/` });
-  await waitText('price', '75,000'); await waitText('connection', '연결됨'); await screenshot('desktop-market');
+  await waitText('price', '75,000'); await waitText('connection', '연결됨');
+  await waitText('market-mode', 'SIMULATED'); await waitText('market-description', '실제 삼성전자 시세가 아닙니다');
+  await waitText('volume-description', '합성 거래량'); await screenshot('desktop-market');
   assert.equal(await evaluate(`document.getElementById('admin-nav').hidden`), true);
   assert.equal(requests.some((request) => request.path === '/api/portfolio'), false);
   await click('auth-open'); await click('auth-switch'); await fill('login-id', 'fixtureuser'); await fill('password', 'password123'); await fill('nickname', '모의 사용자'); await submit('auth-form'); await waitText('identity', '모의 사용자');
@@ -104,7 +106,9 @@ try {
     await screenshot('mobile-' + route);
   }
   for (const interval of ['1m', '5m', '15m', '30m', '1h', '1d']) await evaluate(`document.querySelector('[data-interval="${interval}"]').click()`);
-  await evaluate(`location.hash='market'`); await click('side-sell'); await fill('trade-amount', '1'); expiry = 1; await submit('trade-form'); await waitText('quote-summary', '75,000'); await new Promise((done) => setTimeout(done, 1300));
+  await evaluate(`location.hash='market'`); await click('side-sell'); await fill('trade-amount', '1'); expiry = 1; await submit('trade-form'); await waitText('quote-summary', '75,000');
+  // Wait for the real 1s UI timer rather than assuming its phase relative to a fixed 1300ms sleep.
+  await waitText('quote-timer', '견적이 만료됐습니다');
   assert.equal(await evaluate(`document.getElementById('quote-confirm').disabled`), true); expiry = 30;
   await submit('trade-form'); await waitText('quote-summary', '75,000'); await click('quote-confirm'); await screenshot('mobile-quote-sheet');
   failWrite = true; await click('quote-submit'); await waitText('trade-message', '자동 재주문하지');

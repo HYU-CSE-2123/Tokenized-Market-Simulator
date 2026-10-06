@@ -44,9 +44,17 @@ class TradingIntegrationTest {
     @Autowired UserRepository userRepository;
     @MockBean MarketWebSocketPublisher marketEvents;
     @MockBean UserWebSocketPublisher userEvents;
+    @MockBean com.pricetrack.exchange.market.MarketPriceService marketPrices;
 
     @BeforeEach
     void cleanDatabase() {
+        var snapshot = new com.pricetrack.exchange.market.model.MarketPriceSnapshot("mSEC",
+                new BigDecimal("75000"), new BigDecimal("75000"), BigDecimal.ZERO, BigDecimal.ZERO,
+                com.pricetrack.exchange.market.model.MarketStatus.OPEN,
+                com.pricetrack.exchange.market.model.PriceStatus.SIMULATED, "SIMULATED", java.time.Instant.now());
+        org.mockito.Mockito.when(marketPrices.current()).thenReturn(snapshot);
+        org.mockito.Mockito.when(marketPrices.currentPrice()).thenReturn(snapshot.price());
+        org.mockito.Mockito.when(marketPrices.requireTradableSnapshot()).thenReturn(snapshot);
         tradeRepository.deleteAll();
         orderRepository.deleteAll();
         balanceRepository.deleteAll();

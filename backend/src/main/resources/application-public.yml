@@ -1,0 +1,6 @@
+# Public demo only. Local Toss configuration remains unchanged.
+app:
+  price:
+    provider: simulated
+    simulation:
+      bootstrap-days: ${SIMULATION_BOOTSTRAP_DAYS:2}

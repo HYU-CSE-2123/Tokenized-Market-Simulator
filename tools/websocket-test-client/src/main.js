@@ -99,9 +99,13 @@ async function authenticate(event) {
 }
 function marketRender(market) {
   state.market = market; $('price').textContent = number(market.price, 'mKRW', 2);
-  $('price-change').textContent = `전일 대비 ${number(market.change, 'mKRW', 2)} (${number(market.changeRate, '%', 2)})`;
+  const synthetic = market.provider === 'SIMULATED';
+  $('price-change').textContent = `${synthetic ? '합성 전일 대비' : '전일 대비'} ${number(market.change, 'mKRW', 2)} (${number(market.changeRate, '%', 2)})`;
   $('price-change').className = Number(market.changeRate) > 0 ? 'up' : Number(market.changeRate) < 0 ? 'down' : 'muted';
-  $('provider').textContent = market.provider === 'TOSS' ? 'Toss 기준 시세' : market.provider === 'SIMULATED' ? '시뮬레이션 시세' : '공급자 확인 불가';
+  $('provider').textContent = market.provider === 'TOSS' ? 'Toss 기준 시세' : synthetic ? 'SIMULATED · 합성 시장' : '공급자 확인 불가';
+  $('market-mode').textContent = $('provider').textContent;
+  $('market-description').textContent = synthetic ? '자체 생성한 합성 가격·거래량으로 거래하는 mSEC 모의 시장입니다. 실제 삼성전자 시세가 아닙니다.' : market.provider === 'TOSS' ? 'Toss 삼성전자 기준 시세로 모의 자산을 거래합니다. 실제 주식 거래가 아닙니다.' : '시세 출처를 확인할 수 없습니다.';
+  $('volume-description').textContent = synthetic ? '한국 시간 기준 · 24시간 합성 시장 · 합성 거래량은 사용자 체결량이 아닙니다. 초기 과거 봉도 자체 생성한 합성 이력입니다.' : '한국 시간 기준 · 왼쪽으로 이동해 과거 봉 조회 · 거래량은 공급자 체결량입니다.';
   $('market-state').textContent = `${label(market.marketStatus)} · ${label(market.priceStatus)}`;
   $('price-time').textContent = time(market.observedAt); message('market-message', marketNotice(market));
 }
@@ -188,7 +192,7 @@ function renderQuote() {
     const seconds = remainingSeconds(quote); $('quote-timer').textContent = seconds === null ? '모의 DB 거래 견적 · 온체인 서명 없음' : seconds ? `견적 유효 시간 ${seconds}초` : '견적이 만료됐습니다. 새 견적을 확인해 주세요.';
   }
   if ($('quote-dialog').open) {
-    $('quote-review').replaceChildren(...[...$('quote-summary').children].map((child) => child.cloneNode(true)));
+    $('quote-review').replaceChildren(node('p', state.market?.provider === 'SIMULATED' ? 'SIMULATED · 실제 삼성전자 시세가 아닌 합성 가격으로 거래합니다.' : '공급자 기준 가격의 모의 자산 거래입니다.'), ...[...$('quote-summary').children].map((child) => child.cloneNode(true)));
     $('quote-review-timer').textContent = $('quote-timer').textContent;
   }
   updateTradeControls();

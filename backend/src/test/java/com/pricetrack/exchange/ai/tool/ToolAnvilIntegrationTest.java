@@ -36,7 +36,8 @@ class ToolAnvilIntegrationTest {
     @Autowired OrderRepository orders;
     @Autowired BlockchainTransactionRepository transactions;
     @Test void existingReceiptMatchesAndReadCallsDoNotChangeChainOrDatabaseState() throws Exception {
-        String rpc = "http://127.0.0.1:8545";
+        // Select an already-prepared isolated chain; never create a trade just for this read-only test.
+        String rpc = System.getenv().getOrDefault("AI_TOOL_TEST_RPC_URL", "http://127.0.0.1:8545");
         Web3j web3j = Web3j.build(new HttpService(rpc));
         try {
             BigInteger height = web3j.ethBlockNumber().send().getBlockNumber();
