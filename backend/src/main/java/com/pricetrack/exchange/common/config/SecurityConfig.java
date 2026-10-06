@@ -44,6 +44,15 @@ public class SecurityConfig {
                             "AUTHENTICATION_REQUIRED",
                             "인증이 필요합니다.",
                             request.getRequestURI()));
+                }).accessDeniedHandler((request, response, exception) -> {
+                    // sendError triggers a second secured /error dispatch on embedded Tomcat,
+                    // which can turn a valid USER's intended 403 into an anonymous 401.
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    objectMapper.writeValue(response.getWriter(), ApiErrorResponse.of(
+                            HttpServletResponse.SC_FORBIDDEN, "ACCESS_DENIED",
+                            "접근 권한이 없습니다.", request.getRequestURI()));
                 }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/ai/agent/answers").hasAnyRole("USER", "ADMIN")

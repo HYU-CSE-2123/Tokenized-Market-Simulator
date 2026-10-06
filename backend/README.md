@@ -1,5 +1,7 @@
 # Backend — Spring Boot (Java 21)
 
+공개 배포 준비(2026-10-07)는 개발 Compose와 분리된 [deployment/RUNBOOK.md](../deployment/RUNBOOK.md)를 따른다. 비root/read-only 이미지, private DB·Anvil, 파일 기반 SSM secret, 승인 지식 artifact와 HTTPS proxy를 사용한다. 실제 AWS 생성·공개 게시와 유료 AI 재색인은 아직 하지 않았다. 검증 상태는 [배포 준비 기록](../claude-docs/deployment-preparation.md)에 구분한다.
+
 삼성전자 가격 추종 토큰 거래소의 REST API 및 WebSocket 서버입니다.
 
 AI Phase 2 Basic RAG는 기본 비활성인 ADMIN 전용 모듈입니다. 거래 DB/JPA와 별도의 pgvector 연결을 사용합니다. 설정·실행·색인·평가 및 미검증 범위는 [AI 실행 보고서](../docs/ai/phase-2-basic-rag.md)를 참고하세요.

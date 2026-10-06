@@ -1,5 +1,7 @@
 # Tokenized Market — 제품형 모의 거래 웹
 
+공개용 Docker build는 `--build-arg PUBLIC_DEMO=true`로 생성하며 최초 API/WS/JS 실패에도 정적 `SIMULATED · 합성 시장` 안내가 보인다. 개발/Toss용 빌드는 이 옵션을 켜지 않는다. 공개 TLS/WSS·rate/IP 제한은 별도 [deployment/RUNBOOK.md](../../deployment/RUNBOOK.md)를 따르고 실제 외부 공개 상태는 [배포 준비 기록](../../claude-docs/deployment-preparation.md)과 구분한다.
+
 기존 Vite + JavaScript 검증 클라이언트를 서비스형 UI로 전환했습니다. 디렉터리 이름은 호환성을 위해 유지합니다. 실제 삼성전자 주식·원화 거래가 아닌 모의 자산 서비스이며 Android의 실행 가능한 REST/STOMP 기준 클라이언트 역할도 유지합니다.
 
 ## 현재 사용자 흐름 (2026-10-05)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Renew public demo TLS certificate and validate/reload Nginx
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/exchange/renew.env
+ExecStart=/bin/sh /opt/exchange/deployment/renew-cert.sh ${ENV_FILE} ${CERT_ROOT} ${CERTBOT_IMAGE}
+UMask=0077

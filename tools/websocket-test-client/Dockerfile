@@ -4,6 +4,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY index.html vite.config.js ./
 COPY src ./src
+ARG PUBLIC_DEMO=false
+ENV PUBLIC_DEMO=$PUBLIC_DEMO
 RUN npm run build
 
 FROM nginx:1.28-alpine

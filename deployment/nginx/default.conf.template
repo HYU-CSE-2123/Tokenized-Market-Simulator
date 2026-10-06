@@ -1,0 +1,70 @@
+map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+limit_req_zone $binary_remote_addr zone=api:10m rate=15r/s;
+limit_req_zone $binary_remote_addr zone=auth:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=trade:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=ai:10m rate=6r/m;
+limit_conn_zone $binary_remote_addr zone=connections:10m;
+log_format safe '$remote_addr $request_method $uri $status $request_time';
+server {
+    error_log /var/log/nginx/error.log crit;
+    access_log /var/log/nginx/access.log safe;
+    listen 80 default_server;
+    server_name _;
+    location ^~ /.well-known/acme-challenge/ { root /var/www/acme; }
+    location / { return 301 https://${PUBLIC_DOMAIN}$request_uri; }
+}
+server {
+    error_log /var/log/nginx/error.log crit;
+    access_log /var/log/nginx/access.log safe;
+    listen 443 ssl default_server;
+    server_name ${PUBLIC_DOMAIN};
+    if ($host != ${PUBLIC_DOMAIN}) { return 421; }
+    ssl_certificate /certs/fullchain.pem;
+    ssl_certificate_key /certs/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    server_tokens off;
+    root /usr/share/nginx/html;
+    index index.html;
+    client_max_body_size 32k;
+    client_body_timeout 10s;
+    send_timeout 15s;
+    proxy_read_timeout 65s;
+    limit_req_status 429;
+    limit_conn_status 429;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+    add_header X-Frame-Options DENY always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss:; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'" always;
+    # Block all non-product AI routes including index/Tool/direct RAG.
+    location ~ ^/api/ai/(agent/answers|diagnoses(?:/[0-9]+)?|observability)$ {
+        include /etc/nginx/acceptance.conf;
+        limit_req zone=ai burst=2 nodelay;
+        include /etc/nginx/proxy.conf;
+    }
+    location /api/ai/ { return 404; }
+    location = /api/auth/login {
+        limit_req zone=auth burst=5 nodelay;
+        include /etc/nginx/proxy.conf;
+    }
+    location ~ ^/api/(auth/signup|quotes/(buy|sell)|orders/(buy|sell)|wallet/faucet)$ {
+        include /etc/nginx/acceptance.conf;
+        limit_req zone=trade burst=5 nodelay;
+        include /etc/nginx/proxy.conf;
+    }
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        include /etc/nginx/proxy.conf;
+    }
+    location ~ ^/(ws|ws-sockjs)(/|$) {
+        limit_req zone=api burst=10 nodelay;
+        limit_conn connections 8;
+        include /etc/nginx/proxy.conf;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 90s;
+    }
+    location /assets/ { try_files $uri =404; expires 1y; }
+    location / { try_files $uri $uri/ =404; expires -1; }
+}

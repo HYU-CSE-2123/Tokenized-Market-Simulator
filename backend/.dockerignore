@@ -1,0 +1,12 @@
+**
+!Dockerfile
+!.dockerignore
+!gradlew
+!build.gradle
+!settings.gradle
+!gradle/
+!gradle/**
+!src/
+!src/**
+**/.env*
+**/*.log

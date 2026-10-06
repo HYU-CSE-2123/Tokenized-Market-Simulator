@@ -2,10 +2,10 @@
 title: "시스템 책임과 지식의 경계"
 domain: architecture
 type: overview
-version: 6
+version: 7
 status: active
 minimum_role: USER
-updated_at: 2026-10-02
+updated_at: 2026-10-06
 ---
 
 # 시스템 책임과 지식의 경계
@@ -15,6 +15,8 @@ updated_at: 2026-10-02
 ## 정의와 목적
 
 mSEC는 삼성전자 기준 가격의 변동을 모사하는 교육용 합성자산 토큰이다. 실제 주식·배당·의결권·실제 원화 상환권을 제공하지 않는다. mKRW는 모의 원화이며 faucet은 실제 은행 입금이 아니다.
+
+공개 데모는 SIMULATED 합성 시장이며 실제 삼성전자 시세를 추종하지 않는다. Toss 실연동은 별도 로컬 경로로 보존하지만 public profile에서 호출하지 않는다. 공개 설정의 블록체인은 인터넷에 RPC를 노출하지 않는 Anvil 테스트 체인이다. 이미지/운영 절차 준비와 실제 AWS 공개 배포 완료는 구분한다.
 
 ## 현재 구현과 책임
 

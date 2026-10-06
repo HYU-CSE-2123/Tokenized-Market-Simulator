@@ -1,0 +1,12 @@
+# Temporary HTTP challenge server only, before first certificate. No product backend.
+name: exchange-acme
+services:
+  acme:
+    image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
+    ports: ["${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-80}:80"]
+    volumes:
+      - ./nginx/acme.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${CERT_ROOT:?Set CERT_ROOT}/acme:/var/www/acme:ro
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}

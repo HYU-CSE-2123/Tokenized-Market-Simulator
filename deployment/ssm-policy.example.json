@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Effect":"Allow","Action":"ssm:GetParameters","Resource":[
+      "arn:aws:ssm:ap-northeast-2:ACCOUNT_ID:parameter/exchange/public/DB_PASSWORD",
+      "arn:aws:ssm:ap-northeast-2:ACCOUNT_ID:parameter/exchange/public/AI_DB_PASSWORD",
+      "arn:aws:ssm:ap-northeast-2:ACCOUNT_ID:parameter/exchange/public/JWT_SECRET",
+      "arn:aws:ssm:ap-northeast-2:ACCOUNT_ID:parameter/exchange/public/ADMIN_LOGIN_ID",
+      "arn:aws:ssm:ap-northeast-2:ACCOUNT_ID:parameter/exchange/public/ADMIN_PASSWORD",
+      "arn:aws:ssm:ap-northeast-2:ACCOUNT_ID:parameter/exchange/public/OPERATOR_PRIVATE_KEY",
+      "arn:aws:ssm:ap-northeast-2:ACCOUNT_ID:parameter/exchange/public/PRICE_SIGNER_PRIVATE_KEY",
+      "arn:aws:ssm:ap-northeast-2:ACCOUNT_ID:parameter/exchange/public/OPENAI_API_KEY"
+    ]},
+    {"Effect":"Allow","Action":"kms:Decrypt","Resource":"arn:aws:kms:ap-northeast-2:ACCOUNT_ID:key/KEY_ID",
+     "Condition":{"StringEquals":{"kms:ViaService":"ssm.ap-northeast-2.amazonaws.com"}}}
+  ]
+}

@@ -21,7 +21,8 @@
 - [`phase-6-3-acceptance.md`](phase-6-3-acceptance.md) — 실제 Toss·PostgreSQL·Anvil·웹 종단간 인수 체크리스트와 실행 결과
 - [`career-project-brief.md`](career-project-brief.md) — 프로젝트 마스터에 전달할 최신 취업용 사실 원본. 완료 구현·실행별 평가·미구현/미검증·개인 기여 확인 범위
 - [`web-product-ui.md`](web-product-ui.md) — Vite/JS 제품형 웹 전환, 기존 코드 계약·사용자 흐름·상태·모바일·배포 준비·검증/한계
-- [`external-deployment-design.md`](external-deployment-design.md) — 승인 대기 외부 배포안. EC2/Compose 비용·HTTPS·secret·영속 데이터·공개 API·Toss 이용 제한·Anvil/Sepolia 선택
+- [`external-deployment-design.md`](external-deployment-design.md) — 외부 배포안과 후속 결정. 로컬 배포 준비 완료·실제 AWS 생성 승인 대기, EC2/Compose 비용·HTTPS·secret·영속 데이터·공개 API·Toss 이용 제한·Anvil/Sepolia 선택
+- [`deployment-preparation.md`](deployment-preparation.md) — 승인된 외부 자원 없는 배포 구현·로컬 검증·독립 검토·미검증. 실행 절차는 deployment/RUNBOOK.md
 - [`public-market-data-research.md`](public-market-data-research.md) — 배포 보류 후 국내 실시간/지연/historical 공급자·공개 이용권 조사와 provider/replay 설계 후보
 - [`synthetic-market-design.md`](synthetic-market-design.md) — 공개 simulated 선택과 축소 승인 범위의 합성 tick/거래량·영속 상태·서명 견적·UI 구현, 통합 검증·독립 검토 및 남은 한계(외부 배포는 대기)
 - [`AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md`](AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md) — 사용자 작성 AI 확장 지침. AI Phase 번호는 거래소 Phase와 별개

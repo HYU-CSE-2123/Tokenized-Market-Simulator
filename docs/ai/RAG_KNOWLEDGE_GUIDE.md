@@ -10,6 +10,8 @@
 
 ## 현재 검색 경로
 
+2026-10-07 배포 준비에서 시장정책v2·시스템개요v7을 합성 공개 환경에 맞게 갱신하고 manifest/loader 및9개 artifact를 검증했다. 실제 AI 재색인·새 indexVersion·고정 golden 공급자 평가는 아직 실행하지 않았다. 아래 기존 검색 설정과 과거 평가를 새 corpus의 실행 결과로 오인하지 않는다. 운영자는 새 artifact에 대한 명시 ingest/회귀 후 AI를 공개한다.
+
 - Markdown 제목/문장 경계 기반 청크, 현재1200바이트 기준과 overlap 품질 보정. 설정 이름 `chunkTokens`가 실제 토큰 계량이라는 뜻은 아니다.
 - text-embedding-3-small1536차원, PostgreSQL pgvector semantic search.
 - similarity0.25, 충분한 후보40 이상, 최종Top5 구성에서 문서당2개 제한.

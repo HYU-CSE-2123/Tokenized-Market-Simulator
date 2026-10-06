@@ -2,10 +2,10 @@
 title: "시세·장 상태·차트 데이터의 의미"
 domain: market
 type: policy
-version: 1
+version: 2
 status: active
 minimum_role: USER
-updated_at: 2026-09-27
+updated_at: 2026-10-06
 ---
 
 # 시세·장 상태·차트 데이터의 의미
@@ -14,7 +14,13 @@ updated_at: 2026-09-27
 
 ## 정의와 공급자 역할
 
-가격 공급자는 거래 계산·API·WebSocket이 공유하는 시장 스냅샷을 제공한다. Toss 모드는 REST로 초기 가격·전일 종가·장 일정을 조회하고 WebSocket으로 실시간 체결 tick을 반영한다. 과거 봉은 Toss 캔들 조회 경로를 사용한다. 외부 API 없는 개발·테스트에서는 시뮬레이션 공급자를 선택할 수 있다.
+가격 공급자는 거래 계산·API·WebSocket이 공유하는 시장 스냅샷을 제공한다. Toss 모드는 REST로 초기 가격·전일 종가·장 일정을 조회하고 WebSocket으로 실시간 체결 tick을 반영한다. 과거 봉은 Toss 캔들 조회 경로를 사용한다. 공개 데모의 public profile은 SIMULATED 합성 시장으로 고정하며 Toss 호출은 비활성이다. Toss 실제 연동 코드는 별도 로컬 검증 경로로 유지한다.
+
+## 공개 합성 시장의 경계
+
+합성 가격·거래량·초기 이력은 결정적 seed/Clock 엔진이 자체 생성한다. 실제 삼성전자 시세의 복제나 replay가 아니며 사용자 주문량으로 가격을 정하지 않는다. volume은 가상 mSEC 수량이고 사용자 체결량이 아니다. public 신규 DB의 초기 이력은 최대2일, 긴 중단 catch-up은 없다. 전일 기준은 KST 날짜 경계의 마지막 합성 가격이다.
+
+엔진 상태와 봉을 같은 거래 DB transaction에 저장하고 commit 뒤 현재 가격·WS를 공개한다. 재시작은 checkpoint에서 이어가며 seed 변경으로 이력을 덮어쓰지 않는다. REST 캔들의 asOf는 이미 포함한 합성 tick의 관측 시각 경계이며 eventId와 다른 역할이다. 공개 체인은 비공개 Anvil 테스트 체인이고 Sepolia 배포 완료를 뜻하지 않는다.
 
 이는 구현 설명이며 현재 실행 중인 공급자나 현재 가격을 확정하는 정보가 아니다. 실제 값은 시장 API의 provider·observedAt·상태를 조회해야 한다.
 

@@ -2273,3 +2273,18 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 검토자 직접 실행 backend15/웹48 통과. 직전 전체 XML346/13skip/실패0 및 실제E2E1 통과 증거를 확인했다. 선택 재실행으로 현재 XML은15개 결과이며 전체 실행 이력과 구분한다. 유료 공급자 평가·브라우저·forge·공유 DB/체인은 검토자가 재실행하지 않았다.
 - README의 옛 tick-count volume 문구를 가상 수량 합계로 바로잡았다. 최초 통신 전 SIMULATED 고정 표시와 시장/차트 provider 불일치 차단은 선택 보완 미구현으로 설계 기록에 남겼다. 현재 미확인 표기는 실제 시세라고 주장하지 않는다.
 - 구현/통합 검증/독립 검토 완료이며 사용자 완료 승인·외부 배포는 별개다. AI 지식/manifest/index 갱신·운영 장애/부하·장중 Toss 수동 인수는 이번에 수행하지 않았다. 전용 검증 DB는 보존하며 임시18545 Anvil만 정리한다. 기존 환경·사용자 데이터 보존, 미커밋 상태로 인계한다.
+
+# 공개 배포 준비 — 구현·로컬 운영형 검증 중 (2026-10-07)
+
+- Synthetic 최소 개선의 사용자 완료 승인 후 외부 자원 없는 배포 구현을 시작했다. 시작 Git clean이며 기존 구현을 보존했다. AWS/실제.env/기존 DB·체인 변경 권한은 없다.
+- 별도 production Compose·backend allowlisted/nonroot/digest/read-only 이미지·공개 정적 SIMULATED 표시·9개 지식 artifact/시장v2·개요v7/hash·Nginx TLS/WSS/429/IP/운영API 차단·SSM 정확한 SecureString 파일주입·private chain 명시 초기화·checkpoint/새root restore를 구현했다.
+- backend346 중316통과/30조건부skip/실패0, 웹48/build90/Chrome fixture·forge -q·ops unit10 통과. 고정version assertion은 새 승인 문서 버전으로 수정하되 hash/role/size를 유지했다. backend/web Linux build 성공.
+- 로컬 신규exchange-ops/restore 프로젝트로 운영형 검증 중이며 self-signed TLS·무작위 전용키·loopback만 쓴다. Docker일시500/test openssl/private network runtime컴파일/CRLF/tmpfs YAML 오류를 실제 실행으로 확인해 수정했다. 기록은 [배포 준비](deployment-preparation.md)와 [RUNBOOK](../deployment/RUNBOOK.md)을 따른다. 최종 검증·독립 검토는 대기이고 AWS 공개 완료로 표시하지 않는다.
+
+## 배포 준비 최종 검증 (2026-10-07)
+
+- backend347 중317통과/30조건부skip/실패·오류0, 웹48/build90/Chrome fixture·forge -q 통과. Linux ops13/13. 실제 Tomcat USER403의 /error→401 문제는 권한 rules 변경 없이 JSON403 handler와 실제HTTP 회귀로 보완했다.
+- 독립 초기 검토의 Linux 복원 ownership/mode와 실제 실행 mount 대조 필수2건을 수정했다. 1차 재검토와 최종 운영형 증거 검토에서 발견된 필수 수정 없음. 검토자가16개 결과·백업5개 SHA-256 일치·bind 보존을 직접 확인했고 전체 Docker 실행은 재실행하지 않았다. 이번 run의 private-stack.log는 보존됐지만 private-restore.log는 없으며 최신 helper의 후속 실행부터 보존한다.
+- 최종 `exchange-ops-20261007030121` 운영형16개 모두 PASS/종료0. HTTPS CA/hostname·Native/SockJS WSS·서명 매수 FILLED·재사용 차단·재시작·AI DB/닫힌 로컬 AI API/RPC 장애 격리·429·최초 API 장애 정적 SIMULATED 표시를 확인했다. 백업→신규root 양DB/pgvector/체인 복원→새 서명 매수 FILLED까지 통과했다.
+- 복원 Anvil의 저장 블록 시각은 기동 시 현재 시각의 빈 블록으로 정렬하며 미래2초 초과는 준비 실패한다. 기존 블록/잔고/nonce·거래 서명TTL 검증은 유지한다. 이번 fixture BUY와 직전 Synthetic BUY/SELL 통합 검증은 구분한다.
+- 테스트 프로젝트 컨테이너/네트워크만 down(no-v), bind 증거/데이터 보존. 기존 개발 DB/체인/.env 변경·AWS 생성·유료 AI 색인/평가·공인 인증서 발급·커밋은 하지 않았다. 실제 Linux 호스트/부하·SSM/S3·공인 TLS·외부 인수는 별도 승인/검증 대상이다.

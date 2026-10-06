@@ -1,0 +1,127 @@
+name: exchange-public
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+services:
+  postgres:
+    <<: *service
+    image: ${POSTGRES_IMAGE:?Set POSTGRES_IMAGE}
+    environment:
+      POSTGRES_DB: exchange
+      POSTGRES_USER: exchange
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    volumes:
+      - ${DATA_ROOT:?Set DATA_ROOT}/trade:/var/lib/postgresql/data
+      - ${RUNTIME_ROOT:?Set RUNTIME_ROOT}/db-password:/run/secrets/db-password:ro
+    networks: [trade]
+    mem_limit: 384m
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U exchange -d exchange"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  ai-postgres:
+    <<: *service
+    image: ${AI_POSTGRES_IMAGE:?Set AI_POSTGRES_IMAGE}
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: exchange_ai
+      POSTGRES_USER: exchange_ai
+      POSTGRES_PASSWORD_FILE: /run/secrets/ai-db-password
+    volumes:
+      - ${DATA_ROOT}/ai:/var/lib/postgresql/data
+      - ${RUNTIME_ROOT}/ai-db-password:/run/secrets/ai-db-password:ro
+    networks: [ai]
+    mem_limit: 384m
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U exchange_ai -d exchange_ai"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  anvil:
+    <<: *service
+    image: ${ANVIL_IMAGE:?Set ANVIL_IMAGE}
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    entrypoint: [/bin/sh, /anvil-entrypoint.sh]
+    command: [--host, "0.0.0.0", --accounts, "0", --chain-id, "31337", --state, /data/state.json, --state-interval, "5", --preserve-historical-states, --quiet]
+    volumes:
+      - ${DATA_ROOT}/chain:/data
+      - ./anvil-entrypoint.sh:/anvil-entrypoint.sh:ro
+    networks: [chain]
+    mem_limit: 512m
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD-SHELL, "test -f /tmp/anvil-ready && cast rpc eth_chainId --rpc-url http://127.0.0.1:8545 >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    <<: *service
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE}
+    build: {context: ../backend}
+    environment:
+      SPRING_PROFILES_ACTIVE: public
+      SPRING_CONFIG_IMPORT: file:/run/secrets/application.properties,file:/run/secrets/chain.properties
+      DB_URL: jdbc:postgresql://postgres:5432/exchange
+      DB_USERNAME: exchange
+      AI_DB_URL: jdbc:postgresql://ai-postgres:5432/exchange_ai
+      AI_DB_USERNAME: exchange_ai
+      AI_KNOWLEDGE_ROOT: /knowledge/documents
+      AI_MANIFEST: /knowledge/ingest-manifest.json
+      RPC_URL: http://anvil:8545
+      BLOCKCHAIN_ENABLED: "true"
+      PRICE_REPORT_SIGNING_ENABLED: "true"
+      WEBSOCKET_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?Set exact HTTPS PUBLIC_ORIGIN}
+      SIMULATION_SEED: ${SIMULATION_SEED:-20261006}
+      SIMULATION_BOOTSTRAP_DAYS: ${SIMULATION_BOOTSTRAP_DAYS:-2}
+      AI_AUTO_DIAGNOSIS_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx640m -XX:MaxMetaspaceSize=192m -XX:+ExitOnOutOfMemoryError
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "6"
+      SERVER_SHUTDOWN: graceful
+    volumes:
+      - ${RUNTIME_ROOT}/application.properties:/run/secrets/application.properties:ro
+      - ${DATA_ROOT}/release/chain.properties:/run/secrets/chain.properties:ro
+      - ${KNOWLEDGE_ROOT:?Set KNOWLEDGE_ROOT}:/knowledge:ro
+    networks: [edge, trade, ai, chain, egress]
+    depends_on:
+      postgres: {condition: service_healthy}
+      anvil: {condition: service_healthy}
+    read_only: true
+    tmpfs: ["/tmp:size=128m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1200m
+    stop_grace_period: 60s
+  web:
+    <<: *service
+    image: ${WEB_IMAGE:?Set WEB_IMAGE}
+    build:
+      context: ../tools/websocket-test-client
+      args: {PUBLIC_DEMO: "true"}
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+      BACKEND_UPSTREAM: backend:8082
+      NGINX_ENVSUBST_FILTER: ^(PUBLIC_DOMAIN|BACKEND_UPSTREAM)$
+    ports:
+      - "${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-80}:80"
+      - "${HTTP_BIND:-0.0.0.0}:${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/proxy.conf:/etc/nginx/proxy.conf:ro
+      - ${RUNTIME_ROOT}/acceptance.conf:/etc/nginx/acceptance.conf:ro
+      - ${CERT_ROOT:?Set CERT_ROOT}/live:/certs:ro
+      - ${CERT_ROOT}/acme:/var/www/acme:ro
+    networks: [edge]
+    depends_on: [backend]
+    mem_limit: 128m
+    security_opt: [no-new-privileges:true]
+networks:
+  edge: {}
+  trade: {internal: true}
+  ai: {internal: true}
+  chain: {internal: true}
+  egress: {}

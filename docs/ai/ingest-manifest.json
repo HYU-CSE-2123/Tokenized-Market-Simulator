@@ -3,11 +3,11 @@
   "documents": [
     {"path":"authorization-policy.md","documentVersion":"6","sha256":"792c547bf556760f6d8b396b5fb4d0f05dec1dc3d3e1452bd55cf878efb13c39"},
     {"path":"error-and-status-guide.md","documentVersion":"1","sha256":"9197ae22f966f76fb5776c5b89030d1752785d07fe00a3bf26b176bc073f030d"},
-    {"path":"market-data-policy.md","documentVersion":"1","sha256":"e6a8b3e0b999832ef21310e28a40f307ff0bb9be06c3235dcd86761cf438f1f7"},
+    {"path":"market-data-policy.md","documentVersion":"2","sha256":"c00543b2a0dc7f5eab4454596dea69269f05eb52cde9213aa53b0ca4ddd95051"},
     {"path":"onchain-settlement-policy.md","documentVersion":"1","sha256":"22e5e90b13c4d820b8999dca2616e078d3b9cd5c4eef4ecd3164709b20c8cd10"},
     {"path":"order-lifecycle.md","documentVersion":"1","sha256":"27d7c24809aa33a3fd84d93371dce034f03179c7276ef3a27ab60370622af792"},
     {"path":"signed-quote-policy.md","documentVersion":"1","sha256":"cc562eb86aebaddde9e532222e80524b24537c25ded8e6ca7e69fe9dfd2d4ee0"},
-    {"path":"system-overview.md","documentVersion":"6","sha256":"98e91ee439fc29e38c793cc0862354343e6c80bf5256ad0262f02305c5512953"},
+    {"path":"system-overview.md","documentVersion":"7","sha256":"a6cb486a8159c2dcd1ab45dfc00094d6265032455b5645a6836aa37af5322508"},
     {"path":"transaction-recovery-runbook.md","documentVersion":"2","sha256":"698bbe6bdf46b9eca625b3cb0246694a4b33392aa57ad2dcefd5a14951e01187"},
     {"path":"websocket-consistency-policy.md","documentVersion":"1","sha256":"d6b0fb13335ebae55eb994af0068c15d1b735aa7825d4c2e9d5e9e1fe8f73cc2"}
   ]

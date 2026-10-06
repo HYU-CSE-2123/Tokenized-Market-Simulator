@@ -1,0 +1,8 @@
+.env
+runtime/
+data/
+backups/
+certificates/
+artifacts/
+*.log
+__pycache__/

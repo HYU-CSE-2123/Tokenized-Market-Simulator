@@ -1,5 +1,7 @@
 # 포트폴리오 외부 배포 설계안
 
+2026-10-07 현재: 사용자가 합성 시장 완료와 이 설계의 **외부 자원 없는 배포 구현·로컬 운영형 검증**을 승인했다. `deployment/compose.yml`, 안전화된 이미지·지식 artifact·SSM materializer·HTTPS/WSS gateway·checkpoint/restore와 [운영 절차](../deployment/RUNBOOK.md)를 구현하고 운영형16개 체크를 통과했다. 실제 AWS/SSM/S3/DNS/공인 인증서 발급·공개 게시 권한은 아직 없으며 아래 원안의 승인 대기 문구는 당시 이력이다. [배포 준비 결과](deployment-preparation.md)에 최종 테스트/독립 검토/미검증을 구분한다.
+
 > 2026-10-05 · 제안/사용자 승인 대기. 인프라 생성, 도메인 구매, 외부 게시, 실제 .env 변경, DB/체인 배포는 하지 않았다.
 
 후속 사용자 결정(2026-10-06): 공개 환경은 simulated provider로 확정했다. Toss provider/실제 연동은 유지하되 공개 환경에서 비활성화한다. [합성 시장 개선안](synthetic-market-design.md)을 먼저 승인받아 구현하며, 외부 배포 구현/유료 자원 생성은 아직 승인되지 않았다. 아래 인프라/비용/보안 조건은 기존 제안이고 공개 시세 정책만 확정된 상태다. [공급자 조사](public-market-data-research.md)는 실제 데이터 공개 사용권을 검토한 이력으로 유지하며 공급자 계약은 현재 배포의 선행 조건이 아니다.

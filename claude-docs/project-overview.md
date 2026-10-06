@@ -97,6 +97,8 @@ Android 앱 구현 자체는 Phase 6의 완료 조건이 아니다. Phase 6에�
 
 ### AI 확장 상태 (2026-10-03, 거래소 Phase와 별도)
 
+2026-10-07 배포 준비: production Compose·nonroot 이미지·9개 지식 artifact·Nginx HTTPS/WSS/429·SSM secret 파일 주입·일관 checkpoint/신규root 복원 runbook을 구현했다. 최초 API 장애에도 PUBLIC_DEMO 정적 SIMULATED 표시는 유지한다. 로컬 운영형16개(복원 후 새 서명 매수 FILLED 포함), backend317통과/30skip, 웹48, Linux ops13개 통과. 독립 검토 필수2건 수정 후 재검토에 새 필수 지적 없음. 실제 AWS·공인 TLS·SSM/S3·유료 AI 재색인/평가·Linux 호스트/부하는 미검증이며 실제 자원 생성 승인을 기다린다. 자세한 범위와 한계는 [배포 준비](deployment-preparation.md)를 따른다.
+
 AI Phase 2와 Phase 3은 사용자 완료 승인을 받았다. Phase 3은 고정 golden 12개에서 hit@5 10/12→12/12, MRR@5 0.7778→0.8819로 개선하고 검증·별도 검토를 마쳤다. RAG의 ADMIN-only·별도 AI DB 경계는 유지한다. Hybrid는 식별자 검색 개선과 자연어 근거 회귀가 함께 나타나 비교 실험으로만 남겼다. 검색 후보 오탐 5/8과 작은 개발 평가 세트라는 한계가 있다. 자세한 조건은 [AI Phase 3 보고서](../docs/ai/phase-3-retrieval.md)를 따른다. 핵심 2문항의 ANSWERED assertion도 후속 보강·실제 검증했다.
 
 승인된 [Phase 4 Read-only Tool](../docs/ai/phase-4-read-only-tools.md)은 8개 조회·서버 권한·안전한 DTO·감사·조회 상한을 구현하고 실제 PostgreSQL/Anvil을 포함해 검증했다. USER 본인 조회와 ADMIN 운영 조회만 허용하며 기존 거래 상태는 변경하지 않는다. AI_TOOLS_ENABLED 기본 false이고 RAG·AI DB·외부 AI API와 독립적이다. Agent 연결은 아래 Phase 5에서 구현했으며 Skill·자동 분석·AI UI는 아직 없다.

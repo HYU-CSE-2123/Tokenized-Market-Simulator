@@ -1,0 +1,2 @@
+# Bind-mounted Linux entrypoints must not acquire CRLF on Windows checkouts.
+deployment/*.sh text eol=lf
