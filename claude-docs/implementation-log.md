@@ -2288,3 +2288,96 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 최종 `exchange-ops-20261007030121` 운영형16개 모두 PASS/종료0. HTTPS CA/hostname·Native/SockJS WSS·서명 매수 FILLED·재사용 차단·재시작·AI DB/닫힌 로컬 AI API/RPC 장애 격리·429·최초 API 장애 정적 SIMULATED 표시를 확인했다. 백업→신규root 양DB/pgvector/체인 복원→새 서명 매수 FILLED까지 통과했다.
 - 복원 Anvil의 저장 블록 시각은 기동 시 현재 시각의 빈 블록으로 정렬하며 미래2초 초과는 준비 실패한다. 기존 블록/잔고/nonce·거래 서명TTL 검증은 유지한다. 이번 fixture BUY와 직전 Synthetic BUY/SELL 통합 검증은 구분한다.
 - 테스트 프로젝트 컨테이너/네트워크만 down(no-v), bind 증거/데이터 보존. 기존 개발 DB/체인/.env 변경·AWS 생성·유료 AI 색인/평가·공인 인증서 발급·커밋은 하지 않았다. 실제 Linux 호스트/부하·SSM/S3·공인 TLS·외부 인수는 별도 승인/검증 대상이다.
+
+# 배포 자원 실측·서울 비용 비교 (2026-10-07)
+
+## 범위 / 결정
+
+- 사용자 요청에 따라 월 예산/인스턴스를 확정하지 않고 production Compose 5서비스의 idle/서명 BUY/AI/병행 부하를 신규 격리 프로젝트로 측정했다. 진단 helper `deployment/resource-probe.py`와 순수 unit2를 추가했다. 제품/production Compose/실제.env/기존 DB·체인은 변경하지 않았다.
+- 현재 실측은 2GiB x86을 조건부 최소 후보로 뒷받침하지만 1/2GiB 실제 호스트 검증은 아니다. 24h Lightsail2GB와 필요 시 EC2 t3a.small, Intel/ARM/4GiB/지속 CPU 대안을 비교했고 선택·생성하지 않았다. Lightsail의 secret/백업 운영 변경 경계도 남겼다.
+- [실측·비용 문서](deployment-capacity-cost.md)에 공식 서울 가격표와 기존 실제 OpenAI token 기준 호출별/사용량별 비용을 기록했다. openai-docs 지침에 따라 현재 모델 공식 가격을 확인했으며 모델 변경/유료 호출/재색인은 하지 않았다. 캐시 할인 정보 미기록으로 일반 입력 단가를 적용하며 실제 청구서와 구분한다.
+
+## 검증
+
+- 최종 `probe-20261007110207` 종료0:145표본/단계 실패0/sampling 오류0. 서명 매수11건 FILLED, AI10건 ANSWERED. 최대 서비스 working set496.07MiB, 병행 평균 CPU12.72%(1vCPU100%). backend OOM0. helper unit2 및 diff check 통과.
+- 최초 측정의 orderId helper 계약 오류를 바로잡고 전체 측정을 다시 했다. 최초 실패 run은 성공 용량 근거에서 제외했다. startup은 DB/chain 초기화를 제외하고, 작업 주기는 pacing을 포함하므로 SLA latency로 쓰지 않는다.
+- AI는 로컬 fixture 고정 벡터/2초 응답이므로 실제 공급자 품질·지연/최대 동시성 측정이 아니다. Windows Docker Desktop 자원 실측이며 native Linux/EC2/CPU credit/장기 증가/backup peak는 미검증. 제품 회귀는 이번에 재실행하지 않았다.
+- 정확한 시험용 컨테이너/네트워크만 정리(no-v), bind 증거/시험용 secret은 Git 제외 runtime에 보존했다. 기존 개발 컨테이너3개 보존 확인. AWS 생성·외부 게시·스테이징·커밋은 하지 않았다.
+
+## 검토 / 남은 작업
+
+- 독립 `review_resource_measurement` 소스/증거 검토에서 발견된 필수 수정 없음, 직접 unit2 통과. 비용·최종 문서 검토의 표본 합계 오기165→145를 수정했다. 최종 재확인 결과는 아래에 기록한다.
+- 예산/운영 방식/인스턴스/disk/domain/IP/AI 활성화·유료 색인 및 실제 AWS 생성은 사용자 최종 승인 대기다.
+
+최종 재검토: `review_resource_measurement`가145표본과 공식 서울 EC2/EBS/S3 가격을 직접 조회·대조하고 Phase6/7/8 토큰·비용 산술 및 문서 범위를 확인했다. 발견된 필수 수정 없음. 직접 unit2 통과. Docker/제품 회귀/유료 호출/AWS 생성은 검토자가 재실행하지 않았다. 이 기록 추가는 동작에 영향 없는 검토 결과 전사다.
+
+# AWS 목적 축소 / Linux 운영 검증 계획 작성 (2026-10-07)
+
+- 사용자 결정: 장기 공개 운영 대신 단일 EC2의 배포·부하·장애·복구 검증. 최초 t3a.small 후보, 기본 root EBS1개/SG/자동 public IPv4. RDS/S3/고객관리 KMS/Secrets Manager/ECR/필수SSM 제외, 수동 runtime 파일·사용자 /32 SSH 후 종료 시 규칙/세션 제거.
+- [운영 검증 계획](ec2-operational-validation-plan.md)에 실제 Compose/ops.py 계약, manual CLI 부재와 기존 materialize 재사용, root EBS/SSH tunnel·테스트 CA·이미지 tar 전달·로컬/EC2 필수 재검증·중단 기준·증거/backup 반출·남은 승인 입력을 정리했다. 기존 장기 배포 문서/RUNBOOK/비용 문서에 최신 계획 우선 적용을 명시하되 과거 구현·검증 이력은 보존했다.
+- 이전 자원 측정의 미커밋 변경을 보존했다. 이번에는 제품/Compose/ops.py/실제.env 변경, AWS 생성/secret 입력/부하·장애 실험/유료 AI/커밋을 하지 않았다. 30GiB root·Standard credit mode는 제안이며 생성 승인 전 확정해야 한다.
+- 검증: 코드 계약 대조와 문서 diff/link 확인. 테스트 실행/EC2 성공으로 기록하지 않는다. 동작에 영향 없는 계획 문서 작업이므로 공통 지침의 예외에 따라 별도 구현 검토는 생략했다.
+- 남은 작업: 로컬 실험 runner 필요 범위와 실행 승인, 릴리스 commit 및 사용자 /32/SSH 공개키·subnet·AMI·disk·기동시간/과금 경계·AWS 생성 최종 승인. 실제 AI 활성화/색인은 별도 유료 승인이다.
+
+## 운영 작업 보류 / 재개 지점 (2026-10-07)
+
+- 운영 계획 사용자 승인 후 로컬 validation-runner/metrics/faults와 단위 테스트·결과 문서의 구현 범위를 제안했다. 최종 도구 구현 승인·실험 실행 전 사용자가 운영 작업을 다음으로 미뤘다.
+- 다음 담당자는 [운영 계획 재개 메모](ec2-operational-validation-plan.md)의 순서/측정/문제 사전보고 경계를 따른다. AWS 생성은 로컬 결과 검토 뒤 별도 승인이고 기존 측정 helper를 신규 부하/장애 실험 완료로 쓰지 않는다.
+- 문서만 갱신, 기존 미커밋 변경 보존. 도구 구현/제품 수정/자원 생성/테스트 실행/커밋 없음. 별도 구현 검토 대상 동작 변경 없음.
+
+# 기존 기능 검증 / 신규DB 복원 실패 보고 (2026-10-07)
+
+- 추가 기능 이전 기존 검증 진행 요청으로 backend347(317통과/30skip/실패0), forge36, 웹48/build90/Chrome desktop·mobile fixture와 ops unit15(13통과/2POSIXskip)를 실행했다. 유료 AI·AWS·신규 validation runner 구현은 제외했다.
+- 격리 `exchange-ops-20261007145955`의 local-smoke14 checks 통과 후 새root `pg_restore`에서 종료1. 이후 복원 거래2 checks 미실행. checkpoint5개 hash와 read-only archive 목록/전체 해독은 정상이다.
+- 복원 로그의 임시 서버 ready→목표DB 미존재→CREATE DATABASE→shutdown/FATAL와 Unix socket pg_isready healthcheck를 대조해 초기화 readiness race가 유력한 원인으로 분류했다. 직접 pg_restore stderr는 미확보라 전체 원인 확정으로 쓰지 않는다. [결과·증거·수정 후보](validation-2026-10-07.md)에 기록했다.
+- 사용자 지침대로 바로 수정하지 않았다. 시험 project만 down(no-v), bind/backup/로그·기존 개발3컨테이너·실제.env 보존. 제품/배포helper 변경·유료 호출·commit 없음. 검증/문서 작업만 수행해 별도 구현 검토는 생략했다.
+- 다음 승인: TCP/실제SQL readiness·restore bounded wait·안전한 오류증거 보강과 신규DB 반복 복원 회귀/독립 검토. 실제 Toss 장중/자동진단 성공MATCH·유료 provider·EC2 인수는 별개로 남는다.
+
+# Restore stderr / 실제 SQL readiness 보강 — 구현·검증 완료, 독립 검토 대기 (2026-10-07)
+
+- 사용자 승인 범위만 구현: ops.py의 private pg_restore stderr+실패 metadata/재시도 금지, production Compose 양DB TCP/SELECT1 healthcheck, 각DB 최대60초 read-only readiness polling을 양DB/각dump 직전에 수행. 임의 기동 sleep·부분 복원 retry 없음. 새 postgres-readiness.sh/restore-regression.py와 unit6개 추가.
+- 먼저 stderr만 보강해 old health로 새 DB 실패를 재현했고 `database "exchange" does not exist`를 확보했다. 신규 재현은 목표DB 생성 이전 접속을 직접 확인하지만 최초 실패의 직접 stderr·모든원인을 확정한 것으로 쓰지 않는다.
+- 보강 후 새 빈DB/root3개3/3 회귀 PASS. local-20261007160704 전체16/16 PASS/종료0, 복원 후 새 EIP-712 거래 정산 확인. Linuxops19/19,Windows helper21개19PASS/2POSIXskip. [상세 증거/한계](validation-2026-10-07.md)를 따른다.
+- 사전 기존 미커밋 문서/resource-probe는 이번 구현이 아니며 보존했다. 제품/backend/web/contracts/.env·기존 개발DB/chain/유료AI/AWS/commit 변경 없음. 정확한 시험project만 down(no-v), bind/backup/비공개stderr 유지.
+- 코드·테스트·문서 초안 동결 후 독립 검토를 요청한다. stderr에는 DB행/SQL이 포함될 수 있어 공개하지 않으며 POSIX권한과 WindowsACL보호 차이를 문서화했다.
+
+## Restore 보강 독립 검토 완료
+
+- `review_restore_readiness`: 발견된 필수 수정 없음. 직접 Windowshelper21개19PASS/2POSIXskip, 실제증거·3/3/16checks·최종backup5개hash를 대조했다. SQL readiness/pg_restore1회/private stderr/POSIX권한/WindowsACL한계·최초원인과신규재현 구분을 확인했다.
+- Linux19/19·Docker종단간은 구현자 결과이며 reviewer가 재실행하지 않았다. 최종 docker ps에서 기존개발3컨테이너만 보존 확인. 승인 범위 완료, 제품전체회귀/실제EC2/유료API/신규부하runner는 이번에 실행하지 않았다. 미커밋 상태로 인계한다.
+
+# 개발 DB / 보존 Anvil state 관계 조사와 학습 문서 (2026-10-07~08)
+
+## 조사와 문서
+
+- 사용자의 읽기 전용 조사 승인에 따라 현재 개발 DB SELECT/RPC·보존 파일을 대조했다. [조사 보고서](development-chain-state-audit.md)에 checkpoint별 주소/chainId/높이·checksum·대표 receipt 부재·전체 해시 교집합·한계를 기록했다.
+- 현재 Anvil chainId31337/block0/네 개발 계약 code없음. 개발 DB는 과거 UPDATE_PRICE CONFIRMED22,603건, BUY/SELL 주문12건/체결10건의 hash는 모두 비어 있음. 견적0/잠금0/미완료tx0이다.
+- state25개(서로 다른 내용16개), checkpoint4개를 발견했다. 개발DB 전체txHash와 모든 state의 교집합0. checkpoint 자체 주소의 코드/성공 Vault receipt는 있으나 개발환경의 짝이 아니다. 4checkpoint 모두 보존5파일 checksum일치. Foundry broadcast16파일/receipt항목87(중복 포함)도 개발DB hash교집합0이며 전체state 백업이 아니다.
+- 안전한 기존DB 복원 후보를 찾지 못했으므로 별도 거래DB/AI DB/지속형Anvil/인수전용operator·runtime설정의 신규 격리 인수 baseline을 제안했다. 아직 생성하지 않았고 기존DB 원장이나 주소/nonce를 보정하지 않았다.
+- [학습 문서](backend-blockchain-learning-guide.md)는 현재 코드 기준 구조, 두 faucet/통합지갑, operator와 signer, quoteId/EIP-712, BUY/SELL raw/nonce/RPC/receipt/event/정산/WS, 정본·REVIEW_REQUIRED·state유실을 설명한다. 코드 사실/조사 사실/개념/한계를 구분한다.
+
+## 검증과 보존
+
+- 실제 읽기 전용 조회와 state 오프라인 분석, 보존파일 hash 대조 및 새 두 문서 파일 링크79개 경로 확인. 제품 테스트는 실행하지 않았다. 문서/조사 작업이라 별도 구현 검토는 생략하고 자체 소스·증거 대조를 수행했다.
+- 복원/재배포/DB 초기화/기존chain·DB·.env·제품 변경/신규 컨테이너/유료AI/AWS/commit 없음. 기존 미커밋 작업 보존.
+- 실제Toss 웹 종단간 및 실제AI 성공MATCH 인수는 미완료. baseline 동결도 미실행. 다음은 신규격리환경 생성 승인, 유료AI 승인, 성공MATCH 자동진단 최소 재현절차 승인이다. 운영 부하/장애 실험은 재개하지 않는다.
+
+# 신규 격리 Toss/AI acceptance baseline — 준비 완료, 장중/AI 인수 대기 (2026-10-08)
+
+## 구현과 결정
+
+- 사용자 신규환경 승인 후 acceptance-compose.yml/acceptance.py/test_acceptance.py와 실제 Chrome acceptance-readiness.mjs를 추가했다. 새 거래DB·pgvector DB·persistent Anvil·무작위 독립 operator/signer·네 컨트랙트·runtime 파일 설정을 생성했다. 기존 제품 코드 변경 없음.
+- 기존 .env는 Toss 자격 증명 두 항목만 allowlist로 복사하고 나머지 값은 새로 생성했다. 기존 개발 DB/체인/.env를 복원·덮어쓰기·중지하지 않는다. 기존 서비스 ID/시작 시각·DB 22603/12/10건·체인 block0·.env SHA256 전후 동일 확인.
+- AI 전체 flags false, 유료 key/색인/호출/자동진단 없음. 승인된 지식9개/manifest artifact는 로컬 복사만 하고 별도 AI DB는 vector extension까지 준비했다. 운영 부하/장애/AWS 작업은 재개하지 않았다.
+- Docker Desktop internal-only host publication 실패 증거 확인 후 새namespace만 host-access bridge 추가(루프백 publish 유지). 브라우저 최초 로그인전 failure는 TOSS/Toss UI문구 검사 오류로 helper만 수정, 원본marker 보존 후 명명된 별도 시도 성공.
+
+## 검증
+
+- helper31개29PASS/2POSIXskip, 웹48/48(기존34포함), build90/Chrome fixture smoke PASS. 실제Toss 준비 probe도 PASS: 계약role·주소연결·operator/Vault 각500만mKRW/maxallowance·영속state/재기동유지·휴장quote409·AI503.
+- 실제Chrome에서 Toss표시/로그인/공개2+개인2 STOMP구독/UI faucet1회와 PORTFOLIO_UPDATED/390px모바일3화면 PASS. 새USER mKRW100만/mSEC0/잠금0, 주문/체결0. 장중tick·BUY/SELL·개인주문event·receipt정산은 아직 미실행.
+- 전체 backend/forge 재실행은 이번제품무변경 범위에서 생략했다. 이전 전체회귀와 현재준비검증을 구분한다. 전용 endpoint·명령·비밀파일위치·실패증거·한계는 [상세 인수 준비 기록](isolated-acceptance-baseline.md)에 남겼다.
+
+## 검토와 남은 작업
+
+- 코드/테스트/문서 초안 동결 후 `review_acceptance_baseline` 별도 검토: 발견된 필수 수정 없음(Windows/Docker Desktop 범위). 직접helper31개29PASS/2POSIXskip. namespace/mount/secretallowlist/키분리/영속설정/AI비활성/재시도경계·문서를 확인했다. runtime ACL로 실제증거 대조는 불가하여 환경·브라우저결과는 구현자실행으로 구분한다. Linux host권한/UID10001소유권 보완은 별도이식 대상이며 문서에 한계를 추가했다.
+- 현재휴장으로 실제Toss BUY/SELL 미완료. 실제AI 비용/횟수 및 성공MATCH 최소재현 절차는 실행전 별도보고/승인 대상이다. 둘 모두 인수 후 baseline동결하고 추가기능으로 넘어간다.

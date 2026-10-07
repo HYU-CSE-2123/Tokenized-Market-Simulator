@@ -15,10 +15,11 @@ services:
     volumes:
       - ${DATA_ROOT:?Set DATA_ROOT}/trade:/var/lib/postgresql/data
       - ${RUNTIME_ROOT:?Set RUNTIME_ROOT}/db-password:/run/secrets/db-password:ro
+      - ./postgres-readiness.sh:/postgres-readiness.sh:ro
     networks: [trade]
     mem_limit: 384m
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U exchange -d exchange"]
+      test: [CMD, sh, /postgres-readiness.sh]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -33,10 +34,11 @@ services:
     volumes:
       - ${DATA_ROOT}/ai:/var/lib/postgresql/data
       - ${RUNTIME_ROOT}/ai-db-password:/run/secrets/ai-db-password:ro
+      - ./postgres-readiness.sh:/postgres-readiness.sh:ro
     networks: [ai]
     mem_limit: 384m
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U exchange_ai -d exchange_ai"]
+      test: [CMD, sh, /postgres-readiness.sh]
       interval: 5s
       timeout: 3s
       retries: 20

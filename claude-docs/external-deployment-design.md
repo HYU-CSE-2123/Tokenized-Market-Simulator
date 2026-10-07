@@ -1,5 +1,9 @@
 # 포트폴리오 외부 배포 설계안
 
+최신 목적 변경(2026-10-07): 장기 공개 운영은 보류하고 [단일 EC2 Linux 운영 검증](ec2-operational-validation-plan.md)으로 축소했다. 최초 t3a.small 후보+기본 root EBS+SG+자동 public IPv4, SSH 사용자 /32와 수동 runtime secret을 사용한다. RDS/S3/고객관리 KMS/Secrets Manager/ECR/SSM은 필수가 아니다. 아래 장기 운영·별도 data EBS·SSM/S3 원안은 이력이며 최초 실험의 선행 조건이 아니다. 실제 생성 권한은 없다.
+
+후속 검토(2026-10-07): 사용자 요청에 따라 예산과 인스턴스 크기는 확정하지 않는다. 아래 t3a.medium은 당시 후보이며 현재 전제가 아니다. [실측·서울 비용 비교](deployment-capacity-cost.md)의 2GiB 조건부 후보, 상시/간헐 운영 및 실제 token 비용을 기준으로 최종 승인받는다. 실제 자원 생성 권한은 여전히 없다.
+
 2026-10-07 현재: 사용자가 합성 시장 완료와 이 설계의 **외부 자원 없는 배포 구현·로컬 운영형 검증**을 승인했다. `deployment/compose.yml`, 안전화된 이미지·지식 artifact·SSM materializer·HTTPS/WSS gateway·checkpoint/restore와 [운영 절차](../deployment/RUNBOOK.md)를 구현하고 운영형16개 체크를 통과했다. 실제 AWS/SSM/S3/DNS/공인 인증서 발급·공개 게시 권한은 아직 없으며 아래 원안의 승인 대기 문구는 당시 이력이다. [배포 준비 결과](deployment-preparation.md)에 최종 테스트/독립 검토/미검증을 구분한다.
 
 > 2026-10-05 · 제안/사용자 승인 대기. 인프라 생성, 도메인 구매, 외부 게시, 실제 .env 변경, DB/체인 배포는 하지 않았다.

@@ -1,0 +1,102 @@
+# Explicitly isolated LOCAL Toss acceptance; no public/synthetic profile or old volumes.
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?Set image}
+    environment:
+      POSTGRES_DB: acceptance_exchange
+      POSTGRES_USER: acceptance_exchange
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    ports: ["127.0.0.1:5542:5432"]
+    volumes:
+      - ${ACCEPTANCE_ROOT:?Set dedicated root}/data/trade:/var/lib/postgresql/data
+      - ${ACCEPTANCE_ROOT}/secrets/db-password:/run/secrets/db-password:ro
+      - ./postgres-readiness.sh:/postgres-readiness.sh:ro
+    networks: [trade, host-access]
+    healthcheck:
+      test: [CMD, sh, /postgres-readiness.sh]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  ai-postgres:
+    image: ${AI_POSTGRES_IMAGE:?Set image}
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: acceptance_ai
+      POSTGRES_USER: acceptance_ai
+      POSTGRES_PASSWORD_FILE: /run/secrets/ai-db-password
+    ports: ["127.0.0.1:5543:5432"]
+    volumes:
+      - ${ACCEPTANCE_ROOT}/data/ai:/var/lib/postgresql/data
+      - ${ACCEPTANCE_ROOT}/secrets/ai-db-password:/run/secrets/ai-db-password:ro
+      - ./postgres-readiness.sh:/postgres-readiness.sh:ro
+    networks: [ai, host-access]
+    healthcheck:
+      test: [CMD, sh, /postgres-readiness.sh]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  anvil:
+    image: ${ANVIL_IMAGE:?Set image}
+    user: "10001:10001"
+    entrypoint: [/bin/sh, /anvil-entrypoint.sh]
+    command: [--host, "0.0.0.0", --accounts, "0", --chain-id, "31337", --state, /data/state.json, --state-interval, "5", --preserve-historical-states, --quiet]
+    ports: ["127.0.0.1:18545:8545"]
+    volumes:
+      - ${ACCEPTANCE_ROOT}/data/chain:/data
+      - ./anvil-entrypoint.sh:/anvil-entrypoint.sh:ro
+    networks: [chain, host-access]
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD-SHELL, "test -f /tmp/anvil-ready && cast rpc eth_chainId --rpc-url http://127.0.0.1:8545 >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    image: ${BACKEND_IMAGE:?Set acceptance image}
+    environment:
+      # Import ONLY these two files; never the repository's backend/.env.
+      SPRING_PROFILES_ACTIVE: acceptance
+      SPRING_CONFIG_IMPORT: file:/run/secrets/application.properties,file:/run/secrets/chain.properties
+      DB_URL: jdbc:postgresql://postgres:5432/acceptance_exchange
+      DB_USERNAME: acceptance_exchange
+      AI_DB_URL: jdbc:postgresql://ai-postgres:5432/acceptance_ai
+      AI_DB_USERNAME: acceptance_ai
+      AI_KNOWLEDGE_ROOT: /knowledge/documents
+      AI_MANIFEST: /knowledge/ingest-manifest.json
+      RPC_URL: http://anvil:8545
+      PRICE_PROVIDER: toss
+      BLOCKCHAIN_ENABLED: "true"
+      PRICE_REPORT_SIGNING_ENABLED: "true"
+      AI_ENABLED: "false"
+      AI_TOOLS_ENABLED: "false"
+      AI_AGENT_ENABLED: "false"
+      AI_SKILLS_ENABLED: "false"
+      AI_AUTO_DIAGNOSIS_ENABLED: "false"
+      WEBSOCKET_ALLOWED_ORIGINS: http://127.0.0.1:15173,http://localhost:15173
+      SERVER_PORT: "8082"
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx640m -XX:MaxMetaspaceSize=192m
+      SERVER_SHUTDOWN: graceful
+    ports: ["127.0.0.1:18082:8082"]
+    volumes:
+      - ${ACCEPTANCE_ROOT}/secrets/application.properties:/run/secrets/application.properties:ro
+      - ${ACCEPTANCE_ROOT}/data/release/chain.properties:/run/secrets/chain.properties:ro
+      - ${ACCEPTANCE_ROOT}/knowledge:/knowledge:ro
+    networks: [edge, trade, ai, chain]
+    depends_on:
+      postgres: {condition: service_healthy}
+      ai-postgres: {condition: service_healthy}
+      anvil: {condition: service_healthy}
+    user: "10001:10001"
+    read_only: true
+    tmpfs: ["/tmp:size=128m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 60s
+networks:
+  edge: {}
+  # Docker Desktop does not publish ports on an internal-only container.
+  # Host publications above remain loopback-only; only the new namespace joins this bridge.
+  host-access: {}
+  trade: {internal: true}
+  ai: {internal: true}
+  chain: {internal: true}

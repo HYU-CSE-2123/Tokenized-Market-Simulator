@@ -23,6 +23,12 @@
 - [`web-product-ui.md`](web-product-ui.md) — Vite/JS 제품형 웹 전환, 기존 코드 계약·사용자 흐름·상태·모바일·배포 준비·검증/한계
 - [`external-deployment-design.md`](external-deployment-design.md) — 외부 배포안과 후속 결정. 로컬 배포 준비 완료·실제 AWS 생성 승인 대기, EC2/Compose 비용·HTTPS·secret·영속 데이터·공개 API·Toss 이용 제한·Anvil/Sepolia 선택
 - [`deployment-preparation.md`](deployment-preparation.md) — 승인된 외부 자원 없는 배포 구현·로컬 검증·독립 검토·미검증. 실행 절차는 deployment/RUNBOOK.md
+- [`deployment-capacity-cost.md`](deployment-capacity-cost.md) — production Compose 자원 실측, 서울 EC2/Lightsail 상시·간헐 기동 비용, 실제 AI token 기반 비용과 검증 한계. 예산/인스턴스는 미확정
+- [`ec2-operational-validation-plan.md`](ec2-operational-validation-plan.md) — 최신 AWS 목적: 단일 EC2/root EBS/SG/public IPv4로 Linux 배포·부하·장애·복구 실험. 수동 runtime secret·SSH /32·로컬/EC2 검증 분리, 생성은 승인 대기
+- [`validation-2026-10-07.md`](validation-2026-10-07.md) — 기존 기능 재검증·최초 복원 실패와 후속 stderr/실제SQL readiness 보강. 새DB3/3·종단간16/16·독립 검토 및 남은 검증 경계
+- [`development-chain-state-audit.md`](development-chain-state-audit.md) — 개발 DB와 보존 state/checkpoint의 읽기 전용 대조. 기존 DB와 일치하는 복원 후보 없음·신규 격리 인수 환경 제안, 복원/배포 미실행
+- [`isolated-acceptance-baseline.md`](isolated-acceptance-baseline.md) — 신규 격리 DB·persistent Anvil·독립 키·Toss/실제 웹 준비 결과. 장중 BUY/SELL·유료 AI/성공 MATCH 인수는 대기
+- [`backend-blockchain-learning-guide.md`](backend-blockchain-learning-guide.md) — 현재 코드 기준 구조·운영자 통합 지갑·서명 견적·BUY/SELL·receipt 정산·WS·용어·DB/chain 정본과 유실 영향 학습 문서
 - [`public-market-data-research.md`](public-market-data-research.md) — 배포 보류 후 국내 실시간/지연/historical 공급자·공개 이용권 조사와 provider/replay 설계 후보
 - [`synthetic-market-design.md`](synthetic-market-design.md) — 공개 simulated 선택과 축소 승인 범위의 합성 tick/거래량·영속 상태·서명 견적·UI 구현, 통합 검증·독립 검토 및 남은 한계(외부 배포는 대기)
 - [`AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md`](AI_AGENT_RAG_IMPLEMENTATION_MASTER_GUIDE.md) — 사용자 작성 AI 확장 지침. AI Phase 번호는 거래소 Phase와 별개

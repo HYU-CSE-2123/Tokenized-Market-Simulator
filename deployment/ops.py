@@ -12,6 +12,55 @@ import re
 import shutil
 import subprocess
 import sys
+import time
+
+
+class RestoreFailure(RuntimeError):
+    """Safe public failure; raw diagnostics stay in the restricted data root."""
+
+
+def wait_sql_ready(cmd, service, timeout_seconds=60):
+    """Retry ONLY a read-only readiness probe; never retry pg_restore."""
+    if service not in ('postgres', 'ai-postgres') or not 0 < timeout_seconds <= 120:
+        raise ValueError('Invalid bounded SQL readiness request')
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise RestoreFailure('SQL readiness deadline exceeded; restore not started')
+        try:
+            run(cmd + ['exec', '-T', service, 'sh', '/postgres-readiness.sh'],
+                timeout=min(5, remaining))
+            return
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RestoreFailure('SQL readiness deadline exceeded; restore not started') from None
+            # Probe cadence inside the deadline, not an assumed startup delay.
+            time.sleep(min(.25, remaining))
+
+
+def restore_dump(cmd, service, db, dump, data):
+    evidence = Path(data) / '.restore-diagnostics'
+    evidence.mkdir(mode=0o700, exist_ok=True)
+    if os.name == 'posix': os.chmod(evidence, 0o700)
+    path = evidence / (service + '.stderr')
+    # Exclusive create: never follow/overwrite an existing diagnostic file.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    began = dt.datetime.now(dt.timezone.utc).isoformat()
+    try:
+        with os.fdopen(fd, 'wb') as diagnostic, Path(dump).open('rb') as payload:
+            run(cmd + ['exec', '-T', service, 'pg_restore', '-U', db, '-d', db,
+                       '--exit-on-error', '--no-owner'], stdin=payload,
+                stdout=subprocess.DEVNULL, stderr=diagnostic)
+    except subprocess.CalledProcessError as failure:
+        # Do not print stderr or exception argv (database data may be present).
+        metadata = {'service': service, 'database': db, 'returnCode': failure.returncode,
+                    'startedAt': began, 'stderrFile': path.name, 'restoreRetried': False}
+        meta_fd = os.open(evidence / (service + '.json'), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(meta_fd, 'w', encoding='utf-8') as output:
+            json.dump(metadata, output)
+        raise RestoreFailure('Restore failed; inspect restricted .restore-diagnostics; no retry performed') from None
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
@@ -227,9 +276,12 @@ def restore(args):
         os.chown(data / 'release/chain.properties', os.getuid(), 10001)
         os.chmod(data / 'release/chain.properties', 0o640)
     run(cmd + ['up', '-d', '--wait', 'postgres', 'ai-postgres'])
+    # Both databases must pass SQL before either dump is applied.
+    for service in ('postgres', 'ai-postgres'):
+        wait_sql_ready(cmd, service)
     for service, db in [('postgres', 'exchange'), ('ai-postgres', 'exchange_ai')]:
-        with (source / (db + '.dump')).open('rb') as payload:
-            run(cmd + ['exec', '-T', service, 'pg_restore', '-U', db, '-d', db, '--exit-on-error', '--no-owner'], stdin=payload)
+        wait_sql_ready(cmd, service)
+        restore_dump(cmd, service, db, source / (db + '.dump'), data)
     print('DBs and chain checkpoint restored into isolated root. Verify release/keys/chain before starting ingress.')
 
 def main():

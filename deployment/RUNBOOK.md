@@ -1,5 +1,7 @@
 # 공개 데모 운영 절차
 
+최신 최초 AWS 범위는 [단일 EC2 운영 검증 계획](../claude-docs/ec2-operational-validation-plan.md)을 먼저 따른다. 장기 공개 운영이 아닌 실험이므로 아래 별도 data EBS/SSM/S3/도메인·공인TLS 요구는 최초 실험에서 제외·대체된다. 기본 root EBS, 기존 runtime file 수동 준비, 사용자 /32 SSH와 loopback HTTPS/WSS tunnel로 검증한다. 기존 도구 계약은 유지하며 manual CLI를 새로 구현한 것은 아니다. 실제 자원 생성/실험 실행은 아직 승인 대기다.
+
 이 디렉터리는 승인된 **배포 구현/로컬 운영형 검증**이다. AWS 생성·DNS 변경·공개 게시·SSM 저장/조회·S3 업로드는 사용자 승인 전 실행하지 않는다. 기존 개발 Compose/.env/DB를 재사용하지 않는다. 단일 Linux x86_64 backend, 합성 시장·비공개 Anvil이며 Sepolia/HA/SLA가 아니다.
 
 ## 1. 릴리스 준비
@@ -115,6 +117,12 @@ python deployment/ops.py restore --project exchange-restore-drill --env-file dep
 ```
 
 복원은 `exchange-restore-*` 신규프로젝트·빈 data root만 허용하며 effective Compose mount와 요청경로도 일치해야 한다. 기존 운영 root에는 overwrite하지 않는다. 두 DB pg_restore와 체인 파일을 같은 checkpoint로 복원한 뒤 ingress는 자동 기동하지 않는다. 테스트체인 재시작 후 code/nonce/receipt/서명domain·주문/체결/잔고/잠금/AI indexVersion을 확인하고 fixture 거래가 되는지 검증한다. AWS 장애 복구 RTO/RPO는 아직 측정하지 않았다.
+
+양DB healthcheck는 `postgres-readiness.sh`의 TCP/실제 `SELECT 1` 성공을 확인한다. 파일의 password를 검사 프로세스에서만 읽고 health 출력은 숨긴다. restore는 양DB SQL을 각각 최대60초 확인한 뒤 각 dump 직전 다시 확인한다. 준비 확인만 짧은 주기로 polling하며 pg_restore 자체는 단 한 번 실행한다. 초기화 시간을 가정한 sleep이나 부분 복원 위 retry는 하지 않는다.
+
+pg_restore stderr는 복원 DATA_ROOT의 `.restore-diagnostics/<service>.stderr`에 보존한다. POSIX 디렉터리0700/파일0600이며 실패 metadata는 DB/service/exit code/시각/재시도false만 담는다. **raw stderr에는 SQL/행 데이터가 포함될 수 있으므로 공개 로그·Git·보고서에 복사하지 않는다.** Windows는 mode bit만으로 ACL 보호가 보장되지 않으므로 runtime 접근 권한을 별도로 제한한다. 파일은 exclusive create이며 기존 증거를 덮어쓰지 않는다. 실패 시 신규root를 보존하고 원인 확인 후 다른 빈root를 준비한다.
+
+로컬 시험 checkpoint 전용 반복 회귀는 `python deployment/restore-regression.py --source deployment/runtime/local-RUN/backup --rounds 3`이다. 각 라운드에 새root/project를 만들고 두DB의 체결/pgvector probe 및 chain 동일성을 확인한다. 최초 실패에서 멈추며 부분 복원은 재시도하지 않는다. 기존 개발/운영 checkpoint를 임의 지정하는 도구가 아니다. 삭제는 정확한 시험 컨테이너/네트워크만 down(no-v), bind 증거는 보존한다.
 
 ## 7. 로컬 검증
 

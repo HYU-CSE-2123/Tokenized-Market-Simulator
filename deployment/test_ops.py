@@ -2,6 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +16,72 @@ def values():
             'OPERATOR_PRIVATE_KEY': '0x' + '1' * 64, 'PRICE_SIGNER_PRIVATE_KEY': '0x' + '2' * 64}
 
 class OpsTests(unittest.TestCase):
+    def test_sql_readiness_retries_probe_only_and_returns_on_sql_success(self):
+        failure = subprocess.CalledProcessError(1, ['probe'])
+        with patch.object(ops, 'run', side_effect=[failure, failure, None]) as call, \
+             patch.object(ops.time, 'sleep'):
+            ops.wait_sql_ready(['docker', 'compose'], 'postgres')
+        self.assertEqual(3, call.call_count)
+        for invocation in call.call_args_list:
+            self.assertIn('/postgres-readiness.sh', invocation.args[0])
+            self.assertNotIn('pg_restore', invocation.args[0])
+            self.assertLessEqual(invocation.kwargs['timeout'], 5)
+    def test_sql_readiness_deadline_is_bounded_and_public_error_safe(self):
+        failure = subprocess.CalledProcessError(1, ['secret-canary'])
+        with patch.object(ops.time, 'monotonic', side_effect=[0, 0, 61]), \
+             patch.object(ops, 'run', side_effect=failure) as call:
+            with self.assertRaises(ops.RestoreFailure) as raised:
+                ops.wait_sql_ready([], 'ai-postgres')
+        self.assertEqual(1, call.call_count)
+        self.assertNotIn('secret-canary', str(raised.exception))
+    def test_sql_readiness_invalid_scope_rejected(self):
+        with patch.object(ops, 'run') as call:
+            for service, timeout in [('backend', 60), ('postgres', 0), ('postgres', 121)]:
+                with self.assertRaises(ValueError): ops.wait_sql_ready([], service, timeout)
+            call.assert_not_called()
+    def test_both_databases_ready_before_any_restore_and_ai_failure_blocks_dump(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); source = root / 'source'; source.mkdir()
+            for name in ('state.json', 'chain.properties'): (source / name).write_text('fixture')
+            (source / 'checkpoint.json').write_text('{"sha256":{}}')
+            args = SimpleNamespace(project='exchange-restore-readiness', env_file='fixture.env',
+                                   data_root=str(root / 'data'), source=str(source))
+            def ready(cmd, service):
+                if service == 'ai-postgres': raise ops.RestoreFailure('SQL unavailable')
+            with patch.object(ops, 'verify_layout'), \
+                 patch.object(ops, 'run', return_value=SimpleNamespace(stdout=b'')), \
+                 patch.object(ops, 'wait_sql_ready', side_effect=ready) as probe, \
+                 patch.object(ops, 'restore_dump') as dump:
+                with self.assertRaises(ops.RestoreFailure): ops.restore(args)
+            self.assertEqual(['postgres', 'ai-postgres'], [call.args[1] for call in probe.call_args_list])
+            dump.assert_not_called()
+    def test_restore_stderr_private_and_not_in_public_exception_no_retry(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); dump = root / 'dump'; dump.write_bytes(b'fixture')
+            def failing(command, **kwargs):
+                kwargs['stderr'].write(b'FATAL: fixture-secret-canary\n')
+                raise subprocess.CalledProcessError(1, command)
+            with patch.object(ops, 'run', side_effect=failing) as call:
+                with self.assertRaises(ops.RestoreFailure) as raised:
+                    ops.restore_dump(['docker', 'compose'], 'postgres', 'exchange', dump, root)
+            self.assertEqual(1, call.call_count)
+            self.assertNotIn('fixture-secret-canary', str(raised.exception))
+            evidence = root / '.restore-diagnostics'
+            self.assertIn(b'fixture-secret-canary', (evidence / 'postgres.stderr').read_bytes())
+            meta = json.loads((evidence / 'postgres.json').read_text())
+            self.assertEqual(1, meta['returnCode']); self.assertFalse(meta['restoreRetried'])
+            if ops.os.name == 'posix':
+                self.assertEqual(0o700, evidence.stat().st_mode & 0o777)
+                for path in evidence.iterdir(): self.assertEqual(0o600, path.stat().st_mode & 0o777)
+    def test_restore_diagnostics_refuse_existing_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); evidence = root / '.restore-diagnostics'; evidence.mkdir()
+            path = evidence / 'postgres.stderr'; path.write_text('keep')
+            with patch.object(ops, 'run') as call:
+                with self.assertRaises(FileExistsError):
+                    ops.restore_dump([], 'postgres', 'exchange', root / 'unused', root)
+            call.assert_not_called(); self.assertEqual('keep', path.read_text())
     def test_valid_separate_keys(self): ops.validate_secrets(values())
     def test_unknown_and_missing_secrets_fail(self):
         for change in ({'TOSS_CLIENT_SECRET': 'not-allowed'}, {'JWT_SECRET': ''}):
