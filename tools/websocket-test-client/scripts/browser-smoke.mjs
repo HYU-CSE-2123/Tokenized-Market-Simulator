@@ -44,6 +44,14 @@ const server = createServer(async (req, res) => {
   }
   else if (url.pathname.startsWith('/api/orders/')) body = orders.find((order) => order.orderId === Number(url.pathname.split('/').at(-1)));
   else if (url.pathname === '/api/trades') body = [];
+  else if (url.pathname === '/api/admin/reserve-reconciliations') body = req.method === 'POST'
+    ? { id: 'reserve-fixture', status: 'MATCH', reason: 'EXACT_QUANTITY_MATCH', createdAt: now, dbAt: now,
+        chain: { block: { number: 123, hash: '0x' + 'a'.repeat(64) } }, checks: [],
+        liquidity: { operatorBuyFunds: '1000000000000000000000000', buyAllowance: '1000000000000000000000000',
+          operatorSellTokens: '0', vaultSellFunds: '5000000000000000000000000', userKrw: '1000000000000000000000000', userSec: '0', operatorAllocationReference: '1.0000', operatorEthWei: '1000000000000000000', gasAssessment: 'READ_ONLY_NOT_ESTIMATED' } }
+    : [{ id: 'reserve-fixture', status: 'MATCH', createdAt: now }];
+  else if (url.pathname === '/api/admin/reserve-reconciliations/reserve-fixture') body = {
+    id: 'reserve-fixture', status: 'INCONCLUSIVE', reason: 'CUT_CHANGED', createdAt: now, checks: [], liquidity: null };
   else if (url.pathname === '/api/ai/agent/answers') { if (delayedAi) await new Promise((done) => setTimeout(done, 400)); if (failAi) { status = 503; body = { error: 'AGENT_DISABLED' }; } else body = agent; }
   else if (url.pathname === '/api/ai/diagnoses') body = { items: [{ id: 1, orderId: 1, jobStatus: 'COMPLETED', detectedAt: now }], nextBefore: null };
   else if (url.pathname === '/api/ai/diagnoses/1') body = { completedAt: now, targetStale: true, result: { ...agent, responseStatus: 'PARTIAL' } };
@@ -99,6 +107,12 @@ try {
   await click('auth-open'); await click('auth-switch'); await fill('login-id', 'admin'); await fill('password', 'password123'); await submit('auth-form'); await waitText('identity', '관리자');
   await evaluate(`location.hash='admin'`); await waitText('admin-history', '진단 #1'); await waitText('observation', 'LLM:call');
   await evaluate(`document.getElementById('admin-history').querySelector('button').click()`); await waitText('admin-result', '과거 관측'); await screenshot('desktop-admin');
+  await click('reserve-run'); await waitText('reserve-result', '장부·체인 수량 일치');
+  await waitText('reserve-result', '1 ETH'); await waitText('reserve-result', '비용 미추정');
+  await waitText('reserve-result', '준비금 보증 비율이나 Proof of Reserves가 아니며');
+  await click('reserve-refresh'); await waitText('reserve-history', '최근 대사 20건');
+  await evaluate(`document.getElementById('reserve-history').querySelector('button').click()`);
+  await waitText('reserve-result', '동일 시점·근거 확인 불가');
   await command('Emulation.setDeviceMetricsOverride', { width: 360, height: 800, deviceScaleFactor: 1, mobile: true });
   for (const route of ['market', 'history', 'portfolio', 'ai', 'admin']) {
     await evaluate(`location.hash=${JSON.stringify(route)}`); await new Promise((done) => setTimeout(done, 120));

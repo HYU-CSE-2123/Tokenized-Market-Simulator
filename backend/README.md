@@ -402,3 +402,13 @@ docker compose -p exchange ps
 ```
 
 데이터는 외부 Docker 볼륨 `exchange_postgres-data`에 유지됩니다. Compose 외부 볼륨이므로 `docker compose down -v`도 이 볼륨을 삭제하지 않습니다. 단, Docker Desktop이나 `docker volume rm exchange_postgres-data`로 직접 삭제하면 복구할 수 없으므로 주의합니다.
+
+## 장부·체인 자산 대사 (별도 feature branch)
+
+기본 비활성(`RESERVE_RECONCILIATION_ENABLED=false`). 신규 격리 환경에서만 true와 고유 `RESERVE_EXECUTION_ID`를 지정하고, faucet/거래 전에 ADMIN이 `POST /api/admin/reserve-reconciliations/baseline`으로 불변 기준점을 한 번 생성합니다. 기존 장부를 소급 정상화하지 않습니다. 실행/최근20건/UUID상세는 동일 경로 POST/GET/GET `{id}`. USER403/미인증401입니다.
+
+새 orders/trades에 executionMode가 추가되고 legacy는 UNKNOWN입니다. faucet journal은 잔고 지급과 원자적으로 저장됩니다. 대사는 사용자 잔고·정산 상태·체인을 수정하지 않습니다. PostgreSQL evidence trigger 설치에 DDL 권한이 필요합니다.
+
+계산식·상태·전용 fixture 재현·검증 경계는 [구현 보고서](../claude-docs/reserve-reconciliation-implementation.md)를 참고하세요. 기존 개발/acceptance `.env`와 체인에는 적용하지 않습니다.
+
+operator ETH 잔고도 지정 블록에서 읽어 ADMIN에 보여 주지만 Gas 비용 미추정이며 충분/부족·미래 거래 가능성을 보증하지 않습니다. ETH 관측 실패는 토큰 장부 판정을 대신하지 않습니다. 최신 실제PG 경합·CRLF 보완·전체 회귀는 [최종 검증](../claude-docs/reserve-reconciliation-final-validation.md)에 기록합니다. CRLF 수정은 테스트 fixture만 대상으로 하며 일반 Gradle 테스트에서 별도 resource 정규화가 필요하지 않습니다.

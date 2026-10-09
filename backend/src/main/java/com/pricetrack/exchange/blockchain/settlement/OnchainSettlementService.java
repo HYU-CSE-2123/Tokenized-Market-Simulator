@@ -99,6 +99,7 @@ public class OnchainSettlementService {
         trade.setUserId(order.getUserId());
         trade.setSymbol(order.getSymbol());
         trade.setSide(order.getSide());
+        trade.setExecutionMode(order.getExecutionMode());
         trade.setPrice(price);
         trade.setBaseAmount(order.getSide() == OrderSide.BUY ? output : input);
         trade.setQuoteAmount(order.getSide() == OrderSide.BUY ? input : output);

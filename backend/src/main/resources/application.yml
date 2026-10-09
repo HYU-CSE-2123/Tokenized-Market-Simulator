@@ -30,6 +30,9 @@ server:
 
 # 애플리케이션 커스텀 설정
 app:
+  reserve:
+    enabled: ${RESERVE_RECONCILIATION_ENABLED:false}
+    execution-id: ${RESERVE_EXECUTION_ID:}
   ai:
     diagnosis:
       enabled: ${AI_AUTO_DIAGNOSIS_ENABLED:false}

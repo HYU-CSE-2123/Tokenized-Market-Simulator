@@ -28,6 +28,9 @@
 - [`validation-2026-10-07.md`](validation-2026-10-07.md) — 기존 기능 재검증·최초 복원 실패와 후속 stderr/실제SQL readiness 보강. 새DB3/3·종단간16/16·독립 검토 및 남은 검증 경계
 - [`development-chain-state-audit.md`](development-chain-state-audit.md) — 개발 DB와 보존 state/checkpoint의 읽기 전용 대조. 기존 DB와 일치하는 복원 후보 없음·신규 격리 인수 환경 제안, 복원/배포 미실행
 - [`isolated-acceptance-baseline.md`](isolated-acceptance-baseline.md) — 신규 격리 DB·persistent Anvil·독립 키·Toss/실제 웹 준비 결과. 장중 BUY/SELL·유료 AI/성공 MATCH 인수는 대기
+- [`reserve-reconciliation-design.md`](reserve-reconciliation-design.md) — 장부·체인 대사 최초 설계 기록. 후속 구현 승인됨
+- [`reserve-reconciliation-implementation.md`](reserve-reconciliation-implementation.md) — 별도 feature worktree 구현, Order 실행 정본·불변 기준점·consistent cut·계산식·ADMIN API/UI·격리 검증 및 한계
+- [`reserve-reconciliation-final-validation.md`](reserve-reconciliation-final-validation.md) — 실제 PostgreSQL/Anvil 경합, operator ETH/Gas 한계, 테스트-only CRLF 보완과 최종 브랜치 검증
 - [`backend-blockchain-learning-guide.md`](backend-blockchain-learning-guide.md) — 현재 코드 기준 구조·운영자 통합 지갑·서명 견적·BUY/SELL·receipt 정산·WS·용어·DB/chain 정본과 유실 영향 학습 문서
 - [`public-market-data-research.md`](public-market-data-research.md) — 배포 보류 후 국내 실시간/지연/historical 공급자·공개 이용권 조사와 provider/replay 설계 후보
 - [`synthetic-market-design.md`](synthetic-market-design.md) — 공개 simulated 선택과 축소 승인 범위의 합성 tick/거래량·영속 상태·서명 견적·UI 구현, 통합 검증·독립 검토 및 남은 한계(외부 배포는 대기)

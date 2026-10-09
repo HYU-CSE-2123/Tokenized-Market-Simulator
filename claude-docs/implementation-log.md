@@ -2381,3 +2381,46 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 코드/테스트/문서 초안 동결 후 `review_acceptance_baseline` 별도 검토: 발견된 필수 수정 없음(Windows/Docker Desktop 범위). 직접helper31개29PASS/2POSIXskip. namespace/mount/secretallowlist/키분리/영속설정/AI비활성/재시도경계·문서를 확인했다. runtime ACL로 실제증거 대조는 불가하여 환경·브라우저결과는 구현자실행으로 구분한다. Linux host권한/UID10001소유권 보완은 별도이식 대상이며 문서에 한계를 추가했다.
 - 현재휴장으로 실제Toss BUY/SELL 미완료. 실제AI 비용/횟수 및 성공MATCH 최소재현 절차는 실행전 별도보고/승인 대상이다. 둘 모두 인수 후 baseline동결하고 추가기능으로 넘어간다.
+
+# 준비금 대사 조사·설계 문서 — 작성 완료 / 기능 구현 승인 대기 (2026-10-08)
+
+- 사용자 요청으로 긴 설계 답변을 [준비금 대사 설계](reserve-reconciliation-design.md)에 저장했다. `b7cb0f0`에서 별도 `feat/reserve-reconciliation` worktree를 만들고 이 worktree의 문서·목록·로그만 수정했다. 원래 acceptance worktree 제품/문서/설정은 그대로다.
+- DB faucet/온체인 faucet 분리, amount와 lockedAmount, operator/Vault BUY/SELL·수수료·mint/burn, 실제 Trade 수량·DB-only 경로와 receipt 비동기성을 코드로 확인했다. DB 자산 합=operator 잔고를 전제하지 않고 정합성과 유동성을 분리한다.
+- 지급 이력·Trade 실행 유형·기준점/대사 결과 저장과 ADMIN 수동 API/UI·별도 환경 회귀를 제안했다. 모두 미구현이며 앞선 설계를 기록한 것이지 구현 승인으로 간주하지 않는다.
+- 기존/acceptance DB·chain·Toss·AI 조회/변경·환경 재생성·기동·유료 호출·merge·commit 없음. 문서 Git 범위/link 확인만 수행하며 제품 테스트/독립 구현 검토는 실행하지 않는다. 기능 구현 승인 후 별도 테스트·검토 예정이다.
+
+# 장부·체인 자산 대사 — 구현·격리 검증·독립 재검토 완료 (2026-10-08)
+
+## 구현·결정
+
+- 사용자 후속 승인에 따라 Order 실행 유형 정본/Trade 복사/legacy UNKNOWN, faucet journal 원자 저장, 신규0원 장부의 불변 기준점, ADMIN 수동 대사·이력·제품 UI를 별도 feature worktree에 구현했다.
+- read-only REPEATABLE_READ snapshot + 명시적 blockNumber/hash + 후속 DB/head 안정성 확인을 사용한다. 미정산/UNKNOWN/경합은 INCONCLUSIVE, 충분한 근거 뒤에만 MISMATCH. 유동성과 보증을 구분하며 불확실한 cut에서는 유동성 비율도 산정하지 않는다.
+- 계산식·파일·API·사용법·보존 경계는 [구현 보고서](reserve-reconciliation-implementation.md). 기존 acceptance/runtime/개발DB/chain/.env/Toss/AI는 그대로이며 merge·commit 없음.
+
+## 검증·검토
+
+- 대사 단위/H2 현재28개 PASS. 신규PG+Anvil 서명BUY/SELL E2E는 최초·검토 수정후 각각 신규fixture에서1/1 PASS, forge36/36, 웹54/54/Chrome fixture desktop·모바일 PASS.
+- 최초 전체backend370개 338PASS/1FAIL/31SKIP: 기존 AI Skill CRLF fixture 이중 변환. AI 소스 무변경, build fixture LF 조건 전체 회귀는339PASS/31SKIP, 검토수정·6개추가 후376개345PASS/0FAIL/31SKIP. 일반 checkout 실패와 조건부 재검증을 구분한다.
+- 최초 독립 검토의 tx 방향/DB_ONLY 연결 falseMATCH2건을 신규test로 재현 후 수정했고 전체 회귀·신규E2E를 재실행했다. `review_reserve` 재검토: **발견된 필수 수정 없음**. 코드·신규6tests·문서·현재E2E XML을 확인했고 전체실행은 구현자 결과로 구분한다. 최초검토에서 웹 신규6tests 직접PASS. 실제PG 동시writer와 일반CRLF checkout 기존실패는 독립미검증, 전체deadline/canonicalcache는선택보류.
+- 실제Toss/유료AI/운영부하/원래acceptance 적용은 미실행. 신규fixture2개 각각컨테이너만정지하고 DB/chain/증거는보존했다. 원본Git clean, feature변경미커밋이며 merge없음.
+
+# 장부·체인 대사 최종 보완·브랜치 검증 — 구현/회귀·독립 검토 완료 (2026-10-09)
+
+## 구현·결정
+
+- 지정블록 operator ETH wei 문자열 관측 및 ADMIN 표시, Gas 비용 미추정/보증 아님 안내를 추가했다. ETH0/조회불가도 토큰 장부 판정을 변경하지 않고 전송·자동충전 경로는 그대로다.
+- CRLF Skill 실패를 일반build로 재현(3PASS/1FAIL)했다. 테스트 helper만 canonical LF로 읽고 LF/CRLF 입력을 명시적 구성해 AI 운영 코드/문서hash 무변경으로 보완했다. 이전 수동LF 조건부 전체회귀 이력은 유지한다.
+- 신규PG/Anvil E2E의 실제 DB read-onlyRR 설정 확인과 latch로 제어한 실제DB writer/새블록 경쟁을 추가했다. 제품코드에 테스트hook/sleep 없음. 상세 파일·범위·한계는 [최종검증 보고서](reserve-reconciliation-final-validation.md).
+
+## 검증
+
+- 대사29개/H2·Skill4개 targeted33/33 PASS. 신규PG/Anvil E2E1/1 PASS 안에 balance/journal commit·Trade생성시각 변경·evm_mine 3경합이 모두INCONCLUSIVE CUT_CHANGED, 안정후MATCH였다. 실제RR/read_only와 DBtransaction 없이 RPC수행도 확인했다.
+- 일반전체backend `gradlew test --no-daemon --rerun-tasks`:377개346PASS/0FAIL/31SKIP, buildresource3개CRLF 그대로. 수동정규화/task제외 없음. 외부/유료optin은모두false. 신규E2E는별도실행.
+- 웹55/55·Vite/Chrome desktop360pxmobile PASS(ETH/Gas문구assert), forge36/36 PASS(fuzz포함).
+
+## 검토·커밋 경계
+
+- 최종독립검토 `review_reserve_final`: **발견된 필수 수정 없음**. 웹대사7개 직접PASS, XML377/0FAIL/31SKIP·실제buildCRLF·빈index/diffcheck 확인. PG/Anvil·전체Gradle·Foundry·Chrome은구현자실행으로구분한다. 선택지적의변조Skill newline문서표현만정확히좁혔다.
+- allowlist stage/생성secret값 stagedblob대조/금지산출물배제 후 feat/reserve-reconciliation에만commit한다. 원본merge·배포·acceptance반영 없음. 생성runtime자료는Git에서제외하며최종해시는완료답변과Gitlog에서확인한다.
+- 최종stage40개 소스·문서, fixture실제secret9개 대조일치0/금지경로0/cached diffcheckPASS. 비밀값출력없음. 이번새fixture2컨테이너만정지·데이터보존. 원본worktree b7cb0f0 clean확인.
+- 실제Toss/유료AI/EC2·운영부하·다중서버경쟁·ETH Gas지급정확판정은미실행/범위밖. Trade경합은금액변경이아닌metadata변경이다. 과거유잔고acceptance에는기준점즉시생성불가, 별도migration설계승인이필요하다.

@@ -38,10 +38,12 @@ public class OrderController {
             @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal tokenAmount,
             String quoteId) {}
     public record OrderResponse(Long orderId, String symbol, OrderSide side, BigDecimal inputAmount,
-            BigDecimal outputAmount, OrderStatus status, String txHash, Instant createdAt) {
+            BigDecimal outputAmount, OrderStatus status, String txHash, Instant createdAt,
+            ExecutionMode executionMode) {
         static OrderResponse from(Order order) {
             return new OrderResponse(order.getId(), order.getSymbol(), order.getSide(), order.getInputAmount(),
-                    order.getExpectedOutputAmount(), order.getStatus(), order.getTxHash(), order.getCreatedAt());
+                    order.getExpectedOutputAmount(), order.getStatus(), order.getTxHash(), order.getCreatedAt(),
+                    order.getExecutionMode());
         }
     }
 

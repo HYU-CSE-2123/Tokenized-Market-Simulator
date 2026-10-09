@@ -168,6 +168,22 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_blockchain_transactions_sender_nonce
     ON blockchain_transactions (sender_address, nonce);
 
 -- 초기 자산 데이터 (기획서 §11.2)
+-- Existing rows remain UNKNOWN, never guessed from current mode or absent hashes.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS execution_mode VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+ALTER TABLE trades ADD COLUMN IF NOT EXISTS execution_mode VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+CREATE TABLE IF NOT EXISTS faucet_grants (
+    id VARCHAR(36) PRIMARY KEY, user_id BIGINT NOT NULL,
+    amount DECIMAL(30,18) NOT NULL, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reserve_baselines (
+    id BIGINT PRIMARY KEY CHECK (id=1), payload TEXT NOT NULL,
+    actor_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reserve_runs (
+    id VARCHAR(36) PRIMARY KEY, payload TEXT NOT NULL,
+    actor_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS synthetic_market_state (
     symbol VARCHAR(255) PRIMARY KEY,
     engine_version VARCHAR(255) NOT NULL,

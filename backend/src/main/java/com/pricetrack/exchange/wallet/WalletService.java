@@ -21,10 +21,13 @@ public class WalletService {
 
     private final UserBalanceRepository balanceRepository;
     private final UserWebSocketPublisher userEvents;
+    private final FaucetGrantRepository grantRepository;
 
-    public WalletService(UserBalanceRepository balanceRepository, UserWebSocketPublisher userEvents) {
+    public WalletService(UserBalanceRepository balanceRepository, UserWebSocketPublisher userEvents,
+            FaucetGrantRepository grantRepository) {
         this.balanceRepository = balanceRepository;
         this.userEvents = userEvents;
+        this.grantRepository = grantRepository;
     }
 
     @Transactional
@@ -37,6 +40,7 @@ public class WalletService {
     public FaucetResult faucet(Long userId) {
         UserBalance balance = getForUpdate(userId, KRW_SYMBOL);
         balance.setAmount(balance.getAmount().add(FAUCET_AMOUNT));
+        grantRepository.save(new FaucetGrant(userId, FAUCET_AMOUNT));
         userEvents.publishPortfolio(userId);
         return new FaucetResult(KRW_SYMBOL, FAUCET_AMOUNT, balance.getAmount());
     }

@@ -41,6 +41,11 @@ export class ApiClient {
   }
 
   observation() { return this.#request('/api/ai/observability'); }
+  reserveBaseline() { return this.#request('/api/admin/reserve-reconciliations/baseline'); }
+  createReserveBaseline() { return this.#request('/api/admin/reserve-reconciliations/baseline', { method: 'POST' }); }
+  reconcileAssets() { return this.#request('/api/admin/reserve-reconciliations', { method: 'POST' }); }
+  reserveHistory() { return this.#request('/api/admin/reserve-reconciliations'); }
+  reserveDetail(id) { return this.#request('/api/admin/reserve-reconciliations/'+encodeURIComponent(id)); }
 
   order(id) { return this.#request(`/api/orders/${encodeURIComponent(id)}`); }
 

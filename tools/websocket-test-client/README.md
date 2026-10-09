@@ -149,3 +149,11 @@ npm run build
 로그인 후 `/api/me`가 ADMIN인 경우에만 패널을 표시합니다. 주문 ID를 지정해 기존 settlement-debugging 수동 Skill을 실행하거나, 자동 진단 이력·이전 페이지·진단 ID별 상세를 조회할 수 있습니다. 결과 JSON에는 실행 시점의 관측·정책 해석·출처·trace와 자동 수정 안 함 표시가 있습니다. 현재 거래 상태와 동일하다고 가정하지 마세요.
 
 백엔드의 AI/Agent/Tool/Skill 설정, AI 진단 schema 명시적 초기화와 자동 진단 actor/namespace 설정이 필요합니다. [백엔드 안내](../../backend/README.md)를 따르세요. 웹은 자동 진단을 시작하거나 재거래·복구를 요청하지 않습니다. USER는 이력 API에서도 거부됩니다. 출력은 HTML이 아니라 안전한 텍스트로 표시하며 로그아웃/계정 교체 시 이전 응답을 폐기합니다.
+
+## ADMIN 장부·체인 자산 대사
+
+별도 feature branch의 ADMIN 화면에서 최초 불변 기준점 생성, 수동 대사, 최근20건과 상세를 조회합니다. 정합성 판정과 거래 가능 유동성은 별도 영역이며 보증/Proof of Reserves가 아닙니다. 기준점 reset·자산 자동 보정·실패 POST 자동 재시도는 없습니다. 백엔드 기능이 disabled이면404 안내를 표시합니다. 기존 acceptance 서버에는 새 기능을 적용하지 않습니다.
+
+`npm test`: 기존48+대사6=54개. `npm run test:browser`: desktop/360px 모바일 fixture, 신규 ADMIN 대사/이력/INCONCLUSIVE 상세 포함. 실제 DB/Anvil 검증은 backend의 별도 E2E입니다.
+
+2026-10-09 보완: 대사 ETH UI 테스트1개 추가로 웹55개. ADMIN 유동성 영역에 지정 블록의 operator ETH를 표시하고 Gas 비용 미추정·미래 거래 보증 아님·자동 충전 없음 안내를 제공합니다. browser smoke에서도 해당 표시를 검증합니다.

@@ -62,6 +62,7 @@ public class OnchainOrderPreparationService {
         order.setUserId(userId);
         order.setSymbol(WalletService.TOKEN_SYMBOL);
         order.setSide(side);
+        order.setExecutionMode(ExecutionMode.ONCHAIN);
         order.setInputAmount(input);
         order.setExpectedOutputAmount(TokenUnits.fromWei(quote.getMinimumOutput()));
         order = orderRepository.save(order);

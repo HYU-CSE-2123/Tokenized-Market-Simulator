@@ -5,9 +5,11 @@ import { ChartController } from './chart-controller.js';
 import { normalizeQuote, quoteUsability, remainingSeconds, shouldRenderOrder, friendlyTradeError } from './trade-quote.js';
 import { RequestState, number, time, label, positiveAmount, uncertainWrite, marketNotice } from './state.js';
 import { node, button, fields, empty, orderCard, tradeCard, renderDiagnosis } from './ui.js';
+import { createReservePanel } from './reserve-panel.js';
 
 const $ = (id) => document.getElementById(id);
 const api = new ApiClient(); const requests = new RequestState();
+const reservePanel = createReservePanel(api);
 const state = { user: null, market: null, portfolio: null, orders: [], trades: [], side: 'BUY', quote: null,
   historyTab: 'orders', authMode: 'login', destination: 'market', latestId: null, detailId: null, uncertain: null, history: [], nextBefore: null };
 const chart = new ChartController(api, $('market-chart'), $('chart-message'));
@@ -58,6 +60,7 @@ function route() {
   if (name === 'portfolio') void loadPortfolio();
   if (name === 'history') { renderHistory(); void loadActivity(); }
   if (name === 'admin') { void loadDiagnosisHistory(); void loadObservation(); }
+  reservePanel.setContext(state.user, name);
 }
 function connect() { socket.connect({ transport: $('transport').value, token: api.token, debug: false }); }
 function renderIdentity() {
@@ -66,6 +69,7 @@ function renderIdentity() {
   $('admin-nav').hidden = state.user?.role !== 'ADMIN'; updateTradeControls();
 }
 function resetPrivate() {
+  reservePanel.setContext(null, 'market');
   $('quote-dialog').close();
   requests.reset(); clearTimeout(sessionExpiry); state.user = null; state.quote = null; state.orders = []; state.trades = []; state.portfolio = null;
   state.latestId = null; state.detailId = null; state.uncertain = null; state.history = []; state.nextBefore = null; portfolioRevision++;

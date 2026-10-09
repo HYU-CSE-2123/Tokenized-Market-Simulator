@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 import com.pricetrack.exchange.order.OrderSide;
+import com.pricetrack.exchange.order.ExecutionMode;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,6 +36,8 @@ public class Trade {
     private String symbol;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 10)
     private OrderSide side;
+    @Enumerated(EnumType.STRING) @Column(name = "execution_mode", nullable = false, length = 20)
+    private ExecutionMode executionMode = ExecutionMode.UNKNOWN;
     @Column(nullable = false, precision = 30, scale = 8)
     private BigDecimal price;
     @Column(name = "base_amount", nullable = false, precision = 30, scale = 18)

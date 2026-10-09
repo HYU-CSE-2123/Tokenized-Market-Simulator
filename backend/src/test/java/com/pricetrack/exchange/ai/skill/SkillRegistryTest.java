@@ -12,7 +12,8 @@ import org.junit.jupiter.api.Test;
 class SkillRegistryTest {
     final ObjectMapper json=new ObjectMapper();
     String resource(String name)throws Exception{
-        try(var in=getClass().getClassLoader().getResourceAsStream("ai/skills/"+name)){return new String(in.readAllBytes(),StandardCharsets.UTF_8);}
+        // Canonical test input before explicitly exercising both newline formats; never alter build resources.
+        try(var in=getClass().getClassLoader().getResourceAsStream("ai/skills/"+name)){return new String(in.readAllBytes(),StandardCharsets.UTF_8).replace("\r\n","\n");}
     }
     @Test void parserRejectsDuplicateUnknownYamlAliasTagsAndExpandedCapabilities()throws Exception{
         String good=resource("settlement-debugging.md");var ceiling=SkillRegistry.ceilings().getFirst();
@@ -24,14 +25,16 @@ class SkillRegistryTest {
             assertThatThrownBy(() -> SkillRegistry.parse(bad,ceiling,KnowledgeLoader.hash(bad))).isInstanceOf(IllegalArgumentException.class);
     }
     @Test void hashMismatchDisablesOnlyAffectedSkillAndCrLfIsPortable()throws Exception{
+      for(String newline:List.of("\n","\r\n")) {
         var registry=new SkillRegistry(json,path -> {
             String text=resource(path.substring(path.lastIndexOf('/')+1));
-            if(path.endsWith("settlement-debugging.md"))text+="tampered";else text=text.replace("\n","\r\n");
+            if(path.endsWith("settlement-debugging.md"))text+="tampered";else text=text.replace("\n",newline);
             return new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
         });
         assertThatThrownBy(() -> registry.require("settlement-debugging",UserRole.ADMIN,Subject.ORDER)).hasMessage("SKILL_DEFINITION_UNAVAILABLE");
         assertThat(registry.require("signed-quote-diagnosis",UserRole.USER,Subject.QUOTE).version()).isEqualTo(1);
         assertThat(registry.require("market-availability-diagnosis",UserRole.USER,Subject.NONE).version()).isEqualTo(1);
+      }
     }
     @Test void oversizedMissingAndDuplicateManifestDisableSafely()throws Exception{
         for(String invalid:List.of("x".repeat(8193),"{} {}","{\"x\":1,\"x\":2}")){
