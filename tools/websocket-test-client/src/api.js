@@ -41,6 +41,15 @@ export class ApiClient {
   }
 
   observation() { return this.#request('/api/ai/observability'); }
+  startAudit() { return this.#request('/api/admin/trade-audits', { method: 'POST' }); }
+  auditHistory(before = null) { return this.#request('/api/admin/trade-audits'+(before?'?before='+encodeURIComponent(before):'')); }
+  auditDetail(id) { return this.#request('/api/admin/trade-audits/'+encodeURIComponent(id)); }
+  auditItems(id, before = null, filters = {}) {
+    const query = new URLSearchParams();
+    if (before) query.set('before', String(before));
+    for (const key of ['verdict', 'mode', 'side', 'orderId']) if (filters[key]) query.set(key, String(filters[key]));
+    return this.#request('/api/admin/trade-audits/'+encodeURIComponent(id)+'/items'+(query.size?'?'+query:''));
+  }
   reserveBaseline() { return this.#request('/api/admin/reserve-reconciliations/baseline'); }
   createReserveBaseline() { return this.#request('/api/admin/reserve-reconciliations/baseline', { method: 'POST' }); }
   reconcileAssets() { return this.#request('/api/admin/reserve-reconciliations', { method: 'POST' }); }

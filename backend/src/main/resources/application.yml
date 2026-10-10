@@ -30,6 +30,10 @@ server:
 
 # 애플리케이션 커스텀 설정
 app:
+  trade-audit:
+    enabled: ${TRADE_AUDIT_ENABLED:false}
+    max-rpc-calls: ${TRADE_AUDIT_MAX_RPC_CALLS:500}
+    timeout-seconds: ${TRADE_AUDIT_TIMEOUT_SECONDS:30}
   reserve:
     enabled: ${RESERVE_RECONCILIATION_ENABLED:false}
     execution-id: ${RESERVE_EXECUTION_ID:}

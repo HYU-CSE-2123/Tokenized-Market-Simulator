@@ -184,6 +184,19 @@ CREATE TABLE IF NOT EXISTS reserve_runs (
     actor_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS trade_audit_runs (
+    id VARCHAR(36) PRIMARY KEY, payload TEXT NOT NULL, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS trade_audit_results (
+    run_id VARCHAR(36) PRIMARY KEY REFERENCES trade_audit_runs(id), payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS trade_audit_items (
+    run_id VARCHAR(36) NOT NULL REFERENCES trade_audit_runs(id), seq INT NOT NULL,
+    order_id BIGINT, mode VARCHAR(20) NOT NULL, side VARCHAR(10), verdict VARCHAR(20) NOT NULL,
+    payload TEXT NOT NULL, PRIMARY KEY(run_id,seq)
+);
+CREATE INDEX IF NOT EXISTS idx_trade_audit_created ON trade_audit_runs(created_at,id);
+
 CREATE TABLE IF NOT EXISTS synthetic_market_state (
     symbol VARCHAR(255) PRIMARY KEY,
     engine_version VARCHAR(255) NOT NULL,
