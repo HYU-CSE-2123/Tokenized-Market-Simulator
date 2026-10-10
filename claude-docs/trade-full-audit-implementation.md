@@ -53,3 +53,11 @@ Windows Docker Desktop 격리 fixture 기준이다. 테이블 상한·timeout·R
 - `review_trade_audit` 최초 검토 + 재검토2회. 최종 결론 **발견된 필수 수정 없음**. 재검토1에서 신규 웹6개 직접 PASS, 마지막은 source/nullable 고아 처리/PG assertions/문서 읽기 전용 확인이다. 실제 PG/Anvil·전체 Gradle·Foundry·Chrome은 구현자 실행이며 검토자 독립 재실행으로 쓰지 않는다.
 - 계획 중 restart interruption·동일 블록 설정 변경·snapshot/revert reorg·대규모 활성 원장·다중 서버·RPC의 악의적 로그 누락은 실제 운영 E2E 미검증이다. timeout/call cap과 근거 누락은 단위/mock 검증과 위 실제 fixture 범위를 구분한다. 불완전 범위를 전수 MATCH로 표시하지 않는다.
 - 커밋 전 allowlist30개 소스/문서만 stage하고 새 fixture6개에서 생성된 실제 secret18개를 staged blob과 대조했다. 일치0/금지산출물0/cached diffcheck PASS. 실제.env·DB dump·Anvil state·runtime 로그·build/lib/node_modules는 Git에 포함하지 않는다. 최종 fixture2컨테이너만 정지했고 데이터를 보존했다. 원본melon-init b7cb0f0와 완료reserve00046d7 변경 없음.
+
+## 통합 완료 (2026-10-10)
+
+- 기능 commit `eed6b2f98e518a6c5d13603158b1aa9d3f8f0e06`, 통합 merge `2a5d8d3a29b3e38822678da613c0da9dfa56ea52`. 충돌 없이 병합했고 merge tree와 기능 tree 전체 diff0을 확인했다. 원본melon-init/acceptance 적용·배포는 없다. 이 결과 기록만 추가하는 후속 문서 commit은 Git HEAD/완료 보고에서 확인한다.
+- 통합 worktree에서 `gradlew test --offline --no-daemon --rerun-tasks`:427개/395 PASS/32 SKIP/0 FAIL/0 ERROR. 수동resource정규화·test제외 없음. 32skip의 기존31+별도PASS감사1 구분은 그대로다.
+- 통합 `npm test`61/61, `npm run test:browser`의 Vite92 modules 및 Chrome desktop/mobile REST/STOMP fixture PASS, `forge test`36/36 PASS(fuzz256각각). npm 설치는 offline cache80 packages, Solidity library는 검증feature의 ignored copy이며 다운로드하지 않았다.
+- PostgreSQL/Anvil E2E는 기능 tree에서 별도 실행한50PASS를 근거로 한다. 통합에서 fixture를 또 생성·재실행한 것으로 쓰지 않는다. 동일source tree 확인과 통합 전체회귀를 수행한 것이며 전체제품 최종인수/실제Toss/실제AI를 완료했다는 뜻이 아니다.
+- 알려진 필수 미해결 결함 없음. 단일worker·활성head의INCONCLUSIVE·RPC node 신뢰·과거근거부족 및 위 실제운영 미검증 한계는 유지한다. 다음 작업은 Faucet 정책 설계·승인이다.

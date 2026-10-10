@@ -50,7 +50,7 @@
 
 ## 단일 출처(Source of Truth)
 
-추가 기능 통합 개발의 최신 순서와 보존 경계(2026-10-09)는 [통합 개발 계획](additional-features-integration-plan.md)을 따른다. 실제 Toss 장중 인수는 추가 기능·최종 통합 검증 이후 신규 acceptance에서 진행하며 기존 acceptance는 보존한다. 다음 기능은 [거래 전수 대사 ADMIN 설계](trade-full-audit-design.md)이고 구현 승인 대기다.
+추가 기능 통합 개발의 최신 순서와 보존 경계는 [통합 개발 계획](additional-features-integration-plan.md)을 따른다. 실제 Toss 장중 인수는 추가 기능·최종 통합 검증 이후 신규 acceptance에서 진행하며 기존 acceptance는 보존한다. 2026-10-09의 [거래 전수 대사 ADMIN 설계](trade-full-audit-design.md)는 다음 날 승인·구현·통합되었고, 현재 다음 작업은 Faucet 정책 설계다.
 
 2026-10-10 거래 전수 대사 구현을 승인받았다. 현재 상태·실행별 검증과 통합 결과는 [구현 기록](trade-full-audit-implementation.md)을 따른다. 추가 기능 개발의 중심은 integration/additional-features이며 모든 추가 기능 이후 최종 기준 브랜치와 신규 Toss/AI acceptance를 확정한다. 실제 외부 호출·유료 사용은 별도 승인이다.
 

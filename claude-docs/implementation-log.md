@@ -2459,3 +2459,10 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 최초PG timeout/DockerAPI500 실패 및 빈DB 확인 후 재실행을 기록했다. DB 초기화/engine 재시작/보존 환경 접근으로 우회하지 않았다.
 - review_trade_audit 최종재검토2: **발견된 필수 수정 없음**. 변경된 nullable 고아quote 처리/byte 상한/검증코드/문서를 확인했다. 웹6개 직접PASS는 재검토1, backend/PG/Anvil/Foundry/Chrome 결과는 구현자 실행이다.
 - 소스·문서 allowlist와 secret/산출물 배제 점검 후 feat/trade-audit만 커밋하여 integration/additional-features로 병합한다. 원본melon-init 및 기존acceptance/개발runtime 적용·배포·실제Toss/유료AI/AWS는 없다. 통합검증/해시는 후속 기록으로 확정한다.
+
+# 거래 전수 대사 — 통합 회귀 완료 (2026-10-10)
+
+- 기능 `eed6b2f98e518a6c5d13603158b1aa9d3f8f0e06` → integration/additional-features merge `2a5d8d3a29b3e38822678da613c0da9dfa56ea52`. 충돌0/source tree diff0. 이후 현재 결과를 문서에만 기록한다.
+- 통합 worktree 실제 전체backend427개/395PASS/32SKIP/0FAIL/0ERROR, 웹61/61·Vite92·Chrome desktop/mobile fixture PASS, Foundry36/36 PASS. 새 기능의PG/Anvil 감사50PASS는 동일featuretree의 별도실행이며 통합에서재실행한결과가아니다.
+- 기존31skip·실제Toss/유료AI/AWS/운영부하/최종제품인수 미실행을 유지한다. 독립검토최종결론은 발견된필수수정없음이며 테스트대체가아니다. 상세 [검증 기록](trade-full-audit-implementation.md).
+- featurestage30개/실제fixturesecret18대조0/금지산출물0, 각fixture컨테이너정지·DB/chain/로그보존. 원본melon-init b7cb0f0 및 acceptance/runtime/실제.env에 merge·복사·배포없음. 다음Faucet정책은설계후승인받는다.

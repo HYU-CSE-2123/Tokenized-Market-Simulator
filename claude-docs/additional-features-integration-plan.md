@@ -1,15 +1,15 @@
 # 추가 기능 통합 개발 계획
 
-> 2026-10-09 사용자 우선순위 변경 반영. 브랜치 구성은 실행 완료, 아래 추가 기능은 개별 설계/구현 승인이 필요하다.
+> 2026-10-10 갱신. 준비금 대사·거래 전수 대사 통합 완료. 나머지 추가 기능은 개별 설계/구현 승인이 필요하다.
 
 ## 1. 현재 기준과 보존 경계
 
 - 원본 `melon-init`: `b7cb0f0ed8fd936e73733a6d2f167efe4a951a63`. 원본 working tree는 변경하지 않는다.
 - 완료 기능 `feat/reserve-reconciliation`: `00046d7da28579eaccbff6a31cfda6ce46c398a4`. 커밋·clean 확인. [최종 검증](reserve-reconciliation-final-validation.md)의 검증 범위/한계를 유지한다.
-- 통합 `integration/additional-features`: 위 완료 커밋에서 생성. worktree는 저장소 기준 `deployment/runtime/integration-worktree`다. 준비금 대사를 ancestry로 포함하며 원본 브랜치에 merge한 것이 아니다.
-- 다음 독립 기능 `feat/trade-audit`: 통합 HEAD에서 생성. worktree `deployment/runtime/trade-audit-worktree`. 현재 작업은 이 worktree의 설계 문서뿐이며 제품 구현은 승인 대기다.
+- 통합 `integration/additional-features`: reserve 완료 커밋에서 생성. worktree는 저장소 기준 `deployment/runtime/integration-worktree`다. 준비금 대사 ancestry와 거래 전수 대사 병합 `2a5d8d3a29b3e38822678da613c0da9dfa56ea52`를 포함하며 원본 브랜치에 merge한 것이 아니다. 후속 문서 기록 commit은 Git HEAD에서 확인한다.
+- 완료 독립 기능 `feat/trade-audit`: `eed6b2f98e518a6c5d13603158b1aa9d3f8f0e06`. worktree `deployment/runtime/trade-audit-worktree`. [구현·검증](trade-full-audit-implementation.md)과 독립 재검토 후 통합했고 다음은 Faucet 정책 설계다.
 - 보존 acceptance `acceptance-20261007153304-9bc0b3`와 해당 runtime/DB/chain/설정/제품 버전은 변경·재생성·merge·배포하지 않는다. 기존 개발 DB/Anvil/실제 `.env`도 그대로 둔다.
-- 이번 브랜치 구성에서 서비스 기동, DB/RPC 조회, secret 복사, 신규 계약 배포는 하지 않았다. Git의 공유 branch/worktree metadata만 추가했다.
+- 최초 브랜치 구성(10-09)은 Git metadata만 추가했다. 승인 후 기능 검증(10-10)에는 새 격리fixture만 생성·배포·조회했고 종료 후 보존했다. 기존 환경 secret 복사/DB·RPC 접속/배포는 없다.
 
 최신 사용자 결정은 **추가 기능 → 최종 통합 회귀 → 새 acceptance 환경 → 실제 Toss 장중 최종 인수**다. 과거 문서의 “장중 인수 후 추가 개발” 순서를 대체하되 당시 실행 이력을 삭제하지 않는다. 유료 AI 인수는 예상 호출/비용 보고와 별도 승인 후 실행하며 Toss 인수와 별도 결과로 기록한다. 운영 부하·장애·AWS 실험은 이번 개발 순서 변경으로 자동 재개되지 않는다.
 
@@ -31,7 +31,7 @@
 | 기능 / 상태 | 유지 가능한 구조 | 구조 변경·선행 결정 | 외부 승인 |
 |---|---|---|---|
 | 장부·체인 자산 대사 / feature 완료 | 운영자 통합 지갑, Order 실행 유형, 지급 이력, read-only snapshot·불변 기준점, ADMIN UI | 신규 0원 원장 기준점 필요. 과거 유잔고 환경에 임의 기준점 재설정 불가 | 격리 fixture 외 실제 환경 적용은 별도 승인 |
-| **거래 전수 대사 / 기능 구현·검증 완료, 통합 진행** | Order·Trade·transaction·PriceQuote, 이벤트 parser/단위 변환, ADMIN 권한 | 항목별 근거/이력, 고정 cut·전체 coverage, 과거 UNKNOWN, 양방향 이벤트 누락 검사 구현. 큰 활성 원장·실제 운영 인수는 미검증 | Synthetic/격리 Anvil에는 외부 자격증명 불필요 |
+| **거래 전수 대사 / 기능·통합 회귀 완료** | Order·Trade·transaction·PriceQuote, 이벤트 parser/단위 변환, ADMIN 권한 | 항목별 근거/이력, 고정 cut·전체 coverage, 과거 UNKNOWN, 양방향 이벤트 누락 검사 구현. 큰 활성 원장·실제 운영 인수는 미검증 | Synthetic/격리 Anvil에는 외부 자격증명 불필요 |
 | faucet 정책 / 미구현 | `WalletService.faucet`, 지급 journal, 잔고 transaction, commit 후 WS | 지급 주기·총한도·idempotency·동시성·시간대 결정. 사용자 DB 지급과 operator/Vault 온체인 공급 정책을 **별도** 정의; 제한을 도입해도 자동 담보 공급이 되는 것은 아님 | 자동 충전/ETH 지급·외부 네트워크는 별도 승인 |
 | 사용자 인증 확장 / 미구현 | Spring Security/BCrypt/JWT, users의 nullable email/email_verified/google_sub | Google 로그인·이메일 인증·명시적 계정 연결·refresh/revoke 저장과 세션/WS 만료 정책. 같은 이메일만으로 자동 연결 금지 | Google OAuth client/redirect domain, 발송 서비스 credentials·네트워크·요금 승인. fixture 먼저 가능 |
 | 지정가·예약 주문 / 미구현 | Vault 즉시 체결·서명 보고서 유지 가능 **조건부 트리거 방식이면** | 사용자가 승인하는 장기 주문 의도, trigger·취소·만료·잠금 상태·경합·유동성·새 quote 발급/소비. 30초 서명 견적을 예약 기간 동안 저장해 실행할 수 없음 | fixture는 무료; 실제 공급자/체인 비용 별도 |
