@@ -44,6 +44,14 @@ const server = createServer(async (req, res) => {
   }
   else if (url.pathname.startsWith('/api/orders/')) body = orders.find((order) => order.orderId === Number(url.pathname.split('/').at(-1)));
   else if (url.pathname === '/api/trades') body = [];
+  else if (url.pathname === '/api/admin/trade-audits') body = req.method === 'POST'
+    ? { id: 'audit-fixture', lifecycle: 'RUNNING', verdict: 'INCONCLUSIVE' }
+    : { items: [{ id: 'audit-fixture', lifecycle: 'COMPLETED', verdict: 'INCONCLUSIVE', startedAt: now }], nextBefore: null };
+  else if (url.pathname === '/api/admin/trade-audits/audit-fixture') body = {
+    id: 'audit-fixture', lifecycle: 'COMPLETED', verdict: 'INCONCLUSIVE', reason: 'ITEM_EVIDENCE_INCOMPLETE',
+    startedAt: now, coverage: { dbComplete: true, chainComplete: false, cutStable: true, environmentVerified: true }, match: 1, inconclusive: 1 };
+  else if (url.pathname === '/api/admin/trade-audits/audit-fixture/items') body = {
+    items: [{ key: 'order:1', orderId: 1, mode: 'ONCHAIN', side: 'BUY', verdict: 'INCONCLUSIVE', reason: 'HISTORICAL_CONFIG_UNAVAILABLE', checks: [] }], nextBefore: null };
   else if (url.pathname === '/api/admin/reserve-reconciliations') body = req.method === 'POST'
     ? { id: 'reserve-fixture', status: 'MATCH', reason: 'EXACT_QUANTITY_MATCH', createdAt: now, dbAt: now,
         chain: { block: { number: 123, hash: '0x' + 'a'.repeat(64) } }, checks: [],
@@ -113,6 +121,10 @@ try {
   await click('reserve-refresh'); await waitText('reserve-history', '최근 대사 20건');
   await evaluate(`document.getElementById('reserve-history').querySelector('button').click()`);
   await waitText('reserve-result', '동일 시점·근거 확인 불가');
+  await evaluate(`window.confirm=()=>true`); await click('audit-run');
+  await waitText('audit-result', '전수 MATCH를 뜻하지 않습니다');
+  await waitText('audit-items', 'HISTORICAL_CONFIG_UNAVAILABLE');
+  await click('audit-refresh'); await waitText('audit-history', 'INCONCLUSIVE');
   await command('Emulation.setDeviceMetricsOverride', { width: 360, height: 800, deviceScaleFactor: 1, mobile: true });
   for (const route of ['market', 'history', 'portfolio', 'ai', 'admin']) {
     await evaluate(`location.hash=${JSON.stringify(route)}`); await new Promise((done) => setTimeout(done, 120));

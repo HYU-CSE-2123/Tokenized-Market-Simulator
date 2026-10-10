@@ -2424,3 +2424,38 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - allowlist stage/생성secret값 stagedblob대조/금지산출물배제 후 feat/reserve-reconciliation에만commit한다. 원본merge·배포·acceptance반영 없음. 생성runtime자료는Git에서제외하며최종해시는완료답변과Gitlog에서확인한다.
 - 최종stage40개 소스·문서, fixture실제secret9개 대조일치0/금지경로0/cached diffcheckPASS. 비밀값출력없음. 이번새fixture2컨테이너만정지·데이터보존. 원본worktree b7cb0f0 clean확인.
 - 실제Toss/유료AI/EC2·운영부하·다중서버경쟁·ETH Gas지급정확판정은미실행/범위밖. Trade경합은금액변경이아닌metadata변경이다. 과거유잔고acceptance에는기준점즉시생성불가, 별도migration설계승인이필요하다.
+
+# 추가 기능 통합 브랜치 / 거래 전수 대사 설계 (2026-10-09)
+
+## 변경·결정
+
+- `feat/reserve-reconciliation`의 완료 커밋 `00046d7da28579eaccbff6a31cfda6ce46c398a4`와 clean 상태를 확인했다. 이 commit에서 별도 `integration/additional-features` worktree를 생성하고, 그 HEAD에서 독립 `feat/trade-audit` worktree를 생성했다. 원본 `melon-init`은 `b7cb0f0ed8fd936e73733a6d2f167efe4a951a63` 그대로이며 원본/acceptance merge·배포는 없다.
+- 최신 사용자 결정: 추가 기능·통합 검증 후 최신 버전으로 **새 acceptance**를 만들어 실제 Toss 장중 최종 인수. 기존 `acceptance-20261007153304-9bc0b3`의 모든 runtime/DB/chain/설정/제품 버전을 보존한다. 과거 “장중 인수 후 추가 개발” 순서는 최신 결정으로 대체한다.
+- [통합 개발 계획](additional-features-integration-plan.md)에 8개 추가 기능의 상태/의존관계·구조 변경/외부 승인 경계와 독립 feature→검증→통합 운영을 기록했다.
+- [거래 전수 대사 설계](trade-full-audit-design.md)에 DB/chain 정본·Order/Trade/tx/quote 대응·Vault/Oracle 이벤트·정수 계산·legacy/실패 분류·양방향 coverage·stable cut·ADMIN API/UI·새 audit table·테스트 계획을 제안했다. 제품 구현은 승인 대기다.
+
+## 검증·보존
+
+- 실제 소스·모델·계약·이력과 Git branch/worktree를 읽기 전용으로 조사했다. DB/RPC 조회·서비스 기동·fixture 생성·Toss/유료AI/AWS 호출·secret 복사·제품 테스트 재실행 없음.
+- 새 feature worktree에서 문서만 작성한다. 기존 준비금 대사 결과 backend346PASS/31SKIP, 별도PG/Anvil E2E, forge36PASS, 웹55PASS 및 실제 운영 미검증 항목은 과거 검증 기록으로 유지하며 이번 실행 결과와 혼동하지 않는다.
+
+## 검토·다음 승인
+
+- 별도 `review_integration_audit_design` 읽기 전용 검토 및 명료화 후 재확인: **발견된 필수 수정 없음**. 실제 코드/새 문서 전체/Git 상태·diffcheck를 대조했다. quoteId는 최초 manifest·Order 연결 기준, run 결과는 종료 시 1회 확정 후 불변임을 명료화했다. 직접 제품 테스트/DB/RPC/외부 호출은 없으며 보존 runtime 내용은 검토 범위 밖이다.
+- 새 두 문서의 Markdown 링크 존재와 private-key 형태 검색0을 자체 확인했다. 원본/통합/완료 reserve worktree clean, 새 trade-audit worktree의 문서4개만 변경을 확인했다. 신규 문서는 미커밋이며 통합에 아직 병합하지 않았다.
+- 거래 전수 대사 설계 승인 후에만 구현한다. 다른 추가 기능은 전체 범위 확인/순서 제안이며 구현 승인이나 완료 처리가 아니다.
+
+# 거래 전수 대사 ADMIN — 구현·검증 진행 중 (2026-10-10)
+
+- 승인된 feat/trade-audit에서 read-only snapshot·별도 RPC budget/worker·Order/Trade/PriceQuote/tx/receipt/Vault/Oracle 양방향 비교·과거 signer/fee·coverage 분리·append-only 감사 테이블·ADMIN API/웹 패널을 구현했다. 기존 sender/settlement/잔고 쓰기 경로는 변경하지 않았다.
+- [구현 기록](trade-full-audit-implementation.md)에 파일/계약/한도/실행별 실패·보완·검증 한계를 기록한다. 신규UTC reader와 감사전용409 JSON 처리 문제를 실제E2E로 찾아 보완했다.
+- 신규 격리PG/Anvil fixture의 당시 감사42개 PASS, 웹61/build92/Chrome fixture PASS, forge36PASS. 전체회귀·최종독립검토·통합branch commit/merge는 후속 기록에서 확정한다. 실제Toss/AI/AWS·전체최종제품인수는 미실행이고 보존acceptance/개발DB/chain/.env는 변경하지 않는다.
+- 최신 사용자 확정 기능 순서와 향후melon-init/새기준branch 선택은 [통합 계획](additional-features-integration-plan.md)에 반영했다. 원본을 영구분리할 필요는 없지만 현재원본적용은 하지 않는다.
+
+# 거래 전수 대사 ADMIN — 기능 검증·독립 재검토 완료 (2026-10-10)
+
+- 최초 검토 지적의 DB 모순 보존/전체 coverage 분리와 raw 포함 실제byte 사전 상한을 보완했고, 소비된 고아quote까지 검증했다. source read-only·과거 설정 비추론·원문 미저장 경계를 유지했다.
+- 최종 새PG/Anvil fixture 감사50/50 PASS(49unit+1E2E), 전체427/395PASS/32SKIP/0FAIL, 웹61/build92/Chrome fixture PASS, forge36PASS. 전체427회귀는 마지막 고아quote 수정 직전이며 통합에서 다시 실행한다. 기존31skip과 실제운영 미검증은 [상세 기록](trade-full-audit-implementation.md)에 남긴다.
+- 최초PG timeout/DockerAPI500 실패 및 빈DB 확인 후 재실행을 기록했다. DB 초기화/engine 재시작/보존 환경 접근으로 우회하지 않았다.
+- review_trade_audit 최종재검토2: **발견된 필수 수정 없음**. 변경된 nullable 고아quote 처리/byte 상한/검증코드/문서를 확인했다. 웹6개 직접PASS는 재검토1, backend/PG/Anvil/Foundry/Chrome 결과는 구현자 실행이다.
+- 소스·문서 allowlist와 secret/산출물 배제 점검 후 feat/trade-audit만 커밋하여 integration/additional-features로 병합한다. 원본melon-init 및 기존acceptance/개발runtime 적용·배포·실제Toss/유료AI/AWS는 없다. 통합검증/해시는 후속 기록으로 확정한다.

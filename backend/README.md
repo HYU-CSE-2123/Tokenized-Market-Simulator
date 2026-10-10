@@ -1,5 +1,7 @@
 # Backend — Spring Boot (Java 21)
 
+ADMIN 거래 전수 대사는 기본 비활성 `TRADE_AUDIT_ENABLED=false`입니다. 고정 DB snapshot과 chain block에서 Order/Trade/견적/transaction·Vault/Oracle 이벤트를 양방향 비교하며 거래·잔고를 수정하지 않습니다. API·한도·불변 이력·격리 E2E와 미검증 항목은 [거래 전수 대사 구현 기록](../claude-docs/trade-full-audit-implementation.md)을 참고하세요. 전체 verdict와 coverage를 함께 확인해야 합니다.
+
 공개 배포 준비(2026-10-07)는 개발 Compose와 분리된 [deployment/RUNBOOK.md](../deployment/RUNBOOK.md)를 따른다. 비root/read-only 이미지, private DB·Anvil, 파일 기반 SSM secret, 승인 지식 artifact와 HTTPS proxy를 사용한다. 실제 AWS 생성·공개 게시와 유료 AI 재색인은 아직 하지 않았다. 검증 상태는 [배포 준비 기록](../claude-docs/deployment-preparation.md)에 구분한다.
 
 삼성전자 가격 추종 토큰 거래소의 REST API 및 WebSocket 서버입니다.
