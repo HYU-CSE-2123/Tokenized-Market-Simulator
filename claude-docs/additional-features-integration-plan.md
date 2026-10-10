@@ -56,4 +56,4 @@
 
 ## 5. 다음 승인
 
-[거래 전수 대사 설계](trade-full-audit-design.md)는 2026-10-10 승인되어 [구현·검증 기록](trade-full-audit-implementation.md)대로 기능 검증을 완료했다. 통합 회귀 후 다음 Faucet 정책의 주기·총한도·idempotency·동시성·온체인 공급과의 구분을 먼저 설계/승인받는다. 다른 추가 기능은 순서만 확정했으며 구현하지 않았다.
+[거래 전수 대사 설계](trade-full-audit-design.md)는 2026-10-10 승인되어 [구현·검증 기록](trade-full-audit-implementation.md)대로 기능 및 최종 통합 소스의 신규 격리 PG/Anvil·전체 회귀를 완료했다. 다음 [Faucet 정책 설계](faucet-policy-design.md)를 제출했다. 정책 유형·실제 숫자·기간/timezone·멱등키 계약은 승인 대기이며 구현하지 않았다. 다른 추가 기능은 순서만 확정했으며 구현하지 않았다.

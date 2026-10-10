@@ -48,11 +48,15 @@ class TradeAuditPostgresAnvilE2ETest {
     @Test void completeReadOnlyAuditAndConcurrency() throws Exception {
         assertThat(context.getBeansOfType(com.pricetrack.exchange.ai.provider.OpenAiProvider.class)).isEmpty();
         String user=post("/api/auth/signup",Map.of("loginId","audit_fixture","password","fixture-only-password","nickname","감사테스트"),null,201).path("accessToken").asText();
+        String limitedUser=post("/api/auth/signup",Map.of("loginId","audit_reader","password","fixture-reader-password","nickname","일반사용자"),null,201).path("accessToken").asText();
         long uid=jdbc.queryForObject("SELECT id FROM users WHERE login_id='audit_fixture'",Long.class);
         post("/api/admin/trade-audits",Map.of(),null,401); post("/api/admin/trade-audits",Map.of(),user,403);
-        reserve.createBaseline(uid);
+        post("/api/admin/reserve-reconciliations",Map.of(),null,401);post("/api/admin/reserve-reconciliations",Map.of(),user,403);
+        post("/api/admin/reserve-reconciliations/baseline",Map.of(),user,403);
         jdbc.update("UPDATE users SET role='ADMIN' WHERE id=?",uid);
         admin=post("/api/auth/login",Map.of("loginId","audit_fixture","password","fixture-only-password"),null,200).path("accessToken").asText();
+        post("/api/admin/reserve-reconciliations/baseline",Map.of(),admin,201);
+        assertThat(post("/api/admin/reserve-reconciliations",Map.of(),admin,200).path("status").asText()).isEqualTo("MATCH");
         post("/api/wallet/faucet",Map.of(),admin,200); prices.tick();
         var quote=post("/api/quotes/buy",Map.of("symbol","mSEC","krwAmount","100000"),admin,200);
         long buy=post("/api/orders/buy",Map.of("symbol","mSEC","krwAmount","100000","quoteId",quote.path("quoteId").asText()),admin,202).path("orderId").asLong(); settle(buy);
@@ -66,6 +70,16 @@ class TradeAuditPostgresAnvilE2ETest {
             return c.callRealMethod();
         }).when(store).cut();
         var before=store.cut(); String fp=store.fingerprint(before);
+        // Repeat initialization of the combined schema in this fixture; never an old DB migration.
+        new org.springframework.jdbc.datasource.init.ResourceDatabasePopulator(new org.springframework.core.io.ClassPathResource("schema.sql"))
+            .execute(context.getBean(javax.sql.DataSource.class));
+        assertThat(store.fingerprint(store.cut())).isEqualTo(fp);
+        var reserveRun=post("/api/admin/reserve-reconciliations",Map.of(),admin,200);
+        assertThat(reserveRun.path("status").asText()).isEqualTo("MATCH");
+        assertThat(get("/api/admin/reserve-reconciliations",admin,200).size()).isEqualTo(2);
+        assertThat(get("/api/admin/reserve-reconciliations/"+reserveRun.path("id").asText(),admin,200).path("status").asText()).isEqualTo("MATCH");
+        get("/api/admin/reserve-reconciliations",limitedUser,403);get("/api/admin/trade-audits",limitedUser,403);
+        get("/api/admin/reserve-reconciliations",null,401);get("/api/admin/trade-audits",null,401);
         var match=run(); assertThat(match.verdict()).as(match.reason()).isEqualTo("MATCH");
         assertThat(match.match()).isEqualTo(2); assertThat(match.coverage().scannedEvents()).isEqualTo(2);
         assertThat(match.coverage().chainComplete()).isTrue(); assertThat(store.fingerprint(store.cut())).isEqualTo(fp);
@@ -143,5 +157,9 @@ class TradeAuditPostgresAnvilE2ETest {
     private JsonNode post(String path,Map<String,?> body,String token,int expected) {
         var headers=new HttpHeaders();headers.setContentType(MediaType.APPLICATION_JSON);if(token!=null) headers.setBearerAuth(token);
         var r=http.exchange(path,HttpMethod.POST,new HttpEntity<>(body,headers),JsonNode.class);assertThat(r.getStatusCode().value()).as(path).isEqualTo(expected);return r.getBody();
+    }
+    private JsonNode get(String path,String token,int expected) {
+        var headers=new HttpHeaders();if(token!=null) headers.setBearerAuth(token);
+        var r=http.exchange(path,HttpMethod.GET,new HttpEntity<>(headers),JsonNode.class);assertThat(r.getStatusCode().value()).as(path).isEqualTo(expected);return r.getBody();
     }
 }

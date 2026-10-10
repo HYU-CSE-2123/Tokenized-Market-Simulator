@@ -61,3 +61,20 @@ Windows Docker Desktop 격리 fixture 기준이다. 테이블 상한·timeout·R
 - 통합 `npm test`61/61, `npm run test:browser`의 Vite92 modules 및 Chrome desktop/mobile REST/STOMP fixture PASS, `forge test`36/36 PASS(fuzz256각각). npm 설치는 offline cache80 packages, Solidity library는 검증feature의 ignored copy이며 다운로드하지 않았다.
 - PostgreSQL/Anvil E2E는 기능 tree에서 별도 실행한50PASS를 근거로 한다. 통합에서 fixture를 또 생성·재실행한 것으로 쓰지 않는다. 동일source tree 확인과 통합 전체회귀를 수행한 것이며 전체제품 최종인수/실제Toss/실제AI를 완료했다는 뜻이 아니다.
 - 알려진 필수 미해결 결함 없음. 단일worker·활성head의INCONCLUSIVE·RPC node 신뢰·과거근거부족 및 위 실제운영 미검증 한계는 유지한다. 다음 작업은 Faucet 정책 설계·승인이다.
+
+## 최종 통합 소스 신규 검증 및 Faucet 설계 (2026-10-10 후속)
+
+이 절은 위 기존 실행과 별개의 **새 실행**이다. 입력 HEAD는 `4371b34a4f1e07a0f82c2c81c1cc91d353284cb8`이며 CONSUMED 고아 Quote 최종 수집 수정을 포함한다. 제품 소스는 변경하지 않고 통합 E2E assertions와 문서만 보강했다.
+
+- 새 `audit-e2e-20261010121822-28ba15`의 감사+reserve 80개:78 PASS/1 FAIL/1 SKIP. ADMIN으로 승격한 계정의 이전 JWT를 USER라고 가정한 assertion이403 대신200으로 실패했다. JwtAuthenticationFilter는 현재 DB role을 읽으므로 정상 동작이다. 별도 USER 계정을 만들어 테스트만 수정했고 부분 사용 fixture를 초기화하지 않았다.
+- 수정 후 **새 격리** `audit-e2e-20261010123240-66b637`: `AUDIT_E2E_TESTS=true`, 전용 `AUDIT_E2E_RUN`, `gradlew test --offline --no-daemon --tests 'com.pricetrack.exchange.tradeaudit.*' --tests 'com.pricetrack.exchange.reserve.*' --rerun-tasks`. **80개/79 PASS/1 SKIP/0 FAIL/0 ERROR**. 실제 통합 E2E1개는 PASS. skip1은 별도 opt-in ReservePostgresAnvilE2ETest이며 그 전체 시나리오를 이번 실행으로 완료 처리하지 않는다.
+- 실제 PostgreSQL+Anvil/Synthetic/AI off에서 양방향 BUY/SELL·고아 Quote·금액 모순·source/새블록 변경·과거 signer/fee·권한·이력 등 기존 감사 assertions와 함께 reserve baseline ADMIN 생성, 거래 전후 자산 대사 MATCH, reserve 이력/상세, 별도 USER403/익명401을 확인했다. 기존 잔고/거래 자료가 있는 fixture에서 schema.sql을 다시 적용하고 감사 source fingerprint가 유지됨을 확인했다. 따라서 초기화 스크립트 재적용을 데이터 삭제나 기준점 재설정으로 처리하지 않는다.
+- 최종 테스트 소스에서 새 전체 backend: `AUDIT_E2E_TESTS=false; gradlew test --offline --no-daemon --rerun-tasks`, **427개/395 PASS/32 SKIP/0 FAIL/0 ERROR**, 22:33:58 KST 종료. 수동 build resource 정규화나 테스트 제외 없음. 기존31 opt-in skip은 유지하고 추가 감사 E2E1은 위 별도 실제 실행 PASS로 구분한다.
+- 새 웹 `npm test` **61/61 PASS**. `npm run test:browser`: Vite92 modules build + Chrome desktop/mobile REST/STOMP fixture PASS. 두 ADMIN 패널, coverage/한계 표시 및 기존 반응형 흐름을 확인했다. 실제 브라우저↔PostgreSQL/Anvil 최종 제품 인수는 아니다.
+- 새 Foundry **36/36 PASS**, fuzz 각256회. Solidity 변경 없음. 캐시된 도구 이미지·라이브러리를 재사용했으며 실제 Toss/유료AI/AWS 호출이나 기존 acceptance/dev DB·chain·.env 접근/변경은 하지 않았다. 두 신규 fixture의 컨테이너만 정지하고 데이터·state·private XML evidence는 보존한다.
+- 독립 `review_audit_integration_faucet_design` 읽기 전용 검토: **발견된 필수 수정 없음**. 검토자는 코드·계약·권한·설계 문서를 확인했으며 위 테스트를 독립 재실행한 것은 아니다. 선택 보완인 raw 멱등키 URL 노출 방지와 정책 변경 시 기간 정의/timezone 고정은 Faucet 설계에 반영한다.
+- 선택 보완 후 동일 검토자 재확인도 필수 수정 없음. private XML/로그에 접근하지 않았으며 문서 수치의 내부 일관성과 전달받은 실행 결과와의 일치를 확인한 범위다.
+- 커밋 최종 보안 점검: 통합 stage는 테스트·문서 allowlist6개, 기능 commit30개 파일도 재확인했다. 신규/기존 감사 fixture8개에서 실제 생성 secret24개를 메모리에서 Git blob과 대조하여 일치0, 금지 산출물0, cached diffcheck PASS. 제품 main/contract/web src는 기능 commit 대비 diff0. 실제.env·state·DB dump·로그·빌드 결과는 Git에 포함하지 않는다. feature eed6b2f와 원본 melon-init b7cb0f0는 변경 없고 두 신규 fixture container는 정지 상태다.
+- [Faucet 정책 설계](faucet-policy-design.md)는 현재 DB 지급 구조, 정책 선택지·계산식·원자성·멱등성·권한·migration·향후 테스트 계획을 기록한다. 새 지급 정책/API/DB schema는 아직 구현하지 않았고 정책 숫자·기간·key 계약은 승인 대기다.
+
+기존31 skip 및 restart interruption·동일블록 설정 변경·reorg·대규모 활성 원장·다중 서버·악의적 RPC 누락·실제 Toss/AI·Sepolia·운영 부하 미검증은 유지한다. 기능 commit은 `eed6b2f`이고 merge는 `2a5d8d3`이다. 후속 테스트/설계 기록 commit은 Git log/완료 보고에서 확인한다. 원본 melon-init 및 보존 acceptance에는 merge·배포하지 않는다.

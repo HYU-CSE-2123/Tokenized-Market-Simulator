@@ -2466,3 +2466,11 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 통합 worktree 실제 전체backend427개/395PASS/32SKIP/0FAIL/0ERROR, 웹61/61·Vite92·Chrome desktop/mobile fixture PASS, Foundry36/36 PASS. 새 기능의PG/Anvil 감사50PASS는 동일featuretree의 별도실행이며 통합에서재실행한결과가아니다.
 - 기존31skip·실제Toss/유료AI/AWS/운영부하/최종제품인수 미실행을 유지한다. 독립검토최종결론은 발견된필수수정없음이며 테스트대체가아니다. 상세 [검증 기록](trade-full-audit-implementation.md).
 - featurestage30개/실제fixturesecret18대조0/금지산출물0, 각fixture컨테이너정지·DB/chain/로그보존. 원본melon-init b7cb0f0 및 acceptance/runtime/실제.env에 merge·복사·배포없음. 다음Faucet정책은설계후승인받는다.
+
+# 거래 전수 대사 — 최종 통합 신규 검증 / Faucet 설계 제출 (2026-10-10 후속)
+
+- 최종 고아 Quote 수정 포함 통합 소스에서 실제 새 격리 PostgreSQL/Anvil fixture를 준비했다. 첫80개 실행은78PASS/1FAIL/1SKIP: ADMIN 승격 후 이전 JWT도 DB 현재 role에 따라 ADMIN이라는 정상 동작을 USER 테스트가 잘못 가정했다. 별도 USER로 테스트만 보완했다. 제품 코드 변경 없음.
+- 새 fixture `audit-e2e-20261010123240-66b637`: 감사+reserve **80개/79PASS/1SKIP/0FAIL/0ERROR**, 실제 통합 E2E1 PASS. 두 ADMIN 대사 권한·거래 전후 MATCH·이력/상세와 schema.sql 재적용 source 불변을 추가 확인했다. standalone ReservePostgresAnvilE2ETest1 skip은 완료로 바꾸지 않는다.
+- 그 후 새 전체backend **427개/395PASS/32SKIP/0FAIL/0ERROR**, 웹61/61·Vite92·Chrome desktop/mobile fixture PASS, Foundry36/36 PASS. 기존31 opt-in 미실행 및 별도 실행 PASS 감사1을 구분한다. 테스트 XML은 전용 private runtime에 보존한다.
+- 독립 읽기 전용 검토: 발견된 필수 수정 없음. 검토자 테스트 재실행으로 표현하지 않는다. 실제 Toss/AI/AWS·최종 제품 인수·운영 부하 등 미검증 유지. 보존 acceptance/dev 환경은 변경하지 않았다.
+- [Faucet 정책 설계](faucet-policy-design.md) 제출: 현행1,000,000 DB 지급·무제한 반복과 새 제안을 구분했다. 기간별 정액+계정/전역 한도, 성공 멱등 claim·짧은 DB lock/원자 commit, ADMIN 읽기 전용 관측을 제안한다. 정책 숫자·기간·key 계약은 미승인, 관련 제품 기능 미구현. raw key URL 제외와 기간/timezone 변경 별도 migration 승인 경계를 반영했다.

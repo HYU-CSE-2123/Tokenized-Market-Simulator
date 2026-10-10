@@ -54,6 +54,8 @@
 
 2026-10-10 거래 전수 대사 구현을 승인받았다. 현재 상태·실행별 검증과 통합 결과는 [구현 기록](trade-full-audit-implementation.md)을 따른다. 추가 기능 개발의 중심은 integration/additional-features이며 모든 추가 기능 이후 최종 기준 브랜치와 신규 Toss/AI acceptance를 확정한다. 실제 외부 호출·유료 사용은 별도 승인이다.
 
+최종 통합 소스의 신규 PostgreSQL/Anvil·전체 회귀를 완료했다. 다음 [Faucet 정책 설계](faucet-policy-design.md)는 설계만 제출된 상태이며 숫자·기간·멱등키 계약 승인 전 구현하지 않는다. DB 모의자금 지급과 온체인 자산 공급은 별개다.
+
 문서와 코드가 충돌할 때는 다음 우선순위를 따른다.
 
 1. **실제 소스 코드와 테스트** — 현재 실제 동작 상태
