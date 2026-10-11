@@ -2527,3 +2527,11 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - **병합 최종 source 새 실행**: backend452개418PASS/34SKIP/실패0, 웹77PASS/Vite94/Chrome desktop+mobile REST/STOMP fixture PASS, Foundry36PASS. 또 다른 새 격리PG/Anvil에서 H214+실제E2E1=15/15PASS/skip0. 실제 서명BUY/SELL·동시/취소·raw응답유실/재시작·실패receipt/잠금해제 및 Faucet/장부대사/전수대사 MATCH 확인. 실행별 중복 테스트는 고유총수로 합산하지 않는다.
 - 독립 첫 재검토 **발견된 필수 수정 없음**. 검토 이후 제품 소스변경 없음. 초기 실패 및 UTC보완 범위, 개별suite 미실행/34skip/실제Toss·AI·Android·운영 미검증을 [최종 보고서](oracle-conditional-orders-implementation.md)에 유지한다. 전체/E2E XML·새DB/state는 비공개보존, 해당fixture 두 컨테이너만 정지했다.
 - 통합 소스37파일/새 fixture secret3개 대조0hit, 이전기능secret15개 대조0hit, 실제.env/DBdump/chain/runtime/로그/산출물 Git포함0. 마지막 문서 갱신은 검증 결과·완료 상태 기록만 하며 동작을 바꾸지 않는다. 다음 Google인증/이메일 기능은 별도 설계·외부사용 승인 이후 착수한다.
+
+# 자산 보관 점검 커밋·정체 관측/공개 발행 정책 설계 — 제출 (2026-10-12)
+
+- 기존 사용자 승인 안내/문서/표시 테스트13개를 `integration/additional-features` **c7bf4e83ede98fbcfb661f7e5ab7bfe35607ab9b**로 커밋했다. staged path 금지 산출물0, private-key/PEM/OpenAI key/credential 패턴 검출0, diff check 통과. stage는 명시한13개만, 거래/계약/schema/실제.env/runtime 변경 없음. 커밋 직후 clean 확인. 원본 melon-init b7cb0f0은 clean 유지한다.
+- 커밋 파일: 루트README·기획서, backendREADME, claude-docs README/통합계획/career brief/개요/구현로그/자산보관기술검토/최종점검, 웹index·product 표시test·browser-smoke. 이전 실제 실행 결과는 backend418PASS/34SKIP(452), 웹78PASS, Foundry36PASS, Vite94·Chromium desktop/mobile fixture PASS이며 **이번 설계 조사에서 다시 실행한 결과가 아니다**.
+- [정체 관측 설계](transaction-stall-observability-design.md): 기존 WAITING_LONG ADMIN Tool·시각/원문 복구·조건부 EXECUTING 연결을 조사. 마지막 시도 영속 metadata는 없음. ①ADMIN 표시+②파생 LONG_WAIT 경고와 작은 관측 snapshot을 추천. 거래 상태/REVIEW_REQUIRED·자산 잠금·nonce·raw·재시도 의미를 변경하지 않는다. Grafana/Prometheus/Actuator가 설치됐다는 근거 없음; 외부 경고는 별도 승인.
+- [Sepolia 정책 설계](sepolia-mockkrw-issuance-design.md): 로컬 공개 MockKRW 유지, 공개용 최초 고정 공급 variant를 우선 추천. owner/minter capped 공급 대안도 비교. S0/O0/V0 수치·발행 역할·confirmation/환경 사용은 미확정. 현재 totalSupply 불변 대사에 기준점 이후 추가 mint를 정상 반영하려면 별도 설계가 필요하다.
+- 검증은 현재 코드/테스트/read-only Git/문서 링크 점검. 새 설계 기능 테스트·실제 DB/RPC/부족ETH·Toss/유료AI/AWS/Sepolia는 실행하지 않았다. 동작 변경 없는 조사/문서이므로 별도 검토자는 생략했고 독립 검토 통과로 기록하지 않는다. 원본/기존 acceptance·개발DB·Anvil/runtime 보존. 두 설계는 제출 후 사용자 구현 승인 대기이며 커밋 확정13개와 이후 설계 문서 변경을 구분한다.

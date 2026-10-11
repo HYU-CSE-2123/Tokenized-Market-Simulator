@@ -50,6 +50,8 @@
 
 ## 단일 출처(Source of Truth)
 
+2026-10-12 후속 점검 확정: A 모델 안내·문서·표시 테스트13개를 `c7bf4e8`로 커밋했다. 새 [SIGNED/SUBMITTED 정체 관측 설계](transaction-stall-observability-design.md)와 [Sepolia mKRW 발행 정책 설계](sepolia-mockkrw-issuance-design.md)는 **제안/구현 승인 대기**다. 기존 REVIEW_REQUIRED·거래 복구·계약·DB 및 acceptance는 변경하지 않았다.
+
 2026-10-12 **자산 보관 모델 A 확정**: 운영자 통합 지갑 + PostgreSQL 사용자별 모의자산 장부를 유지한다. 사용자별 온체인 지갑·CustodyVault·사용자 직접 서명·사용자 간 호가 거래소는 제외한다. [기술 비교](user-wallet-custody-architecture-review.md), [표현·거래 가능성·Sepolia Faucet 최종 점검](asset-custody-final-check.md)을 따른다. 사용자 장부 할당량과 온체인 소유권, 대사 MATCH와 지급 능력/준비금 보증은 구분한다.
 
 2026-10-12 **Oracle 가격 조건부 BUY/SELL 통합 완료**: 기능c413079 → integration/additional-features 병합d8dea3e. 병합 소스 backend418PASS/34SKIP, 웹77/Foundry36PASS 및 신규 격리 PG/Anvil 실제E2E1PASS를 확인했다. [설계](oracle-conditional-orders-design.md), [구현 기록](oracle-conditional-orders-implementation.md), [Android 계약](conditional-orders-android-integration.md)을 따른다. 사용자 간 호가/시간 지정 예약은 제외하고 실제 Toss/유료 AI 인수는 여전히 연기한다. Google 인증 등 나머지 기능은 별도 설계/승인 사항이다.
