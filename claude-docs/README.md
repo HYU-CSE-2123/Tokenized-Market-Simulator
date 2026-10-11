@@ -50,6 +50,8 @@
 
 ## 단일 출처(Source of Truth)
 
+2026-10-12 **SIGNED/SUBMITTED 관측 ①+② 구현 검증 중**: [구현/API·검증 기록](transaction-stall-observability-implementation.md). ADMIN 읽기 전용 LONG_WAIT와 최신 완료 시도 snapshot을 추가하며 기존 복구/정산·AI WAITING_LONG 계약은 유지한다. 아래 승인 대기 문구는 이전 설계 시점 이력이며 현재 관측 구현은 승인됐다. 외부 모니터링은 제외. [Sepolia 정책](sepolia-mockkrw-issuance-design.md)은 별도 최초 고정 공급 A안으로 확정했지만 S0/O0/V0·계약 구현·배포/ETH/RPC는 미승인이다.
+
 2026-10-12 후속 점검 확정: A 모델 안내·문서·표시 테스트13개를 `c7bf4e8`로 커밋했다. 새 [SIGNED/SUBMITTED 정체 관측 설계](transaction-stall-observability-design.md)와 [Sepolia mKRW 발행 정책 설계](sepolia-mockkrw-issuance-design.md)는 **제안/구현 승인 대기**다. 기존 REVIEW_REQUIRED·거래 복구·계약·DB 및 acceptance는 변경하지 않았다.
 
 2026-10-12 **자산 보관 모델 A 확정**: 운영자 통합 지갑 + PostgreSQL 사용자별 모의자산 장부를 유지한다. 사용자별 온체인 지갑·CustodyVault·사용자 직접 서명·사용자 간 호가 거래소는 제외한다. [기술 비교](user-wallet-custody-architecture-review.md), [표현·거래 가능성·Sepolia Faucet 최종 점검](asset-custody-final-check.md)을 따른다. 사용자 장부 할당량과 온체인 소유권, 대사 MATCH와 지급 능력/준비금 보증은 구분한다.

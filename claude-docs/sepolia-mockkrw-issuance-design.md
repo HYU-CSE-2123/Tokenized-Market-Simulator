@@ -78,4 +78,4 @@ owner/minter 권한을 없애려고 기존 Vault/mSEC/Oracle owner를 무조건 
 - 준비 script의 wrong chain/잘못된 variant/역할/배분 누락 차단, secret 비노출, baseline 불변·신구 환경 분리.
 - 이후 별도 승인된 Sepolia에서만 실제 deployment/receipt/confirmation/reorg 한계를 검증한다. 로컬 결과를 Sepolia 완료로 보고하지 않는다.
 
-아직 미확정: 대안, 초기 공급/배분 수치, 배포·발행 키 역할, 공개 RPC/test ETH 확보, confirmation/reorg 정책, 기존 거래 자료의 공개 범위. **이번 문서는 정책 설계 제출까지만 완료**했고 스마트 컨트랙트 수정·재배포·외부 비용 사용은 없다.
+현재 확정: A안 별도 최초 고정 공급 variant, 최초 공급 이후 추가 mint 없음, ERC-20 호환성과 로컬 공개 Faucet 유지. 미확정/추가 승인 필요: 초기 총공급 S0, operator 배분 O0, Vault 배분 V0 및 나머지 배분/보관 주체, 배포 키 역할, 공개 RPC/test ETH 확보, confirmation/reorg 정책, 기존 거래 자료의 공개 범위. 스마트 컨트랙트 구현·배포·ETH 사용·Sepolia RPC는 아직 미승인이며 이번 작업에서 실행하지 않는다.

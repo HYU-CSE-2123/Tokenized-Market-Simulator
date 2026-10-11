@@ -60,6 +60,8 @@ const server = createServer(async (req, res) => {
   }
   else if (url.pathname.startsWith('/api/orders/')) body = orders.find((order) => order.orderId === Number(url.pathname.split('/').at(-1)));
   else if (url.pathname === '/api/trades') body = [];
+  else if (url.pathname === '/api/admin/transaction-observations') body = {observedAt:now,warningSeconds:300,nextCursor:null,recorder:{storageFailures:0,dropped:0},items:[{id:1,type:'BUY',status:'SIGNED',kind:'USER_TRANSACTION',linkStatus:'ORDER_MISSING',attention:'LONG_WAIT',totalAgeSeconds:301,waitingAgeSeconds:301,warningSeconds:300,observedAt:now,lastAttempt:null}]};
+  else if (url.pathname === '/api/admin/transaction-observations/1') body = {id:1,type:'BUY',status:'SIGNED',kind:'USER_TRANSACTION',linkStatus:'ORDER_MISSING',attention:'LONG_WAIT',totalAgeSeconds:301,waitingAgeSeconds:301,warningSeconds:300,observedAt:now,lastAttempt:null,txHash:'0x'+'a'.repeat(64),nonce:'7'};
   else if (url.pathname === '/api/admin/trade-audits') body = req.method === 'POST'
     ? { id: 'audit-fixture', lifecycle: 'RUNNING', verdict: 'INCONCLUSIVE' }
     : { items: [{ id: 'audit-fixture', lifecycle: 'COMPLETED', verdict: 'INCONCLUSIVE', startedAt: now }], nextBefore: null };
@@ -142,6 +144,10 @@ try {
   await click('auth-open'); await click('auth-switch'); await fill('login-id', 'admin'); await fill('password', 'password123'); await submit('auth-form'); await waitText('identity', '관리자');
   await evaluate(`location.hash='admin'`); await waitText('admin-history', '진단 #1'); await waitText('observation', 'LLM:call');
   await waitText('conditional-admin-history','조건부 매도');
+  await waitText('tx-observation-list','LONG_WAIT');await waitText('tx-observation-list','UNRECORDED');
+  assert.equal(await evaluate("document.getElementById('tx-observation-list').textContent.includes('txHash')"),false);
+  await evaluate("document.getElementById('tx-observation-list').querySelector('button').click()");await waitText('tx-observation-detail','txHash');
+  await fill('tx-observation-status','SUBMITTED');await evaluate("document.getElementById('tx-observation-status').dispatchEvent(new Event('change'))");await waitText('tx-observation-list','LONG_WAIT');
   await evaluate(`document.getElementById('admin-history').querySelector('button').click()`); await waitText('admin-result', '과거 관측'); await screenshot('desktop-admin');
   await click('reserve-run'); await waitText('reserve-result', '장부·체인 수량 일치');
   await waitText('reserve-result', '1 ETH'); await waitText('reserve-result', '비용 미추정');

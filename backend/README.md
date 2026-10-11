@@ -1,5 +1,7 @@
 # Backend — Spring Boot (Java 21)
 
+ADMIN 거래 정체 관측: GET `/api/admin/transaction-observations` 및 `/{id}`. 기본300초 LONG_WAIT는 실패 상태가 아니며 기존 복구가 계속됩니다. 최신 완료 시도 metadata는 별도 bounded writer로 기록하고 미기록 과거 거래는 UNRECORDED로 표시합니다. 설정 `app.blockchain.observation.warning-seconds`, 조회 필터·보안·best-effort 한계·실제 검증 상태는 [관측 기록](../claude-docs/transaction-stall-observability-implementation.md)을 따릅니다. 신규 RPC나 거래 종료 기능은 없습니다.
+
 Oracle 가격 조건부 BUY/SELL은 통합 브랜치에 반영하고 격리 검증을 완료했습니다. `CONDITIONAL_ORDERS_ENABLED=false` 기본이며 Toss의 최신 OPEN/LIVE 가격에서만 새 서명 견적으로 실행합니다. Synthetic는 격리 fixture에서만 허용합니다. 등록 중 자산 미예약/실행 시 확보·복구 경계와 실제 실행 결과·미검증은 [조건부 주문 기록](../claude-docs/oracle-conditional-orders-implementation.md)을 참고하세요. 기존 즉시 거래/Faucet 계약은 유지합니다.
 
 Faucet 정책 고도화를 integration/additional-features에 반영했습니다. POST `/api/wallet/faucet`는 `Idempotency-Key` 필수이며 신규 빈 PostgreSQL 원장에서만 초기 활성화합니다. 1회100만/KST일1회/계정누적5회/전체누적5천만 mKRW이고 DB 지급만 수행합니다. [구현 기록](../claude-docs/faucet-policy-implementation.md)에 실제 실행·미완료 범위를 구분합니다. 기존 DB migration은 별도 승인 없이 하지 않습니다.
