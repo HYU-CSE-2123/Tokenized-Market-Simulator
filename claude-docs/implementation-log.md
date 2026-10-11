@@ -2488,3 +2488,10 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 실제 DB 행 잠금·동일/다른 키·자정 대기·마지막 예산 경쟁·rollback·version/replay·계정5회/전역50m·회계/설정 차단, 실제BUY/SELL 경합과 잠금/REVIEW_REQUIRED 불변, 온체인 불변 및 두 대사 MATCH를 확인했다. 자정은 테스트 전용 DB fixture clock이며 실제 장기 대기가 아니다.
 - 웹 최종66/66PASS·Vite93·Chrome desktop/mobile REST/STOMP fixture PASS, Foundry36/36PASS. 최종 E2E assertion 포함 전체 source 회귀와 통합 source 회귀는 이어서 기록한다. standaloneReservePG opt-in skip을 실제 실행으로 표시하지 않는다.
 - 최초 독립 검토는 검토 불충분(실제PG 미실행)이었다. 첫 재검토 결론은 **발견된 필수 수정 없음**. 검토자는 source/assertion/문서·diff check 및 당시 XML80개0실패1skip을 직접 확인했고 실제DB/RPC 실행은 구현자 결과다. Android 코드 수정·실기기·Toss/유료AI/AWS·운영부하·기존원장 migration은 미검증/미실행이다.
+
+# Faucet 정책 — 기능 커밋·통합 신규 회귀 완료 (2026-10-11)
+
+- feat/faucet-policy `a1d87c9b69ad0069f8d48f6116f46b21b47251b9` → integration/additional-features merge `7b468338f72894fb108cd6a58540674ca4fcffc5`, 충돌0/tree diff0. feature42파일/신규fixturesecret9개대조0/금지산출물0을 확인했다. 최종 기능 전체436/403PASS/33SKIP/실패0.
+- **병합 소스 새 실행**: 전체436/403PASS/33SKIP, 웹66·Vite93·Chrome desktop/mobile fixture PASS, Foundry36PASS. 새 통합 Faucet PG/Anvil fixture9/9PASS, 또 다른 새 통합 감사/자산대사 fixture80/79PASS/1SKIP. 중복 단위 테스트를 별도 고유 테스트로 합산하지 않는다. XML/private DB·chain은 보존하고 각 새fixture 컨테이너만 정지했다.
+- 기존31 opt-in 및 standaloneReservePG 미실행·실제Toss/유료AI/장기운영·기존migration·Android실기기 미검증을 유지한다. 세부원인/최초실패/재실행/독립검토는 [최종 구현 기록](faucet-policy-implementation.md)에 보존했다. AFTER_COMMIT·기존locked/REVIEW_REQUIRED·두 대사와 호환되며 온체인 자동공급 기능은 없다.
+- 원본melon-init b7cb0f0 clean 유지, 기존 acceptance/개발DB/chain/.env/runtime 변경·merge·배포없음. 다음은 Google로그인·이메일인증 설계이며 외부credentials/네트워크·계정연결·자산소유권은 승인 후 구현한다.

@@ -1,6 +1,6 @@
 # Faucet 정책 구현·검증 기록
 
-> 2026-10-11 / feat/faucet-policy / **기능 구현·격리 PostgreSQL/Anvil 검증 완료, 최종 재검토·통합 진행 중**. 입력 integration/additional-features HEAD `6720b4a`. 거래 전수 대사/고아 Quote 최종 통합 검증은 이전 기록의 신규 실행 결과로 확인했고 이번 Faucet 검증으로 재표시하지 않는다. 아래 최초 실행 이력과 후속 결과를 구분한다.
+> 2026-10-11 / **기능 구현·격리 검증·독립 재검토·integration/additional-features 통합 회귀 완료**. 기능 커밋 `a1d87c9b69ad0069f8d48f6116f46b21b47251b9`, 병합 `7b468338f72894fb108cd6a58540674ca4fcffc5`. 입력 통합 HEAD `6720b4a`. 아래 최초 실행 이력과 후속 결과를 구분한다. 실제 운영/보존 acceptance에 적용한 것은 아니다.
 
 ## 승인 정책과 구현 위치
 
@@ -78,3 +78,26 @@ ADMIN 거절 집계는 HTTP 지급 경로에서 관측한 allowlisted 사유의 
 - 독립 첫 재검토 `review_faucet_policy`: **발견된 필수 수정 없음**. source·추가 assertion·문서·diff check와 당시80개 XML을 직접 확인했다. 실제 PG/RPC 재실행은 하지 않았으며 구현자 실행과 구분했다. 현재 기록 보완은 제품 동작 변경이 아니다.
 - 기능 stage allowlist42개, 새 fixture 실제 비밀값9개와 대조해 노출0, 금지 산출물0, `git diff --cached --check` PASS. 실제 `.env`, key, DB dump/state, chain state, runtime 로그, build/node_modules/lib는 포함하지 않는다. 문서에 추가하는 검증 기록도 커밋 전 다시 점검한다.
 - 기능 source를 통합에 병합한 뒤 최종 통합 source에서 회귀와 새 PG/Anvil fixture를 다시 실행한다. 통합 해시·결과는 후속 기록에서 확정한다.
+
+## 최종 통합 신규 실행 결과
+
+병합 충돌0, feature와 merge source tree diff0. 이후 변경은 승인 계약·실제 실행 결과를 기록한 문서뿐이다. 기존 `melon-init` HEAD `b7cb0f0ed8fd936e73733a6d2f167efe4a951a63` 및 clean 상태를 읽기 전용 확인했다. 기존 acceptance/dev DB/Anvil/runtime/.env는 참조·복사·merge·배포·초기화하지 않았다.
+
+| 병합된 소스에서 새 실행 | 총수 | PASS | SKIP | FAIL/ERROR |
+|---|---:|---:|---:|---:|
+| backend 전체 (12:37 KST) |436|403|33|0/0|
+| wallet.faucet.* (새 PG/Anvil 포함) |9|9|0|0/0|
+| tradeaudit.* + reserve.* (또 다른 새 PG/Anvil 포함) |80|79|1|0/0|
+| 웹 node tests |66|66|0|0/0|
+| Foundry (fuzz 각256) |36|36|0|0/0|
+
+Vite93 modules build와 Chrome desktop/mobile REST/STOMP fixture smoke도 새 실행 PASS다. 웹 fixture 테스트를 실제 Toss/실기기 테스트라고 표현하지 않는다. 전체와 targeted에 중복되는 단위/H2 테스트가 있으므로 단순 합계로 고유 테스트 수를 산출하지 않는다. 전체33 skip은 기존31 opt-in + 감사/Faucet E2E 각1이며 후자의 별도 실제 실행 결과를 위 두 행에서 구분한다. 별도 reserve PG opt-in1은 여전히 미실행이다.
+
+- 통합 Faucet fixture `audit-e2e-20261011033452-518321`: 새로운 빈 PG/Anvil에서 같은9개를 실제 재실행했다. XML은 `logs/integration-full-results`와 `logs/integration-faucet-results`에 보존했다.
+- 통합 대사 fixture `audit-e2e-20261011033904-2a1e00`: 새로운 빈 PG/Anvil에서80개를 재실행했다. XML은 `logs/integration-audit-results`에 보존했다. 기존 지급으로 소진된 fixture를 초기화·재사용하지 않았다.
+- 각 두 컨테이너만 정지하고 새 DB/chain/state/log는 private runtime에 보존했다. 실제 Toss·유료 AI·외부 네트워크·AWS 호출 없음.
+- 신규정책·동시성·두 대사 호환성은 완료했지만 기존원장 migration, 실제벽시계 자정 장기 시험, 장시간부하/다중서버, 실제RPC실패 주문 전체복구의 새 E2E, 실제Toss/AI 최종인수, Android빌드/실기기는 완료 주장에 포함하지 않는다. 기존 실패잠금해제/WS 회귀는 전체 H2/Mock 결과로 구분한다.
+
+다음 Google 로그인·이메일 인증 **설계 착수 가능**. 계정 연결·기존 자산 소유권·세션/WS 만료와 Google/발송 공급자 자격증명·외부 네트워크 승인은 먼저 결정한다. 인증 조건을 Faucet에 임의 추가하지 않는다. 기능 및 merge 해시는 위와 같고 이후 문서 기록 커밋의 최종 통합 HEAD는 Git에서 확인한다.
+
+최종 통합 보안 점검: 입력6720b4a 대비 변경43파일(최종 문서 포함), 기능·통합 worktree의 실제 신규/보존 fixture secret21개 대조 노출0, 금지산출물0, cached diff check PASS. 문서8개만 후속 커밋한다. 실제 `.env`, DB/Anvil state, runtime/로그/build를 Git에 추가하지 않는다.

@@ -1,6 +1,6 @@
 # Android Faucet 연동 계약
 
-> 2026-10-11. 서버 기능·격리 PostgreSQL/Anvil 검증을 완료했고 최종 통합은 후속 기록으로 확정한다. Android 소스는 접근했지만 수정하거나 테스트하지 않았다. 기존 ApiServices.kt에는 Faucet API가 없다. 최신 상태는 [구현 기록](faucet-policy-implementation.md)을 따른다.
+> 2026-10-11. 서버 기능·격리 PostgreSQL/Anvil 검증·통합 회귀를 완료했다. Android 소스는 접근했지만 수정하거나 테스트하지 않았다. 기존 ApiServices.kt에는 Faucet API가 없다. 실제 Android 연동은 다음 계약을 적용하고 검증해야 한다. 상세 [구현 기록](faucet-policy-implementation.md).
 
 1. 인증된 사용자의 POST `/api/wallet/faucet`에 `Authorization: Bearer ...`와 `Idempotency-Key`를 보낸다. 키는 UUID 등 영숫자/하이픈/밑줄16..128자. body는 없음 또는 `{}`. 금액/userId를 보내지 않는다.
 2. 서버 정책은1회1,000,000 mKRW, KST 하루1회, 누적5회, 전체50,000,000 예산이다. ADMIN도 우회하지 못한다. 현재 잔고·이메일 인증을 새 조건으로 쓰지 않는다.

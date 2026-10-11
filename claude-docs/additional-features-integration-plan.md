@@ -1,6 +1,6 @@
 # 추가 기능 통합 개발 계획
 
-> 2026-10-11 갱신. 준비금 대사·거래 전수 대사 통합 완료. Faucet 정책은 최종 승인대로 기능 구현·격리 검증 후 통합 진행 중이다. 나머지 추가 기능은 개별 설계/구현 승인이 필요하다.
+> 2026-10-11 갱신. 준비금 대사·거래 전수 대사·Faucet 정책의 기능 및 통합 회귀 완료. 나머지 추가 기능은 개별 설계/구현 승인이 필요하다.
 
 ## 1. 현재 기준과 보존 경계
 
@@ -32,7 +32,7 @@
 |---|---|---|---|
 | 장부·체인 자산 대사 / feature 완료 | 운영자 통합 지갑, Order 실행 유형, 지급 이력, read-only snapshot·불변 기준점, ADMIN UI | 신규 0원 원장 기준점 필요. 과거 유잔고 환경에 임의 기준점 재설정 불가 | 격리 fixture 외 실제 환경 적용은 별도 승인 |
 | **거래 전수 대사 / 기능·통합 회귀 완료** | Order·Trade·transaction·PriceQuote, 이벤트 parser/단위 변환, ADMIN 권한 | 항목별 근거/이력, 고정 cut·전체 coverage, 과거 UNKNOWN, 양방향 이벤트 누락 검사 구현. 큰 활성 원장·실제 운영 인수는 미검증 | Synthetic/격리 Anvil에는 외부 자격증명 불필요 |
-| faucet 정책 / 기능 구현·격리 검증 완료, 통합 진행 중 | 지급 journal, 잔고 transaction, commit 후 WS | 승인된100만/KST일1회/누적5회/전역5천만, 성공 멱등 claim·행 잠금·불변 정책·journal 비교. 기존 데이터 migration 미승인, 온체인 공급 별개 | 자동 충전/ETH 지급·외부 네트워크는 별도 승인 |
+| faucet 정책 / 기능·통합 회귀 완료 | 지급 journal, 잔고 transaction, commit 후 WS | 승인된100만/KST일1회/누적5회/전역5천만, 성공 멱등 claim·행 잠금·불변 정책·journal 비교. 기존 데이터 migration 미승인, 온체인 공급 별개 | 자동 충전/ETH 지급·외부 네트워크는 별도 승인 |
 | 사용자 인증 확장 / 미구현 | Spring Security/BCrypt/JWT, users의 nullable email/email_verified/google_sub | Google 로그인·이메일 인증·명시적 계정 연결·refresh/revoke 저장과 세션/WS 만료 정책. 같은 이메일만으로 자동 연결 금지 | Google OAuth client/redirect domain, 발송 서비스 credentials·네트워크·요금 승인. fixture 먼저 가능 |
 | 지정가·예약 주문 / 미구현 | Vault 즉시 체결·서명 보고서 유지 가능 **조건부 트리거 방식이면** | 사용자가 승인하는 장기 주문 의도, trigger·취소·만료·잠금 상태·경합·유동성·새 quote 발급/소비. 30초 서명 견적을 예약 기간 동안 저장해 실행할 수 없음 | fixture는 무료; 실제 공급자/체인 비용 별도 |
 | 사용자 지갑 / 미구현 | 조회 UI·인증·시세 일부 유지 | 지갑이 단순 연결 식별자인지 직접 자산 보유/서명 실행자인지 먼저 결정. 직접 실행이면 현재 executor=operator, 사용자 DB 원장·faucet·Vault 자산 대사 모두 재설계. WalletConnect·입출금/보관 키/복구 범위 결정 | wallet 프로젝트 credentials·외부 RPC/test ETH·네트워크 승인; 개인 키 서버 임의 보관 금지 |
@@ -57,3 +57,5 @@
 ## 5. 다음 승인
 
 [거래 전수 대사 설계](trade-full-audit-design.md)는 승인되어 기능·통합 검증을 완료했다. [Faucet 정책](faucet-policy-design.md)은 2026-10-11 최종 승인되어 [구현·실제 검증 기록](faucet-policy-implementation.md)대로 진행한다. 다음 Google 로그인·이메일 인증은 설계와 외부 자격증명·네트워크 범위 승인 후 구현한다. 다른 추가 기능은 순서만 확정했으며 구현하지 않았다.
+
+Faucet 기능 `a1d87c9` → 통합 merge `7b46833`를 완료했다. 병합 소스 전체436/403PASS/33SKIP, 웹66·Chrome·Foundry36 PASS, 각각 새 PG/Anvil의 Faucet9PASS와 대사80/79PASS/1SKIP를 재실행했다. 이후는 결과 문서 기록이다. 기존 원본/acceptance 적용·최종Toss/AI·운영부하 검증은 하지 않았다.

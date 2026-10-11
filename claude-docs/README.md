@@ -56,7 +56,7 @@
 
 최종 통합 소스의 신규 PostgreSQL/Anvil·전체 회귀를 완료했다. 다음 [Faucet 정책 설계](faucet-policy-design.md)는 설계만 제출된 상태이며 숫자·기간·멱등키 계약 승인 전 구현하지 않는다. DB 모의자금 지급과 온체인 자산 공급은 별개다.
 
-2026-10-11 Faucet 최종 승인 정책의 기능·격리 PostgreSQL/Anvil 검증과 첫 독립 재검토를 완료했다. [구현·검증 기록](faucet-policy-implementation.md)과 [Android 계약](faucet-android-integration.md)을 따른다. 앞선 설계 승인 대기 문구는10-10 당시 이력이며 현재 판단을 대체하지 않는다. 최종 통합 상태는 구현 기록의 후속 결과에서 확인한다.
+2026-10-11 Faucet 최종 승인 정책의 기능·격리 PostgreSQL/Anvil 검증·첫 독립 재검토·통합 회귀를 완료했다(a1d87c9 →7b46833). [구현·검증 기록](faucet-policy-implementation.md)과 [Android 계약](faucet-android-integration.md)을 따른다. 앞선 설계 승인 대기 문구는10-10 당시 이력이며 현재 판단을 대체하지 않는다. 다음 Google 로그인·이메일 인증은 설계부터 진행한다.
 
 문서와 코드가 충돌할 때는 다음 우선순위를 따른다.
 

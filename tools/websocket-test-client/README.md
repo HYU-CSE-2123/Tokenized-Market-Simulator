@@ -1,6 +1,6 @@
 # Tokenized Market — 제품형 모의 거래 웹
 
-Faucet 정책 UI는 feat/faucet-policy에서 검증 중입니다. 사용자별 pending key를 보존하고 응답 유실 시 같은 요청 결과를 확인하며, ADMIN은 지급 정책·예산·계정별 이력을 읽기만 합니다. [구현 상태](../../claude-docs/faucet-policy-implementation.md)와 [Android 전달 계약](../../claude-docs/faucet-android-integration.md)을 참고하세요. 실제 PostgreSQL/Anvil 검증 전 통합 완료로 표시하지 않습니다.
+Faucet 정책 UI를 integration/additional-features에 반영했습니다. 사용자별 pending key를 보존하고 응답 유실 시 같은 요청 결과를 확인하며, ADMIN은 지급 정책·예산·계정별 이력을 읽기만 합니다. [구현·실제 검증 상태](../../claude-docs/faucet-policy-implementation.md)와 [Android 전달 계약](../../claude-docs/faucet-android-integration.md)을 참고하세요. Android 코드를 수정하거나 실제 Toss/AI 인수를 실행한 것은 아닙니다.
 
 공개용 Docker build는 `--build-arg PUBLIC_DEMO=true`로 생성하며 최초 API/WS/JS 실패에도 정적 `SIMULATED · 합성 시장` 안내가 보인다. 개발/Toss용 빌드는 이 옵션을 켜지 않는다. 공개 TLS/WSS·rate/IP 제한은 별도 [deployment/RUNBOOK.md](../../deployment/RUNBOOK.md)를 따르고 실제 외부 공개 상태는 [배포 준비 기록](../../claude-docs/deployment-preparation.md)과 구분한다.
 

@@ -1,6 +1,6 @@
 # Backend — Spring Boot (Java 21)
 
-Faucet 정책 고도화는 현재 feat/faucet-policy에서 검증 중입니다. POST `/api/wallet/faucet`는 `Idempotency-Key` 필수이며 신규 빈 PostgreSQL 원장에서만 초기 활성화합니다. 1회100만/KST일1회/계정누적5회/전체누적5천만 mKRW이고 DB 지급만 수행합니다. [구현 기록](../claude-docs/faucet-policy-implementation.md)에 실제 실행·미완료 범위를 구분합니다. 기존 DB migration은 별도 승인 없이 하지 않습니다.
+Faucet 정책 고도화를 integration/additional-features에 반영했습니다. POST `/api/wallet/faucet`는 `Idempotency-Key` 필수이며 신규 빈 PostgreSQL 원장에서만 초기 활성화합니다. 1회100만/KST일1회/계정누적5회/전체누적5천만 mKRW이고 DB 지급만 수행합니다. [구현 기록](../claude-docs/faucet-policy-implementation.md)에 실제 실행·미완료 범위를 구분합니다. 기존 DB migration은 별도 승인 없이 하지 않습니다.
 
 ADMIN 거래 전수 대사는 기본 비활성 `TRADE_AUDIT_ENABLED=false`입니다. 고정 DB snapshot과 chain block에서 Order/Trade/견적/transaction·Vault/Oracle 이벤트를 양방향 비교하며 거래·잔고를 수정하지 않습니다. API·한도·불변 이력·격리 E2E와 미검증 항목은 [거래 전수 대사 구현 기록](../claude-docs/trade-full-audit-implementation.md)을 참고하세요. 전체 verdict와 coverage를 함께 확인해야 합니다.
 
