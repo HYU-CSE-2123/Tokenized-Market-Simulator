@@ -8,6 +8,8 @@ public final class WebSocketDestinations {
     public static final String PORTFOLIO_QUEUE = "/queue/portfolio";
     public static final String ORDERS_SUBSCRIPTION = "/user" + ORDERS_QUEUE;
     public static final String PORTFOLIO_SUBSCRIPTION = "/user" + PORTFOLIO_QUEUE;
+    public static final String CONDITIONAL_QUEUE = "/queue/conditional-orders";
+    public static final String CONDITIONAL_SUBSCRIPTION = "/user" + CONDITIONAL_QUEUE;
 
     private WebSocketDestinations() {}
 }

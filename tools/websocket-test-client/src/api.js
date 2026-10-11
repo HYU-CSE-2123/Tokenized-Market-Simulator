@@ -101,6 +101,13 @@ export class ApiClient {
     return this.#request('/api/portfolio');
   }
 
+  conditionalCapabilities() { return this.#request('/api/conditional-orders/capabilities'); }
+  conditionalOrders(before=null) { return this.#request('/api/conditional-orders'+(before?'?before='+encodeURIComponent(before):'')); }
+  conditionalAdmin(before=null) { return this.#request('/api/admin/conditional-orders'+(before?'?before='+encodeURIComponent(before):'')); }
+  createConditional(request,key) { return this.#request('/api/conditional-orders',{method:'POST',headers:{'Idempotency-Key':key},body:JSON.stringify(request)}); }
+  conditionalRequest(key) { return this.#request('/api/conditional-orders/requests',{headers:{'Idempotency-Key':key}}); }
+  cancelConditional(id) { return this.#request('/api/conditional-orders/'+encodeURIComponent(id)+'/cancel',{method:'POST'}); }
+
   orders() {
     return this.#request('/api/orders');
   }

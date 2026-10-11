@@ -8,12 +8,14 @@ import { node, button, fields, empty, orderCard, tradeCard, renderDiagnosis } fr
 import { createReservePanel } from './reserve-panel.js';
 import { createTradeAuditPanel } from './trade-audit-panel.js';
 import { createFaucetPanel } from './faucet-panel.js';
+import { createConditionalPanel } from './conditional-panel.js';
 
 const $ = (id) => document.getElementById(id);
 const api = new ApiClient(); const requests = new RequestState();
 const reservePanel = createReservePanel(api);
 const tradeAuditPanel = createTradeAuditPanel(api);
 const faucetPanel = createFaucetPanel(api, () => void loadPortfolio(), expireSession);
+const conditionalPanel = createConditionalPanel(api, id => void showOrder(id),expireSession);
 const state = { user: null, market: null, portfolio: null, orders: [], trades: [], side: 'BUY', quote: null,
   historyTab: 'orders', authMode: 'login', destination: 'market', latestId: null, detailId: null, uncertain: null, history: [], nextBefore: null };
 const chart = new ChartController(api, $('market-chart'), $('chart-message'));
@@ -67,6 +69,7 @@ function route() {
   reservePanel.setContext(state.user, name);
   tradeAuditPanel.setContext(state.user, name);
   faucetPanel.setContext(state.user, name);
+  conditionalPanel.setContext(state.user, name);
 }
 function connect() { socket.connect({ transport: $('transport').value, token: api.token, debug: false }); }
 function renderIdentity() {
@@ -78,6 +81,7 @@ function resetPrivate() {
   reservePanel.setContext(null, 'market');
   tradeAuditPanel.setContext(null, 'market');
   faucetPanel.setContext(null, 'market');
+  conditionalPanel.setContext(null, 'market');
   $('quote-dialog').close();
   requests.reset(); clearTimeout(sessionExpiry); state.user = null; state.quote = null; state.orders = []; state.trades = []; state.portfolio = null;
   state.latestId = null; state.detailId = null; state.uncertain = null; state.history = []; state.nextBefore = null; portfolioRevision++;
@@ -240,7 +244,7 @@ async function executeQuote() {
 }
 function socketStatus(status) {
   $('connection').textContent = ({ CONNECTED: '실시간 연결됨', CONNECTING: '연결 중', RECONNECTING: '연결 복구 중', DISCONNECTED: '연결 안 됨', ERROR: '연결 확인 필요', AUTH_EXPIRED: '인증 만료' })[status] || '연결 확인 중';
-  if (status === 'CONNECTED') { void loadMarket(); void chart.load(); if (state.user) { void loadActivity(); void loadPortfolio(); } }
+  if (status === 'CONNECTED') { void loadMarket(); void chart.load(); if (state.user) { void loadActivity(); void loadPortfolio(); void conditionalPanel.refresh(); } }
   if (status === 'RECONNECTING' || status === 'DISCONNECTED') message('market-message', '실시간 연결이 끊겼습니다. 자동 복구 중이며 표시 정보가 최신이 아닐 수 있습니다.', 'warning');
   if (status === 'AUTH_EXPIRED') expireSession();
 }
@@ -249,6 +253,7 @@ function socketEvent(channel, event) {
   if (event.type === 'INVALID_JSON' || !event.data) return;
   if (event.eventId && seenEvents.has(event.eventId)) return;
   if (event.eventId) { seenEvents.add(event.eventId); if (seenEvents.size > 300) seenEvents.delete(seenEvents.values().next().value); }
+  if(channel==='conditional'&&state.user){void conditionalPanel.refresh();void loadActivity();void loadPortfolio();return;}
   if (channel === 'price') {
     if (state.market?.observedAt && Date.parse(event.data.observedAt) < Date.parse(state.market.observedAt)) return;
     marketRevision++; marketRender({ ...state.market, ...event.data }); chart.tick(event.data);

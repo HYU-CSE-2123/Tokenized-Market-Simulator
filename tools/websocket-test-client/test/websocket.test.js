@@ -43,9 +43,9 @@ test('configures bounded exponential reconnect and distinguishes reconnect', () 
   assert.deepEqual(statuses.at(-1), ['CONNECTED', '재연결됨', { reconnected: true }]);
   assert.deepEqual(client.subscriptions.map(({ destination }) => destination), [
     '/topic/markets/mSEC/price', '/topic/markets/mSEC/trades',
-    '/user/queue/orders', '/user/queue/portfolio',
+    '/user/queue/conditional-orders', '/user/queue/orders', '/user/queue/portfolio',
     '/topic/markets/mSEC/price', '/topic/markets/mSEC/trades',
-    '/user/queue/orders', '/user/queue/portfolio',
+    '/user/queue/conditional-orders', '/user/queue/orders', '/user/queue/portfolio',
   ]);
 });
 

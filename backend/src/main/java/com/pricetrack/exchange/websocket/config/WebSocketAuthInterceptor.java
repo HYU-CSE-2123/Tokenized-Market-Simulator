@@ -34,6 +34,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             PRICE_TOPIC,
             TRADES_TOPIC);
     private static final Set<String> PRIVATE_DESTINATIONS = Set.of(
+            com.pricetrack.exchange.websocket.event.WebSocketDestinations.CONDITIONAL_SUBSCRIPTION,
             ORDERS_SUBSCRIPTION,
             PORTFOLIO_SUBSCRIPTION);
 
