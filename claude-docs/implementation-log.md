@@ -2521,6 +2521,8 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 # Oracle 조건부 주문 — 통합 및 신규 최종 회귀 완료 (2026-10-12)
 
+후속 자산 보관 모델 확정/문구 점검(2026-10-12): **A: operator 통합 지갑 + PostgreSQL 사용자별 모의자산 장부** 유지. 사용자별 지갑/CustodyVault/직접 서명/사용자 간 호가 거래소 제외. [최종 점검](asset-custody-final-check.md)에 실제 실행 가능성, SIGNED 장기 정체 위험, Sepolia 공개 faucet 대안과 미검증을 구분했다. 정적 웹 안내/API·프로젝트 문구/표시 테스트만 변경, 거래·계약·DB 변경 없음. 새 실행 backend452/418PASS/34SKIP/실패0, 웹78PASS, Vite94·Chromium desktop/mobile fixture PASS, Foundry36PASS. 실제 PG/Anvil E2E·Toss/유료AI·Android·운영 검증은 실행하지 않았다. 원본 melon-init b7cb0f0 clean 및 integration HEAD0b5d35f 유지, 커밋/merge/배포와 기존 acceptance/runtime 변경 없음.
+
 - 기능 `c4130798a6e62c3f16addad726fde0c421793f32` → 통합 merge `d8dea3e4cff38ce214b6365d6071e451e482b7b9`, 충돌0/tree diff0. 원본melon-init b7cb0f0 clean 유지, acceptance/devDB·Anvil·실제.env/runtime 변경/merge/배포 없음.
 - **병합 최종 source 새 실행**: backend452개418PASS/34SKIP/실패0, 웹77PASS/Vite94/Chrome desktop+mobile REST/STOMP fixture PASS, Foundry36PASS. 또 다른 새 격리PG/Anvil에서 H214+실제E2E1=15/15PASS/skip0. 실제 서명BUY/SELL·동시/취소·raw응답유실/재시작·실패receipt/잠금해제 및 Faucet/장부대사/전수대사 MATCH 확인. 실행별 중복 테스트는 고유총수로 합산하지 않는다.
 - 독립 첫 재검토 **발견된 필수 수정 없음**. 검토 이후 제품 소스변경 없음. 초기 실패 및 UTC보완 범위, 개별suite 미실행/34skip/실제Toss·AI·Android·운영 미검증을 [최종 보고서](oracle-conditional-orders-implementation.md)에 유지한다. 전체/E2E XML·새DB/state는 비공개보존, 해당fixture 두 컨테이너만 정지했다.

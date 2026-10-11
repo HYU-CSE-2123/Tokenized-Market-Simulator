@@ -6,7 +6,7 @@
 <aside id="public-market-notice" hidden class="notice">SIMULATED · 합성 시장 — 자체 생성한 가격·가상 거래량을 사용하는 모의 자산 데모입니다. 실제 삼성전자 시세나 투자 서비스가 아닙니다. Toss 실제 연동은 별도로 로컬 검증했으며 이 공개 환경에서는 비활성입니다. 블록체인은 비공개 Anvil 테스트 체인입니다.</aside>
 <nav class="navigation" aria-label="주요 메뉴"><a href="#market" data-route="market">시장</a><a href="#history" data-route="history">주문·체결</a><a href="#portfolio" data-route="portfolio">내 자산</a><a href="#ai" data-route="ai">AI 도움</a><a href="#admin" data-route="admin" id="admin-nav" hidden>ADMIN 운영</a></nav>
 <main id="main" tabindex="-1">
-<p class="disclaimer">학습용 모의 거래 서비스입니다. mSEC는 실제 삼성전자 주식이 아니며 주주권·배당·실제 원화 상환권을 제공하지 않습니다.</p>
+<p id="custody-notice" class="disclaimer">mKRW/mSEC 잔고는 서비스의 PostgreSQL 사용자별 모의자산 장부입니다. 온체인 거래는 운영자(operator) 통합 지갑이 실행하며 사용자가 ERC-20을 직접 보유하는 방식이 아닙니다. mSEC는 실제 삼성전자 주식이 아니며 주주권·배당·실제 주식이나 원화 상환권을 제공하지 않습니다. 장부-체인 대사 MATCH는 사용자별 온체인 소유권이나 준비금 보증이 아닙니다.</p>
 <section id="view-market" class="view">
 <div class="page-heading"><div><p class="eyebrow">MARKET / mSEC</p><h1>시장을 보고, 견적을 확인하고.</h1><p id="market-description" class="muted">시세 출처를 확인한 뒤 모의 토큰을 거래하세요.</p></div><span id="provider" class="pill">시세 확인 중</span></div>
 <p class="muted">Toss REST 초기 시세 조회·실시간 WebSocket 연동은 별도 로컬 환경에서 검증했습니다. 공개 데모에서는 비활성화되어 있습니다. 실제 장중 거래 전체 수동 인수와는 구분합니다.</p>

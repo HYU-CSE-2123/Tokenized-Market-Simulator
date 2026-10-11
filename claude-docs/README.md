@@ -50,6 +50,8 @@
 
 ## 단일 출처(Source of Truth)
 
+2026-10-12 **자산 보관 모델 A 확정**: 운영자 통합 지갑 + PostgreSQL 사용자별 모의자산 장부를 유지한다. 사용자별 온체인 지갑·CustodyVault·사용자 직접 서명·사용자 간 호가 거래소는 제외한다. [기술 비교](user-wallet-custody-architecture-review.md), [표현·거래 가능성·Sepolia Faucet 최종 점검](asset-custody-final-check.md)을 따른다. 사용자 장부 할당량과 온체인 소유권, 대사 MATCH와 지급 능력/준비금 보증은 구분한다.
+
 2026-10-12 **Oracle 가격 조건부 BUY/SELL 통합 완료**: 기능c413079 → integration/additional-features 병합d8dea3e. 병합 소스 backend418PASS/34SKIP, 웹77/Foundry36PASS 및 신규 격리 PG/Anvil 실제E2E1PASS를 확인했다. [설계](oracle-conditional-orders-design.md), [구현 기록](oracle-conditional-orders-implementation.md), [Android 계약](conditional-orders-android-integration.md)을 따른다. 사용자 간 호가/시간 지정 예약은 제외하고 실제 Toss/유료 AI 인수는 여전히 연기한다. Google 인증 등 나머지 기능은 별도 설계/승인 사항이다.
 
 추가 기능 통합 개발의 최신 순서와 보존 경계는 [통합 개발 계획](additional-features-integration-plan.md)을 따른다. 실제 Toss 장중 인수는 추가 기능·최종 통합 검증 이후 신규 acceptance에서 진행하며 기존 acceptance는 보존한다. 2026-10-09의 [거래 전수 대사 ADMIN 설계](trade-full-audit-design.md)는 다음 날 승인·구현·통합되었고, 현재 다음 작업은 Faucet 정책 설계다.

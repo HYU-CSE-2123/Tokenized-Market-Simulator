@@ -10,6 +10,10 @@ ADMIN 거래 전수 대사는 기본 비활성 `TRADE_AUDIT_ENABLED=false`입니
 
 삼성전자 가격 추종 토큰 거래소의 REST API 및 WebSocket 서버입니다.
 
+### 잔고·주문 API의 자산 의미
+
+공식 모델은 운영자 통합 지갑 + PostgreSQL 사용자별 모의자산 장부입니다. Portfolio/UserBalance의 mKRW/mSEC 잔고와 `amount`, `lockedAmount`는 사용자별 DB 할당량이며 사용자가 ERC-20을 직접 소유하거나 서명한다는 의미가 아닙니다. 실제 온체인 거래 및 EIP-712 보고서의 executor는 operator입니다. DB Faucet 지급은 온체인 mint와 별개이며 대사 MATCH는 사용자별 온체인 소유권·준비금 보증·실제 원화/주식 상환권을 증명하지 않습니다. API 경로·필드·거래 계약은 변경하지 않았습니다. [최종 점검](../claude-docs/asset-custody-final-check.md)을 참고하세요.
+
 AI Phase 2 Basic RAG는 기본 비활성인 ADMIN 전용 모듈입니다. 거래 DB/JPA와 별도의 pgvector 연결을 사용합니다. 설정·실행·색인·평가 및 미검증 범위는 [AI 실행 보고서](../docs/ai/phase-2-basic-rag.md)를 참고하세요.
 
 AI Phase 3은 문장 경계·순수 링크 청크 정리, 1200바이트 청크, similarity 0.25와 충분한 후보 이후 문서당 최대 2개 선택을 적용합니다. 기존 색인은 명시적으로 재생성해야 합니다. Hybrid는 서비스에 연결하지 않은 비교 실험입니다. 수치와 제한사항은 [검색 품질 보고서](../docs/ai/phase-3-retrieval.md)를 참고하세요.

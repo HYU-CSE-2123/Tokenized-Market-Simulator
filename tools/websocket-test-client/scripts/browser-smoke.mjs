@@ -105,6 +105,8 @@ try {
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await command('Page.navigate', { url: `http://127.0.0.1:${port}/` });
   await waitText('price', '75,000'); await waitText('connection', '연결됨');
+  await waitText('custody-notice', 'PostgreSQL 사용자별 모의자산 장부');
+  assert.equal(await evaluate("document.getElementById('custody-notice').getBoundingClientRect().height > 0"), true);
   await waitText('market-mode', 'SIMULATED'); await waitText('market-description', '실제 삼성전자 시세가 아닙니다');
   await waitText('volume-description', '합성 거래량'); await screenshot('desktop-market');
   assert.equal(await evaluate(`document.getElementById('admin-nav').hidden`), true);
@@ -155,6 +157,7 @@ try {
   for (const route of ['market', 'history', 'portfolio', 'ai', 'admin']) {
     await evaluate(`location.hash=${JSON.stringify(route)}`); await new Promise((done) => setTimeout(done, 120));
     assert.equal(await evaluate(`document.documentElement.scrollWidth<=window.innerWidth`), true, 'horizontal overflow: ' + route);
+    assert.equal(await evaluate("document.getElementById('custody-notice').getBoundingClientRect().height > 0"), true, 'custody notice hidden: ' + route);
     await screenshot('mobile-' + route);
   }
   for (const interval of ['1m', '5m', '15m', '30m', '1h', '1d']) await evaluate(`document.querySelector('[data-interval="${interval}"]').click()`);
