@@ -50,7 +50,7 @@
 
 ## 단일 출처(Source of Truth)
 
-2026-10-12 **SIGNED/SUBMITTED 관측 ①+② 구현 검증 중**: [구현/API·검증 기록](transaction-stall-observability-implementation.md). ADMIN 읽기 전용 LONG_WAIT와 최신 완료 시도 snapshot을 추가하며 기존 복구/정산·AI WAITING_LONG 계약은 유지한다. 아래 승인 대기 문구는 이전 설계 시점 이력이며 현재 관측 구현은 승인됐다. 외부 모니터링은 제외. [Sepolia 정책](sepolia-mockkrw-issuance-design.md)은 별도 최초 고정 공급 A안으로 확정했지만 S0/O0/V0·계약 구현·배포/ETH/RPC는 미승인이다.
+2026-10-12 **SIGNED/SUBMITTED 관측 ①+② 통합 완료**: 기능e489b3c → 병합7bf459c. [구현/API·실행별 검증 기록](transaction-stall-observability-implementation.md): 병합 소스 backend427 PASS/35 SKIP, 웹84/Foundry36 PASS, 브라우저·신규 PG/Anvil1·별도 JVM PG1 PASS. ADMIN 읽기 전용 LONG_WAIT와 최신 완료 시도 snapshot이며 기존 복구/정산·AI WAITING_LONG 계약은 유지한다. 아래 승인 대기 문구는 이전 설계 시점 이력이다. 외부 모니터링은 제외. [Sepolia 정책](sepolia-mockkrw-issuance-design.md)은 별도 최초 고정 공급 A안으로 확정했지만 S0/O0/V0·계약 구현·배포/ETH/RPC는 미승인이다.
 
 2026-10-12 후속 점검 확정: A 모델 안내·문서·표시 테스트13개를 `c7bf4e8`로 커밋했다. 새 [SIGNED/SUBMITTED 정체 관측 설계](transaction-stall-observability-design.md)와 [Sepolia mKRW 발행 정책 설계](sepolia-mockkrw-issuance-design.md)는 **제안/구현 승인 대기**다. 기존 REVIEW_REQUIRED·거래 복구·계약·DB 및 acceptance는 변경하지 않았다.
 

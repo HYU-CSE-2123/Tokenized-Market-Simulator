@@ -1,6 +1,6 @@
 # SIGNED/SUBMITTED 거래 정체 관측 구현
 
-> 2026-10-12 · feat/transaction-stall-observability · 기능 검증 완료, 최종 커밋·통합 회귀 대기
+> 2026-10-12 · 기능 커밋 `e489b3c17868cfb91ec51bb4c08ae636d7d76a37` → integration/additional-features 병합 `7bf459c3559cc7fe5fc7cfc17e00c2f2428e05dc` · 통합 소스 재검증 완료
 
 ## 범위와 정본
 
@@ -41,7 +41,28 @@ txHash/nonce는 ADMIN 상세에만 있다. raw tx, 키, 서명, RPC URL, 오류 
 - 독립 검토1차: 발견된 필수 수정 없음. 검토자 직접 신규 웹6/6 및 diff-check PASS. 구현/문서 재검토와 최종 통합 회귀 결과는 아래에 추가한다.
 - 독립 첫 재검토: 발견된 필수 수정 없음. 최종 코드·문서·시작 예외 guard/테스트·Sepolia 승인 경계를 재확인, 직접 신규 웹6/6 재실행, XML462/427/35/0 및 contracts diff0/diff-check 확인. 실제 fixture/runtime에는 검토자가 접근하지 않았으며 E2E는 구현자의 실행 결과다. 아래 통합 회귀는 별도 실행한다.
 
-## 미검증·승인 경계
+## 통합 후 새 실행 및 보존
+
+기존 실행 결과를 재실행으로 취급하지 않고 **병합된 소스에서** 다음을 새 실행했다.
+
+| 검증 | 기능 브랜치 | 병합 소스 |
+|---|---|---|
+| backend 전체 `test --offline --no-daemon --rerun-tasks` | 427 PASS /35 SKIP /0 FAIL (462 total) | 427 PASS /35 SKIP /0 FAIL (462 total) |
+| 웹 `npm test` | 84 PASS /0 SKIP | 84 PASS /0 SKIP |
+| build + Chrome `npm run test:browser` | PASS (fixture) | PASS (fixture) |
+| `forge test --offline` | 36 PASS /0 SKIP (동일 contract 소스) | 36 PASS /0 SKIP |
+| 실제 새 PG/Anvil 조건부·관측 E2E | 1 PASS | 1 PASS |
+| 별도 JVM PG 재시작·metadata 순서 | 1 PASS | 1 PASS |
+
+통합 전용 신규 run은 `audit-e2e-20261011223339-70d89a`. 실제 E2E는 `CONDITIONAL_E2E_TESTS=true`, 전용 `CONDITIONAL_E2E_RUN`, `--tests '*ConditionalPostgresAnvilE2ETest'`로 실행한다. 이어 같은 **신규 fixture**에서 `OBSERVATION_RESTART_TESTS=true`와 `--tests '*ObservationRestartPostgresTest'`를 별도 Gradle/JVM으로 실행한다. 재시작 테스트는 SQL init을 하지 않는다. E2E는 빈 DB만 허용하므로 같은 데이터에 재실행하려면 초기화 대신 신규 fixture가 필요하다. 실제 즉시 REST 거래의 별도 라이브 인수는 이번에 수행한 조건부 실행 경로 재사용 검증과 구분한다.
+
+35 skip은 opt-in AI 관련26 및 비AI9(기존 blockchain2, 새 관측 restart1, conditional1, synthetic1, quote concurrency1, reserve1, trade audit1, faucet1)이다. 이 중 conditional/restart2는 위 새 E2E로 별도 실행했지만 기본 회귀 XML의35 SKIP 표기는 그대로 유지한다. 나머지 opt-in suite는 이번에 새 실행하지 않았으며 조건부 E2E 안의 Faucet/두 대사 시나리오와 해당 독립 suite 전체를 동일시하지 않는다.
+
+기능 커밋26파일은 observation 구현/테스트, recovery hook/security/schema, 웹 API/ADMIN 표시 및 문서다. source equality를 feature와 merge 사이에서 확인했다. 실제 .env, 생성된 fixture 키/DB 비밀번호, dump/state, runtime/log/build/dist/lib/node_modules는 Git 제외 점검을 통과했다. 신규 fixture의 private evidence와 PostgreSQL/chain data는 보존하고 이번 작업 전용 컨테이너만 종료한다. Docker 주소 pool 회수는 이번 작업에서 생성한 연결 없는 네트워크에만 한정한다.
+
+`melon-init` HEAD는 작업 전후 `b7cb0f0ed8fd936e73733a6d2f167efe4a951a63`, working tree clean. acceptance/기존 개발 DB·chain/runtime과 `.env`는 사용하거나 수정하지 않았으며 통합 기능을 배포하지 않았다. 이후 신규 acceptance에 반영할 때만 additive 관측 table과 새 소스를 적용하고 기존 보존 baseline에는 복사하지 않는다.
+
+## 미검증·승인 경계 (최종)
 
 실제 operator ETH 부족, 장시간 RPC 지속 장애, 실제 Toss 장중, 유료 AI, AWS/Linux 운영 부하, Sepolia는 미실행이다. 시계 보정·metadata drop은 best-effort 한계이며 거래 실패 원인을 추정하지 않는다. 기존 melon-init/acceptance/runtime/.env와 개발 DB/chain은 사용/변경하지 않는다.
 
