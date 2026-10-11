@@ -41,7 +41,13 @@ public class OnchainOrderService {
 
     private Order submit(Long userId, OrderSide side, BigDecimal input, String quoteId) {
         var prepared = preparationService.prepare(userId, side, input, quoteId);
+        return submitPrepared(prepared);
+    }
+
+    /** Sends an already committed preparation without creating another order or consuming another quote. */
+    public Order submitPrepared(OnchainOrderPreparationService.PreparedOrder prepared) {
         Order order = prepared.order();
+        OrderSide side = order.getSide();
         var signed = prepared.signedReport();
         try {
             BlockchainTransactionType type = side == OrderSide.BUY

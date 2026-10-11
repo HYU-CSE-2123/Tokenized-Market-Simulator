@@ -30,6 +30,11 @@ server:
 
 # 애플리케이션 커스텀 설정
 app:
+  conditional:
+    enabled: ${CONDITIONAL_ORDERS_ENABLED:false}
+    fixture: false # Synthetic execution additionally requires the isolated conditional-fixture profile and fixture DB.
+    poll-ms: 1000
+    initial-delay-ms: 5000
   faucet:
     policy-version: ${FAUCET_POLICY_VERSION:kst-v1}
   trade-audit:

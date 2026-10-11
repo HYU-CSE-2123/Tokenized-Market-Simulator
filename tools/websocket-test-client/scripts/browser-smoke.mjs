@@ -12,6 +12,7 @@ const root = resolve('dist'); const artifacts = join(root, '.smoke'); await mkdi
 const profile = await mkdtemp(join(artifacts, 'profile-'));
 let role = 'USER', orders = [], failWrite = false, failAi = false, delayedAi = false;
 const faucetClaims=new Map();let loseFaucetResponse=false;
+const conditionalClaims=new Map();
 const quoteId = '0x' + '1'.repeat(64); let expiry = 30;
 const agent = { status: 'PARTIAL', answer: '<img src=x onerror=alert(1)> 관측 가능한 범위에서 설명합니다.', uncertainties: ['receipt를 확인할 수 없습니다.'],
   toolEvidence: [{ tool: 'getOrder', status: 'OK', data: { status: 'PENDING_ONCHAIN' } }],
@@ -30,6 +31,11 @@ const server = createServer(async (req, res) => {
   const now = new Date().toISOString(); let body = {}, status = 200;
   if (url.pathname.startsWith('/api/auth/')) { role = input.loginId === 'admin' ? 'ADMIN' : 'USER'; body = { accessToken: 'fixture-token', expiresIn: 3600 }; }
   else if (url.pathname === '/api/me') body = { id:role==='ADMIN'?2:1,nickname: role === 'ADMIN' ? '관리자' : '모의 사용자', role };
+  else if(url.pathname==='/api/conditional-orders/capabilities')body={registrationEnabled:true};
+  else if(url.pathname==='/api/conditional-orders/requests'){body=conditionalClaims.get(req.headers['idempotency-key']);if(!body){status=404;body={code:'CONDITIONAL_NOT_FOUND'};}}
+  else if(url.pathname==='/api/conditional-orders'&&req.method==='POST'){const key=req.headers['idempotency-key'];body=conditionalClaims.get(key)||{...input,id:'condition-'+(conditionalClaims.size+1),state:'WAITING',createdAt:now,updatedAt:now};conditionalClaims.set(key,body);}
+  else if(url.pathname==='/api/conditional-orders'||url.pathname==='/api/admin/conditional-orders')body={items:[...conditionalClaims.values()],nextBefore:null};
+  else if(url.pathname.startsWith('/api/conditional-orders/')&&url.pathname.endsWith('/cancel')){const id=url.pathname.split('/')[3];body=[...conditionalClaims.values()].find(c=>c.id===id);if(body)body.state='CANCELLED';else{status=404;body={code:'CONDITIONAL_NOT_FOUND'};}}
   else if(url.pathname==='/api/wallet/faucet/status')body={eligible:true,remainingCount:5,decisionDate:'2026-10-11',policyVersion:'kst-v1'};
   else if(url.pathname==='/api/wallet/faucet/grants'||url.pathname==='/api/admin/faucet/grants')body={items:[...faucetClaims.values()],nextBefore:null};
   else if(url.pathname==='/api/admin/faucet')body={activeVersion:'kst-v1',configured:true,spent:'1000000',remainingBudget:'49000000',grantCount:1,journalConsistent:true,rejections:{FAUCET_DAILY_LIMIT:1},rejectionMetricsStartedAt:now};
@@ -105,6 +111,13 @@ try {
   assert.equal(requests.some((request) => request.path === '/api/portfolio'), false);
   await click('auth-open'); await click('auth-switch'); await fill('login-id', 'fixtureuser'); await fill('password', 'password123'); await fill('nickname', '모의 사용자'); await submit('auth-form'); await waitText('identity', '모의 사용자');
   assert.ok(requests.some((request) => request.path === '/api/auth/signup'));
+  await waitText('conditional-availability','등록 가능');await fill('conditional-input','100000');await fill('conditional-target','74000');await fill('conditional-expiry','2099-01-01T00:00');await submit('conditional-form');await waitText('conditional-history','가격 조건 대기');
+  assert.equal(conditionalClaims.size,1);await evaluate(`document.getElementById('conditional-history').querySelector('button').click()`);
+  await poll(async()=>[...conditionalClaims.values()][0].state==='CANCELLED');await waitText('conditional-history','취소');
+  await fill('conditional-side','SELL');await fill('conditional-input','1.5');await fill('conditional-target','80000');await submit('conditional-form');await waitText('conditional-history','조건부 매도');assert.equal(conditionalClaims.size,2);
+  await command('Emulation.setDeviceMetricsOverride',{width:360,height:800,deviceScaleFactor:1,mobile:true});
+  assert.equal(await evaluate(`document.documentElement.scrollWidth<=window.innerWidth`),true,'conditional mobile overflow');
+  await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   await fill('trade-amount', '100000'); await submit('trade-form'); await waitText('quote-summary', '75,000');
   await fill('trade-amount', '110000'); assert.equal(await evaluate(`document.getElementById('quote-confirm').disabled`), true);
   await submit('trade-form'); await waitText('quote-summary', '75,000'); await click('quote-confirm'); await click('quote-submit'); await waitText('latest-order', '블록체인 확인 중');
@@ -126,6 +139,7 @@ try {
   assert.equal(await evaluate(`document.getElementById('ai-result').textContent`), ''); delayedAi = false;
   await click('auth-open'); await click('auth-switch'); await fill('login-id', 'admin'); await fill('password', 'password123'); await submit('auth-form'); await waitText('identity', '관리자');
   await evaluate(`location.hash='admin'`); await waitText('admin-history', '진단 #1'); await waitText('observation', 'LLM:call');
+  await waitText('conditional-admin-history','조건부 매도');
   await evaluate(`document.getElementById('admin-history').querySelector('button').click()`); await waitText('admin-result', '과거 관측'); await screenshot('desktop-admin');
   await click('reserve-run'); await waitText('reserve-result', '장부·체인 수량 일치');
   await waitText('reserve-result', '1 ETH'); await waitText('reserve-result', '비용 미추정');

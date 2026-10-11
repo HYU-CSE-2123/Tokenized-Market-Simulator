@@ -119,6 +119,19 @@ class WebSocketConnectionIntegrationTest {
     }
 
     @Test
+    void conditionalQueueIsDeliveredOnlyToOwner() throws Exception {
+        User owner=createUser("conditional-owner"),other=createUser("conditional-other");
+        var ownSession=authenticatedSession(owner);var otherSession=authenticatedSession(other);
+        var own=subscribe(ownSession,WebSocketDestinations.CONDITIONAL_SUBSCRIPTION);
+        var foreign=subscribe(otherSession,WebSocketDestinations.CONDITIONAL_SUBSCRIPTION);
+        var otherReady=subscribe(otherSession,WebSocketDestinations.PORTFOLIO_SUBSCRIPTION);
+        sendUntilReceived(otherReady,()->messagingTemplate.convertAndSendToUser(other.getId().toString(),WebSocketDestinations.PORTFOLIO_QUEUE,"ready"));
+        String result=sendUntilReceived(own,()->messagingTemplate.convertAndSendToUser(owner.getId().toString(),WebSocketDestinations.CONDITIONAL_QUEUE,"conditional-state"));
+        assertThat(result).isEqualTo("conditional-state");
+        assertThatThrownBy(()->foreign.get(400,TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+    }
+
+    @Test
     void privateOrderIsDeliveredOnlyToItsOwner() throws Exception {
         User owner = createUser("owner");
         User other = createUser("other");

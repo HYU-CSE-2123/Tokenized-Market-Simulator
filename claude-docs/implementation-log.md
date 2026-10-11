@@ -2495,3 +2495,26 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - **병합 소스 새 실행**: 전체436/403PASS/33SKIP, 웹66·Vite93·Chrome desktop/mobile fixture PASS, Foundry36PASS. 새 통합 Faucet PG/Anvil fixture9/9PASS, 또 다른 새 통합 감사/자산대사 fixture80/79PASS/1SKIP. 중복 단위 테스트를 별도 고유 테스트로 합산하지 않는다. XML/private DB·chain은 보존하고 각 새fixture 컨테이너만 정지했다.
 - 기존31 opt-in 및 standaloneReservePG 미실행·실제Toss/유료AI/장기운영·기존migration·Android실기기 미검증을 유지한다. 세부원인/최초실패/재실행/독립검토는 [최종 구현 기록](faucet-policy-implementation.md)에 보존했다. AFTER_COMMIT·기존locked/REVIEW_REQUIRED·두 대사와 호환되며 온체인 자동공급 기능은 없다.
 - 원본melon-init b7cb0f0 clean 유지, 기존 acceptance/개발DB/chain/.env/runtime 변경·merge·배포없음. 다음은 Google로그인·이메일인증 설계이며 외부credentials/네트워크·계정연결·자산소유권은 승인 후 구현한다.
+
+# Oracle 가격 조건부 주문 — 구현·기능 검증, 통합 대기
+
+> 2026-10-12 갱신. 사용자의 후속 우선순위 지시로 Faucet 통합0a3b67e에서 feat/oracle-conditional-orders를 분리했다.
+
+## 구현·결정
+- 신규 conditional_orders 의도와 실행 Order를 분리한다. 등록 시 quote/서명/자산 잠금 없음, 조건 충족 후 fresh quote의 가격을 재검증하고 기존 EIP-712/Vault 전송·receipt/event 정산을 재사용한다. BUY 총 mKRW/SELL mSEC 단위와 수수료 계약은 유지한다.
+- 실행 준비 시 의도 FK/Order/견적 소비/잔고 잠금을 한 transaction으로 확정하며 RPC는 잔고 lock 밖이다. 취소·만료는 실행 FK 전에만 가능하다. 불확실한 전송은 동일 raw 복구/REVIEW_REQUIRED로 유지한다.
+- 상세 코드·API/UI·새 시각 컬럼·첫 실패 증거와 복구는 [구현 기록](oracle-conditional-orders-implementation.md), Android 미수정·미빌드는 [계약](conditional-orders-android-integration.md)에 명시한다. 사용자 간 매칭/시간 예약/온체인 충전/분산 nonce는 추가하지 않는다.
+
+## 검증
+- 신규 fresh PostgreSQL/Anvil의 H212+실제 E2E1:13/13PASS. 실제 BUY/SELL·중복/취소 경합·RPC 응답 유실 동일 raw 복구·재시작 claim·만료·실패 receipt·Faucet/두 대사 MATCH를 확인했다. 초기 프로필/시간대 실패는 삭제하지 않고 별도 fixture에 보존했다.
+- WS 보강 후 최종 기능 source 전체451개/417PASS/34SKIP/실패0, 웹71PASS·Vite94·Chrome desktop/mobile fixture PASS, Foundry36PASS. 실제 PG 테스트와 H2/Mock/브라우저 fixture 범위는 구분한다. opt-in skip을 실제 실행으로 처리하지 않는다.
+
+## 검토·남은 작업
+- 독립 검토·기능 커밋·통합 병합 및 병합 최종 source 신규 회귀는 아직 대기다. 기존 melon-init/acceptance/devDB·Anvil·실제.env는 변경하지 않는다. 실제 Toss/유료AI/AWS/Sepolia/Android/운영부하는 미실행이다.
+
+# Oracle 조건부 주문 — 검토 보완·최종 기능 회귀 (2026-10-12)
+
+- 최초 독립 검토 필수2건(준비 시 최신 시세 조건 재검사 누락, 웹 확정 거절 이후 pending 고착)을 수정했다. BUY/SELL 초기·lock 이후 네 경계 및 실제 패널 유실/재입력/세션 교체 회귀를 추가했다.
+- 수정 후 새 실제 PostgreSQL/Anvil E2E1PASS, 웹77PASS·Vite94·Chrome desktop/mobile fixture PASS, Foundry36PASS. 당시 H2 준비13실패 및 이어진 전체452 중4실패는 UTC/KST 날짜 경계의 테스트 시간대 문제였다. 실패 XML을 보존했고 제품 Faucet/운영 DB는 수정하지 않았다. 테스트 Hikari UTC 보완 후 전체 **452개/418PASS/34SKIP/실패0**, BUILD SUCCESSFUL.
+- 첫 재검토 **발견된 필수 수정 없음**. 검토자는 패널11개를 직접 실행하고 전체XML106파일/452개 및 실제PG 성공/실패XML·최신diff·문서를 확인했다. 공통 test UTC는 PG opt-in에도 상속되므로 새 격리PG 재검증과 병합 source 회귀는 별도로 진행한다. skip·Toss/AI/Android/운영 미검증은 그대로 유지한다.
+- 공통UTC 적용 후 또 다른 새 PG/Anvil fixture에서 H214+실제E2E1 **15/15PASS/skip0**. 전체452 XML과 실제 실행XML은 구분해 비공개 보존하고 새 컨테이너 두 개만 정지했다. 최종 source 후보37파일/생성secret15개 대조0hit/금지파일0/diff check PASS. 기능 commit·병합 후 새 통합 회귀는 다음 기록에서 확정한다.
