@@ -9,6 +9,7 @@ import { createReservePanel } from './reserve-panel.js';
 import { createTradeAuditPanel } from './trade-audit-panel.js';
 import { createFaucetPanel } from './faucet-panel.js';
 import { createConditionalPanel } from './conditional-panel.js';
+import { createTransactionObservationPanel } from './transaction-observation-panel.js';
 
 const $ = (id) => document.getElementById(id);
 const api = new ApiClient(); const requests = new RequestState();
@@ -16,6 +17,7 @@ const reservePanel = createReservePanel(api);
 const tradeAuditPanel = createTradeAuditPanel(api);
 const faucetPanel = createFaucetPanel(api, () => void loadPortfolio(), expireSession);
 const conditionalPanel = createConditionalPanel(api, id => void showOrder(id),expireSession);
+const transactionObservationPanel = createTransactionObservationPanel(api,expireSession);
 const state = { user: null, market: null, portfolio: null, orders: [], trades: [], side: 'BUY', quote: null,
   historyTab: 'orders', authMode: 'login', destination: 'market', latestId: null, detailId: null, uncertain: null, history: [], nextBefore: null };
 const chart = new ChartController(api, $('market-chart'), $('chart-message'));
@@ -70,6 +72,7 @@ function route() {
   tradeAuditPanel.setContext(state.user, name);
   faucetPanel.setContext(state.user, name);
   conditionalPanel.setContext(state.user, name);
+  transactionObservationPanel.setContext(state.user,name);
 }
 function connect() { socket.connect({ transport: $('transport').value, token: api.token, debug: false }); }
 function renderIdentity() {
@@ -82,6 +85,7 @@ function resetPrivate() {
   tradeAuditPanel.setContext(null, 'market');
   faucetPanel.setContext(null, 'market');
   conditionalPanel.setContext(null, 'market');
+  transactionObservationPanel.setContext(null,'market');
   $('quote-dialog').close();
   requests.reset(); clearTimeout(sessionExpiry); state.user = null; state.quote = null; state.orders = []; state.trades = []; state.portfolio = null;
   state.latestId = null; state.detailId = null; state.uncertain = null; state.history = []; state.nextBefore = null; portfolioRevision++;

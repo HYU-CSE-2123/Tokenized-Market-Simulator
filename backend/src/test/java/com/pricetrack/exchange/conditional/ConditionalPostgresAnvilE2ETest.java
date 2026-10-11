@@ -37,6 +37,8 @@ class ConditionalPostgresAnvilE2ETest {
     static HttpServer proxy; static ExecutorService proxyPool;
     static final AtomicBoolean loseSendResponse=new AtomicBoolean();
     static final AtomicInteger lost=new AtomicInteger();
+    static final AtomicBoolean dropBeforeSend=new AtomicBoolean();
+    static final AtomicInteger rpcRequests=new AtomicInteger();
     @DynamicPropertySource static void fixture(DynamicPropertyRegistry registry) throws Exception {
         Path root=Path.of(System.getenv("CONDITIONAL_E2E_RUN")).toRealPath();
         if(!root.getParent().equals(Path.of("../deployment/runtime").toRealPath())
@@ -50,6 +52,8 @@ class ConditionalPostgresAnvilE2ETest {
         proxy.createContext("/",exchange->{
             try {
                 byte[] body=exchange.getRequestBody().readAllBytes();
+                rpcRequests.incrementAndGet();
+                if(dropBeforeSend.get() && new String(body,java.nio.charset.StandardCharsets.UTF_8).contains("eth_sendRawTransaction"))return;
                 var response=client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:26545"))
                     .timeout(Duration.ofSeconds(5)).header("Content-Type","application/json")
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build(),HttpResponse.BodyHandlers.ofByteArray());
@@ -65,6 +69,7 @@ class ConditionalPostgresAnvilE2ETest {
         p.forEach((k,v)->registry.add(k.toString(),()->v));
         registry.add("app.conditional.enabled",()->"true");registry.add("app.conditional.fixture",()->"true");
         registry.add("app.conditional.initial-delay-ms",()->"2147483647");
+        registry.add("app.blockchain.reconciliation.required-confirmations",()->"2");
     }
     @AfterAll static void close(){if(proxy!=null)proxy.stop(0);if(proxyPool!=null)proxyPool.shutdownNow();}
     @Autowired TestRestTemplate http;@Autowired JdbcTemplate jdbc;
@@ -72,6 +77,10 @@ class ConditionalPostgresAnvilE2ETest {
     @Autowired ConditionalOrderRepository intents;@Autowired BlockchainReconciliationService reconciliation;
     @Autowired SimulatedPriceProvider prices;@Autowired OrderRepository orders;
     @Autowired UserBalanceRepository balances;@Autowired ReserveService reserve;@Autowired AuditService audit;
+    @Autowired com.pricetrack.exchange.blockchain.observation.ObservationStore observationStore;
+    @Autowired com.pricetrack.exchange.blockchain.observation.ObservationRecorder observationRecorder;
+    @Autowired jakarta.persistence.EntityManager em;
+    @Autowired org.springframework.transaction.PlatformTransactionManager tm;
     String token;long uid;
 
     @Test void actualAtomicExecutionRaceRecoveryAndAudit() throws Exception {
@@ -119,11 +128,20 @@ class ConditionalPostgresAnvilE2ETest {
         assertThat(lost.get()).isPositive();
         var linked=service.find(uid,recovered);assertThat(linked.executionOrderId()).isNotNull();
         assertThat(linked.state()).isEqualTo(ConditionalOrder.State.EXECUTING);
+        assertObservationDoesNotMutate(linked.executionOrderId(),"SIGNED");
         assertThat(balances.findByUserIdAndSymbol(uid,"mKRW").orElseThrow().getLockedAmount()).isEqualByComparingTo("20000");
         long count=jdbc.queryForObject("SELECT count(*) FROM orders",Long.class);worker.evaluate(recovered);settle(recovered);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM orders",Long.class)).isEqualTo(count);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM trades WHERE order_id=?",Long.class,linked.executionOrderId())).isEqualTo(1);
         assertThat(balances.findByUserIdAndSymbol(uid,"mKRW").orElseThrow().getLockedAmount()).isZero();
+
+        // The first send is NOT forwarded: recovery must actually resend identical stored bytes.
+        String resent=create("BUY","5000","1000000000");prices.tick();dropBeforeSend.set(true);
+        try{worker.evaluate(resent);}finally{dropBeforeSend.set(false);}
+        long resentOrder=service.find(uid,resent).executionOrderId();
+        var rawBefore=jdbc.queryForMap("SELECT raw_transaction,nonce,tx_hash FROM blockchain_transactions WHERE order_id=?",resentOrder);
+        settle(resent);
+        assertThat(jdbc.queryForMap("SELECT raw_transaction,nonce,tx_hash FROM blockchain_transactions WHERE order_id=?",resentOrder)).isEqualTo(rawBefore);
 
         String restart=create("BUY","10000","1000000000");prices.tick();service.claim(restart,"previous-worker");prices.tick();worker.evaluate(restart);settle(restart);
         String expired=create("BUY","10000","1000000000");jdbc.update("UPDATE conditional_orders SET expires_at=clock_timestamp()-interval '1 second' WHERE id=?",expired);worker.evaluate(expired);
@@ -135,24 +153,68 @@ class ConditionalPostgresAnvilE2ETest {
         assertThat(audit.detail(run).verdict()).as(audit.detail(run).reason()).isEqualTo("MATCH");
         assertThat(audit.detail(run).coverage().chainComplete()).isTrue();
 
+        // Corrupt ONLY this fresh fixture's expected input, proving the existing review boundary remains.
+        String review=create("BUY","2000","1000000000");prices.tick();worker.evaluate(review);
+        long reviewOrder=service.find(uid,review).executionOrderId();
+        jdbc.update("UPDATE orders SET input_amount=1500 WHERE id=?",reviewOrder);
+        rpc("evm_mine",List.of());reconciliation.reconcilePendingTransactions();service.refresh(review);
+        assertThat(jdbc.queryForObject("SELECT status FROM blockchain_transactions WHERE order_id=?",String.class,reviewOrder)).isEqualTo("REVIEW_REQUIRED");
+        awaitResult(reviewOrder,"REVIEW_REQUIRED");
+        var lockedReview=balances.findByUserIdAndSymbol(uid,"mKRW").orElseThrow().getLockedAmount();
+        assertThat(lockedReview).isEqualByComparingTo("2000");
+        reconciliation.reconcilePendingTransactions();assertThat(balances.findByUserIdAndSymbol(uid,"mKRW").orElseThrow().getLockedAmount()).isEqualByComparingTo(lockedReview);
+
         // Real mined status=0: delay mining beyond the signed report's expiry; do not retry a new order.
         String rejected=create("BUY","10000","1000000000");prices.tick();rpc("anvil_setAutomine",List.of(false));
         try {
             worker.evaluate(rejected);long order=service.find(uid,rejected).executionOrderId();
+            assertObservationDoesNotMutate(order,"SUBMITTED");
+            reconciliation.reconcilePendingTransactions();awaitResult(order,"RECEIPT_NOT_FOUND");
+            long failures=(Long)observationRecorder.health().get("storageFailures");
+            jdbc.execute("ALTER TABLE blockchain_transaction_observations RENAME TO fixture_observation_offline");
+            try{reconciliation.reconcilePendingTransactions();for(int i=0;i<100 && (Long)observationRecorder.health().get("storageFailures")==failures;i++)Thread.sleep(20);
+                assertThat((Long)observationRecorder.health().get("storageFailures")).isGreaterThan(failures);
+                assertThat(orders.findById(order).orElseThrow().getStatus()).isEqualTo(OrderStatus.PENDING_ONCHAIN);
+            }finally{jdbc.execute("ALTER TABLE fixture_observation_offline RENAME TO blockchain_transaction_observations");}
             long expires=jdbc.queryForObject("SELECT EXTRACT(EPOCH FROM valid_until)::bigint FROM price_quotes WHERE order_id=?",Long.class,order);
             rpc("evm_setNextBlockTimestamp",List.of(expires+1));rpc("evm_mine",List.of());
+            reconciliation.reconcilePendingTransactions();awaitResult(order,"CONFIRMATIONS_PENDING");
+            rpc("evm_mine",List.of());
             for(int i=0;i<100 && service.find(uid,rejected).state()!=ConditionalOrder.State.FAILED;i++){
                 reconciliation.reconcilePendingTransactions();service.refresh(rejected);Thread.sleep(100);
             }
             assertThat(service.find(uid,rejected).state()).isEqualTo(ConditionalOrder.State.FAILED);
             assertThat(orders.findById(order).orElseThrow().getStatus()).isEqualTo(OrderStatus.FAILED);
             assertThat(jdbc.queryForObject("SELECT count(*) FROM trades WHERE order_id=?",Long.class,order)).isZero();
-            assertThat(balances.findByUserIdAndSymbol(uid,"mKRW").orElseThrow().getLockedAmount()).isZero();
+            assertThat(balances.findByUserIdAndSymbol(uid,"mKRW").orElseThrow().getLockedAmount()).isEqualByComparingTo(lockedReview);
+            awaitResult(order,"FAILURE_SETTLED");
         }finally{rpc("anvil_setAutomine",List.of(true));}
+    }
+    void awaitResult(long order,String expected) throws Exception {
+        for(int i=0;i<150;i++){
+            var rows=jdbc.queryForList("SELECT result_code FROM blockchain_transaction_observations x JOIN blockchain_transactions t ON t.id=x.transaction_id WHERE t.order_id=?",String.class,order);
+            if(rows.size()==1&&rows.get(0).equals(expected))return;Thread.sleep(20);
+        }throw new AssertionError("Observation result not recorded: "+expected);
+    }
+    void assertObservationDoesNotMutate(long order,String expected) {
+        long tx=jdbc.queryForObject("SELECT id FROM blockchain_transactions WHERE order_id=?",Long.class,order);
+        var before=jdbc.queryForMap("SELECT status,raw_transaction,nonce,tx_hash FROM blockchain_transactions WHERE id=?",tx);
+        var assets=jdbc.queryForList("SELECT symbol,amount,locked_amount FROM user_balances WHERE user_id=? ORDER BY symbol",uid);
+        int calls=rpcRequests.get();var observation=get("/api/admin/transaction-observations/"+tx,token,200);
+        assertThat(observation.path("status").asText()).isEqualTo(expected);
+        assertThat(observation.path("conditionalState").asText()).isEqualTo("EXECUTING");
+        assertThat(observation.toString()).doesNotContain("rawTransaction","errorMessage","senderAddress","signature");
+        var actor=new com.pricetrack.exchange.auth.AuthenticatedUser(uid,"fixture",com.pricetrack.exchange.user.UserRole.ADMIN);
+        var future=new com.pricetrack.exchange.blockchain.observation.TransactionObservationService(em,observationRecorder,300,Clock.offset(Clock.systemUTC(),Duration.ofSeconds(301)));
+        var projected=new org.springframework.transaction.support.TransactionTemplate(tm).execute(s->future.detail(actor,tx));
+        assertThat(projected.get("attention")).isEqualTo("LONG_WAIT");
+        assertThat(rpcRequests.get()).isEqualTo(calls);
+        assertThat(jdbc.queryForMap("SELECT status,raw_transaction,nonce,tx_hash FROM blockchain_transactions WHERE id=?",tx)).isEqualTo(before);
+        assertThat(jdbc.queryForList("SELECT symbol,amount,locked_amount FROM user_balances WHERE user_id=? ORDER BY symbol",uid)).isEqualTo(assets);
     }
     String create(String side,String amount,String price){prices.tick();return post("/api/conditional-orders",request(side,amount,price),token,UUID.randomUUID().toString(),201).path("id").asText();}
     Map<String,?> request(String side,String amount,String price){return Map.of("symbol","mSEC","side",side,"inputAmount",amount,"targetPrice",price,"expiresAt",Instant.now().plusSeconds(3600).truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString());}
-    void settle(String id) throws Exception {for(int i=0;i<100;i++){reconciliation.reconcilePendingTransactions();service.refresh(id);if(service.find(uid,id).state()==ConditionalOrder.State.SUCCEEDED)return;Thread.sleep(100);}throw new AssertionError("Conditional settlement not successful: "+service.find(uid,id).state()+" / "+service.find(uid,id).reasonCode());}
+    void settle(String id) throws Exception {for(int i=0;i<100;i++){rpc("evm_mine",List.of());reconciliation.reconcilePendingTransactions();service.refresh(id);if(service.find(uid,id).state()==ConditionalOrder.State.SUCCEEDED)return;Thread.sleep(100);}throw new AssertionError("Conditional settlement not successful: "+service.find(uid,id).state()+" / "+service.find(uid,id).reasonCode());}
     HttpHeaders headers(String auth,String key){var h=new HttpHeaders();h.setContentType(MediaType.APPLICATION_JSON);if(auth!=null)h.setBearerAuth(auth);if(key!=null)h.set("Idempotency-Key",key);return h;}
     JsonNode post(String path,Map<String,?> body,String auth,String key,int expected){var r=http.exchange(path,HttpMethod.POST,new HttpEntity<>(body,headers(auth,key)),JsonNode.class);assertThat(r.getStatusCode().value()).as(path+" "+r.getBody()).isEqualTo(expected);return r.getBody();}
     JsonNode get(String path,String auth,int expected){var r=http.exchange(path,HttpMethod.GET,new HttpEntity<>(headers(auth,null)),JsonNode.class);assertThat(r.getStatusCode().value()).as(path).isEqualTo(expected);return r.getBody();}

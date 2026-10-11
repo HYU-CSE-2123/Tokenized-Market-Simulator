@@ -41,6 +41,12 @@ export class ApiClient {
   }
 
   observation() { return this.#request('/api/ai/observability'); }
+  transactionObservations(filters = {}) {
+    const query = new URLSearchParams();
+    for (const key of ['status','attention','cursor']) if (filters[key]) query.set(key,String(filters[key]));
+    return this.#request('/api/admin/transaction-observations'+(query.size?'?'+query:''));
+  }
+  transactionObservation(id) { return this.#request('/api/admin/transaction-observations/'+encodeURIComponent(id)); }
   startAudit() { return this.#request('/api/admin/trade-audits', { method: 'POST' }); }
   auditHistory(before = null) { return this.#request('/api/admin/trade-audits'+(before?'?before='+encodeURIComponent(before):'')); }
   auditDetail(id) { return this.#request('/api/admin/trade-audits/'+encodeURIComponent(id)); }

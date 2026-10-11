@@ -213,6 +213,18 @@ INSERT INTO assets (symbol, name, contract_address, decimals)
 VALUES ('mKRW', 'Mock Korean Won', NULL, 18)
 ON CONFLICT (symbol) DO NOTHING;
 
+-- Independent observation metadata; never modifies the transaction/asset journal.
+CREATE TABLE IF NOT EXISTS blockchain_transaction_observations (
+    transaction_id BIGINT PRIMARY KEY,
+    attempt_id VARCHAR(36) NOT NULL,
+    started_at TIMESTAMP NOT NULL,
+    finished_at TIMESTAMP NOT NULL,
+    phase VARCHAR(32) NOT NULL,
+    result_code VARCHAR(48) NOT NULL,
+    attempt_count BIGINT NOT NULL,
+    recorded_at TIMESTAMP NOT NULL
+);
+
 INSERT INTO assets (symbol, name, contract_address, decimals)
 VALUES ('mSEC', 'Samsung Electronics Price-Tracking Token', NULL, 18)
 ON CONFLICT (symbol) DO NOTHING;

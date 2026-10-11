@@ -29,6 +29,8 @@ import com.pricetrack.exchange.blockchain.contract.ContractEventParser.EventVali
 import com.pricetrack.exchange.blockchain.contract.ContractEventParser.SettlementEvent;
 import com.pricetrack.exchange.blockchain.settlement.OnchainSettlementService.SettlementConsistencyException;
 import com.pricetrack.exchange.order.OrderRepository;
+import com.pricetrack.exchange.blockchain.observation.ObservationRecorder;
+import com.pricetrack.exchange.blockchain.observation.ObservationRecorder.Result;
 
 /**
  * DB에 남은 미완료 트랜잭션과 체인의 실제 상태를 주기적으로 일치시킨다.
@@ -53,6 +55,7 @@ public class BlockchainReconciliationService {
     private final OnchainSettlementService settlementService;
     private final OraclePriceSettlementService oraclePriceSettlementService;
     private final Web3j web3j;
+    private final ObservationRecorder observations;
 
     public BlockchainReconciliationService(BlockchainProperties properties,
             BlockchainReconciliationProperties reconciliationProperties,
@@ -60,7 +63,7 @@ public class BlockchainReconciliationService {
             BlockchainTransactionSender transactionSender, OrderRepository orderRepository,
             ContractEventParser eventParser,
             OnchainSettlementService settlementService,
-            OraclePriceSettlementService oraclePriceSettlementService, Web3j web3j) {
+            OraclePriceSettlementService oraclePriceSettlementService, Web3j web3j, ObservationRecorder observations) {
         this.properties = properties;
         this.reconciliationProperties = reconciliationProperties;
         this.transactionRepository = transactionRepository;
@@ -70,6 +73,7 @@ public class BlockchainReconciliationService {
         this.settlementService = settlementService;
         this.oraclePriceSettlementService = oraclePriceSettlementService;
         this.web3j = web3j;
+        this.observations = observations;
     }
 
     /**
@@ -84,22 +88,34 @@ public class BlockchainReconciliationService {
         List<BlockchainTransaction> pending = transactionRepository.findAllByStatusInOrderByCreatedAtAsc(
                 List.of(BlockchainTransactionStatus.SIGNED, BlockchainTransactionStatus.SUBMITTED));
         for (BlockchainTransaction transaction : pending) {
+            java.time.Instant started = null;
+            try { started = observations.start(); }
+            catch (RuntimeException ignored) { /* Observability cannot prevent recovery. */ }
+            var phase = transaction.getStatus() == BlockchainTransactionStatus.SIGNED
+                    ? ObservationRecorder.Phase.SIGNED_RECOVERY : ObservationRecorder.Phase.RECEIPT_CHECK;
+            Result result = Result.ATTEMPT_UNAVAILABLE;
             try {
                 if (transaction.getStatus() == BlockchainTransactionStatus.SIGNED) {
                     transactionSender.recoverSigned(transaction);
+                    result = Result.SUBMISSION_RECORDED;
                 } else {
-                    reconcileSubmitted(transaction);
+                    result = reconcileSubmitted(transaction);
                 }
             } catch (EventValidationException | SettlementConsistencyException exception) {
                 log.error("Onchain settlement requires review: txHash={}", transaction.getTxHash(), exception);
                 settlementService.markReviewRequired(transaction.getId(), exception.getMessage());
+                result = Result.REVIEW_REQUIRED;
             } catch (RuntimeException exception) {
                 log.warn("Onchain reconciliation will retry: txHash={}", transaction.getTxHash(), exception);
+            } finally {
+                // Best-effort metadata must not replace a recovery/settlement exception or add RPC calls.
+                try { if (started != null) observations.record(transaction.getId(), started, phase, result); }
+                catch (RuntimeException ignored) { /* Observation is not a settlement authority. */ }
             }
         }
     }
 
-    void reconcileSubmitted(BlockchainTransaction transaction) {
+    Result reconcileSubmitted(BlockchainTransaction transaction) {
         try {
             var response = web3j.ethGetTransactionReceipt(transaction.getTxHash()).send();
             if (response.hasError()) {
@@ -107,9 +123,9 @@ public class BlockchainReconciliationService {
                         "receipt 조회 실패: " + response.getError().getMessage());
             }
             // receipt가 없거나 confirmation이 부족한 것은 실패가 아니라 아직 대기 중인 상태다.
-            if (response.getTransactionReceipt().isEmpty()) return;
+            if (response.getTransactionReceipt().isEmpty()) return Result.RECEIPT_NOT_FOUND;
             TransactionReceipt receipt = response.getTransactionReceipt().get();
-            if (!hasRequiredConfirmations(receipt)) return;
+            if (!hasRequiredConfirmations(receipt)) return Result.CONFIRMATIONS_PENDING;
 
             long blockNumber = receipt.getBlockNumber().longValueExact();
             // EVM 실행 실패에는 신뢰할 이벤트 결과가 없으므로 성공 정산 경로로 들어가지 않는다.
@@ -121,19 +137,20 @@ public class BlockchainReconciliationService {
                     settlementService.settleFailure(transaction.getId(), blockNumber,
                             "온체인 receipt status가 실패입니다: " + receipt.getStatus());
                 }
-                return;
+                return Result.FAILURE_SETTLED;
             }
             // 시스템 가격 갱신과 사용자 주문은 연결된 DB 원장이 달라 별도 정산 서비스로 보낸다.
             if (transaction.getType() == BlockchainTransactionType.UPDATE_PRICE) {
                 var event = eventParser.parsePriceUpdated(receipt, properties.priceOracleAddress(),
                         requiredTargetValue(transaction));
                 oraclePriceSettlementService.confirm(transaction.getId(), event, blockNumber);
-                return;
+                return Result.SUCCESS_SETTLED;
             }
             SettlementEvent event = eventParser.parse(receipt, transaction.getType(),
                     properties.exchangeVaultAddress(), transaction.getSenderAddress(),
                     expectedInput(transaction));
             settlementService.settleSuccess(transaction.getId(), event, blockNumber);
+            return Result.SUCCESS_SETTLED;
         } catch (IOException exception) {
             throw new BlockchainConfigurationException("receipt polling RPC 호출에 실패했습니다.", exception);
         } catch (ArithmeticException exception) {

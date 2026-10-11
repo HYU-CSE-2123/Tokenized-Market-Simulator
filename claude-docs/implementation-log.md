@@ -1,5 +1,12 @@
 # 구현 로그 — Phase 0: 모노레포 뼈대
 
+## 2026-10-12: SIGNED/SUBMITTED 거래 정체 관측 — 검증 진행 중
+
+- 승인 범위①+②: ADMIN DB 조회, 기본300초 LONG_WAIT, 마지막 완료 복구 시도 best-effort snapshot. 상태/잠금/nonce/raw/재전송/Receipt 정책과 기존 AI Tool은 유지.
+- 구현 위치·API·resource budget·실패 증거·실제 검증·한계는 [관측 구현 기록](transaction-stall-observability-implementation.md)에 기록한다. 아직 feature commit/통합 완료로 처리하지 않는다.
+- Sepolia는 별도 최초 고정 공급 A안 방향 확정, S0/O0/V0/실제 구현·배포는 승인 대기. 컨트랙트나 기존 acceptance/개발 환경 변경 없음.
+- 독립 검토 1차: 발견된 필수 수정 없음. 직접 신규 웹6/6 및 diff-check 확인, 실제 PG/Anvil·별도 JVM·전체 회귀는 구현자 실행 결과를 추가로 확인해야 한다.
+
 > 단일 출처: 리포 루트 `구현 계획.md`. 본 문서는 **실제로 구축된 코드 상태**를 기록한다.
 > 작성: 2026-06-22 (Phase 0 모노레포 뼈대 완료 시점)
 
