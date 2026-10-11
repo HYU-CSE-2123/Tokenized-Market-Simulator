@@ -1,6 +1,6 @@
 # Tokenized Market — 제품형 모의 거래 웹
 
-Oracle 가격 조건부 주문 UI는 별도 기능 브랜치에서 검증 중입니다. 시장 화면의 조건부 BUY/SELL 입력·목표 가격·만료·본인 이력·취소·실행 Order 연결과 ADMIN 읽기 이력을 제공합니다. 대기 중 자산은 예약되지 않으며 조건 충족은 체결 보장이 아닙니다. public Synthetic에서는 등록 비활성입니다. [구현/검증 기록](../../claude-docs/oracle-conditional-orders-implementation.md)과 [클라이언트 계약](../../claude-docs/conditional-orders-android-integration.md)을 따릅니다.
+Oracle 가격 조건부 주문 UI는 통합 브랜치에 반영하고 웹77개 및 Chrome desktop/mobile fixture 검증을 완료했습니다. 시장 화면의 조건부 BUY/SELL 입력·목표 가격·만료·본인 이력·취소·실행 Order 연결과 ADMIN 읽기 이력을 제공합니다. 대기 중 자산은 예약되지 않으며 조건 충족은 체결 보장이 아닙니다. public Synthetic에서는 등록 비활성입니다. [구현/검증 기록](../../claude-docs/oracle-conditional-orders-implementation.md)과 [클라이언트 계약](../../claude-docs/conditional-orders-android-integration.md)을 따릅니다. 실제 Toss 장중 웹 인수는 아직 하지 않았습니다.
 
 Faucet 정책 UI를 integration/additional-features에 반영했습니다. 사용자별 pending key를 보존하고 응답 유실 시 같은 요청 결과를 확인하며, ADMIN은 지급 정책·예산·계정별 이력을 읽기만 합니다. [구현·실제 검증 상태](../../claude-docs/faucet-policy-implementation.md)와 [Android 전달 계약](../../claude-docs/faucet-android-integration.md)을 참고하세요. Android 코드를 수정하거나 실제 Toss/AI 인수를 실행한 것은 아닙니다.
 

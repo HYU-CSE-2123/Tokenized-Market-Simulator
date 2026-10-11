@@ -1,6 +1,6 @@
 # Oracle 가격 조건부 주문 — 구현·검증 기록
 
-> 2026-10-12 / feat/oracle-conditional-orders / 기준 integration/additional-features 0a3b67e. 기능 구현·전체 회귀·독립 재검토 완료, 통합 병합/병합 회귀 대기. 기존 acceptance/dev 환경은 보존한다.
+> 2026-10-12 최종 / 기능 구현·독립 재검토·integration/additional-features 병합 및 병합 소스 신규 회귀 완료. 기준0a3b67e, 기능c413079, 병합d8dea3e. 기존 acceptance/dev 환경은 보존한다.
 
 ## 실행 의미
 
@@ -57,3 +57,22 @@ WAITING → PREPARING → EXECUTING → SUCCEEDED / FAILED / REVIEW_REQUIRED. �
 공통 UTC 설정 이후 또 다른 새 격리 PG/Anvil에서 **H214/14 + 실제 E2E1/1 PASS(15개/skip0)**, BUILD SUCCESSFUL을 확인했다. 해당 fixture의 PostgreSQL 세션 설정과 실제 서명/채굴/정산·두 대사 호환을 최종 제품 소스에서 재검증한 결과다. 전체452 회귀 XML과 이 E2E XML은 별도 비공개 경로로 보존했고 해당 새 컨테이너 두 개만 정지했다. 데이터·chain state는 보존했다.
 
 병합 회귀 및 기능/통합 커밋은 아직 남아 있다. 실제 Toss 장중·유료 AI·AWS·Sepolia·Android·장시간 중단/다중 프로세스·운영 부하는 실행하지 않는다. 기존 acceptance DB/chain/runtime을 변경/배포하지 않는다. 최종 Toss/AI 인수는 전체 추가 기능 개발 이후 신규 acceptance에서 진행한다.
+
+## 최종 통합 결과 (2026-10-12)
+
+위 진행 중 문구는 각각의 실행 시점 기록이다. 최종 구현과 병합 검증은 아래와 같이 완료했다.
+
+- 기능 커밋: `c4130798a6e62c3f16addad726fde0c421793f32` (`feat/oracle-conditional-orders`). 안전 소스·문서37파일만 포함했다. 기능 worktree는 clean이다.
+- 병합 커밋: `d8dea3e4cff38ce214b6365d6071e451e482b7b9` (`integration/additional-features`). 충돌0, 병합 직후 기능 HEAD와 tree diff0. 원본 melon-init에는 병합하지 않았다.
+- **병합 소스 새 실행**: backend `test --offline --no-daemon --rerun-tasks` **452개/418 PASS/34 SKIP/실패·오류0**, Gradle BUILD SUCCESSFUL. 웹 `npm test` **77/77 PASS**, `npm run test:browser` Vite94 modules 및 Chrome desktop/mobile REST/STOMP fixture PASS. Foundry `forge test --offline -vv` **36/36 PASS/skip0**.
+- 또 다른 신규 격리 PostgreSQL/Anvil에서 `CONDITIONAL_E2E_TESTS=true`로 `conditional.*`를 재실행해 **H214/14 + 실제 PG/Anvil E2E1/1 PASS**, 실패·skip0. 실제 E2E의 BUY/SELL 서명 실행·동시 등록/worker·취소 경쟁·raw 응답 유실 동일 거래 복구·PREPARING 재시작·만료·실패 receipt·Faucet 및 장부/전수 대사 MATCH를 최종 통합 소스에서 확인했다. 하나의 E2E 안에 여러 시나리오가 있고 별도 테스트 수로 합산하지 않는다. 이 H214는 전체418에 중복 포함되므로 총 고유 테스트처럼 합산하지 않는다.
+- 전체 회귀 XML과 E2E XML은 각각 비공개 runtime에 보존했다. 테스트 종료 후 해당 신규 컨테이너 두 개만 정지했고 DB/chain 데이터를 삭제·초기화하지 않았다. acceptance/기존 개발 환경은 참조하거나 재사용하지 않았다.
+- 최종 통합 소스37파일과 새 통합 fixture 비밀값3개 대조0hit. 기능 단계 생성 비밀값15개 대조0hit, 금지 산출물0, diff check PASS. 실제 .env·키·DB dump·chain state·runtime·로그·빌드 결과는 Git에 포함하지 않았다.
+
+### 검증 한계와 다음 조건
+
+전체 실행의34 SKIP는 실제 통과가 아니다. 기존31 opt-in(AI 실제 provider/AI DB/도구·기존 체인·시장·quote·거래 전수 대사 fixture 등)에 Faucet/standaloneReserve/Conditional PG 테스트3개가 추가된 값이다. 이번에는 Conditional PG만 별도로 실제 실행했으며 나머지를 재실행했다고 보고하지 않는다. 두 대사의 이번 호환 확인은 Conditional 실제 E2E 안의 실행 결과이지 각 standalone suite 전체 재실행이 아니다.
+
+Chrome은 fixture이며 실제 브라우저→Toss→Anvil 종단간 인수가 아니다. 개인 WS는 별도의 실제 STOMP broker 사용자 격리와 H2 AFTER_COMMIT/rollback 테스트로 확인했다. Android 접근은 확인했지만 수정·빌드·실기기 검증하지 않았다. 실제 Toss 장중, 유료 AI, AWS/Sepolia, 장기간 대기·부하·다중 프로세스, 기존 데이터 migration은 미실행/미검증이다. 새 조건부 실행은 기본 비활성이고 공개 Synthetic에서는 허용하지 않는다.
+
+최종 인수는 추가 기능 완료 후 최신 통합 버전으로 신규 격리 환경에서 수행한다. 보존 중인 acceptance DB/Anvil/runtime과 원본 melon-init `b7cb0f0ed8fd936e73733a6d2f167efe4a951a63` clean 상태는 유지한다. Google 로그인·이메일 인증, 사용자 지갑·분산 nonce·준비금 증명 확장·Sepolia는 완료한 기능으로 취급하지 않으며 별도 설계/승인이 필요하다.

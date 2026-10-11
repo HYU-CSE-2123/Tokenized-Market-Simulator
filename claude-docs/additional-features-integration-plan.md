@@ -1,6 +1,6 @@
 # 추가 기능 통합 개발 계획
 
-> 후속 사용자 지시: Faucet 최종 통합0a3b67e 다음 작업은 Oracle 가격 조건부 BUY/SELL이다. feat/oracle-conditional-orders에서 개발·검증 중이며 [구현 기록](oracle-conditional-orders-implementation.md)을 따른다. 이는 사용자 간 지정가 호가 매칭이나 시간 지정 예약 기능의 완료를 의미하지 않는다. Google 인증·사용자 지갑 등 나머지 범위는 계속 남아 있다.
+> 후속 사용자 지시: Faucet 최종 통합0a3b67e 이후 Oracle 가격 조건부 BUY/SELL을 구현했고2026-10-12 병합d8dea3e 및 새 통합 회귀를 완료했다. [구현 기록](oracle-conditional-orders-implementation.md)을 따른다. 이는 사용자 간 지정가 호가 매칭이나 시간 지정 예약 기능의 완료를 의미하지 않는다. Google 인증·사용자 지갑 등 나머지 범위는 계속 남아 있다.
 
 > 2026-10-11 갱신. 준비금 대사·거래 전수 대사·Faucet 정책의 기능 및 통합 회귀 완료. 나머지 추가 기능은 개별 설계/구현 승인이 필요하다.
 

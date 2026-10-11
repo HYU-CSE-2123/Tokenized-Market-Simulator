@@ -2518,3 +2518,10 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 수정 후 새 실제 PostgreSQL/Anvil E2E1PASS, 웹77PASS·Vite94·Chrome desktop/mobile fixture PASS, Foundry36PASS. 당시 H2 준비13실패 및 이어진 전체452 중4실패는 UTC/KST 날짜 경계의 테스트 시간대 문제였다. 실패 XML을 보존했고 제품 Faucet/운영 DB는 수정하지 않았다. 테스트 Hikari UTC 보완 후 전체 **452개/418PASS/34SKIP/실패0**, BUILD SUCCESSFUL.
 - 첫 재검토 **발견된 필수 수정 없음**. 검토자는 패널11개를 직접 실행하고 전체XML106파일/452개 및 실제PG 성공/실패XML·최신diff·문서를 확인했다. 공통 test UTC는 PG opt-in에도 상속되므로 새 격리PG 재검증과 병합 source 회귀는 별도로 진행한다. skip·Toss/AI/Android/운영 미검증은 그대로 유지한다.
 - 공통UTC 적용 후 또 다른 새 PG/Anvil fixture에서 H214+실제E2E1 **15/15PASS/skip0**. 전체452 XML과 실제 실행XML은 구분해 비공개 보존하고 새 컨테이너 두 개만 정지했다. 최종 source 후보37파일/생성secret15개 대조0hit/금지파일0/diff check PASS. 기능 commit·병합 후 새 통합 회귀는 다음 기록에서 확정한다.
+
+# Oracle 조건부 주문 — 통합 및 신규 최종 회귀 완료 (2026-10-12)
+
+- 기능 `c4130798a6e62c3f16addad726fde0c421793f32` → 통합 merge `d8dea3e4cff38ce214b6365d6071e451e482b7b9`, 충돌0/tree diff0. 원본melon-init b7cb0f0 clean 유지, acceptance/devDB·Anvil·실제.env/runtime 변경/merge/배포 없음.
+- **병합 최종 source 새 실행**: backend452개418PASS/34SKIP/실패0, 웹77PASS/Vite94/Chrome desktop+mobile REST/STOMP fixture PASS, Foundry36PASS. 또 다른 새 격리PG/Anvil에서 H214+실제E2E1=15/15PASS/skip0. 실제 서명BUY/SELL·동시/취소·raw응답유실/재시작·실패receipt/잠금해제 및 Faucet/장부대사/전수대사 MATCH 확인. 실행별 중복 테스트는 고유총수로 합산하지 않는다.
+- 독립 첫 재검토 **발견된 필수 수정 없음**. 검토 이후 제품 소스변경 없음. 초기 실패 및 UTC보완 범위, 개별suite 미실행/34skip/실제Toss·AI·Android·운영 미검증을 [최종 보고서](oracle-conditional-orders-implementation.md)에 유지한다. 전체/E2E XML·새DB/state는 비공개보존, 해당fixture 두 컨테이너만 정지했다.
+- 통합 소스37파일/새 fixture secret3개 대조0hit, 이전기능secret15개 대조0hit, 실제.env/DBdump/chain/runtime/로그/산출물 Git포함0. 마지막 문서 갱신은 검증 결과·완료 상태 기록만 하며 동작을 바꾸지 않는다. 다음 Google인증/이메일 기능은 별도 설계·외부사용 승인 이후 착수한다.

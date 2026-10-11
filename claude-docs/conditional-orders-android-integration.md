@@ -1,6 +1,6 @@
 # 조건부 주문 클라이언트 계약
 
-> 진행 중인 기능 브랜치 계약. 기존 즉시 주문 API는 변경하지 않는다. Android `android/app/src/main/java/com/pricetrack/exchange/data/remote/ApiServices.kt`를 읽어 접근 가능함을 확인했지만 이번에 수정·빌드·실기기 검증하지 않았다.
+> integration/additional-features에 통합된 조건부 주문 계약(2026-10-12). 기존 즉시 주문 API는 변경하지 않는다. Android `android/app/src/main/java/com/pricetrack/exchange/data/remote/ApiServices.kt`를 읽어 접근 가능함을 확인했지만 이번에 수정·빌드·실기기 검증하지 않았다.
 
 - 모든 사용자 경로는 JWT가 필요하다. 대상 사용자 ID는 받지 않는다. 금액·가격은 정확한 decimal 문자열을 권장한다.
 - `GET /api/conditional-orders/capabilities`: `registrationEnabled`. 비활성이면 등록 UI를 닫되 이력 조회는 유지한다.
