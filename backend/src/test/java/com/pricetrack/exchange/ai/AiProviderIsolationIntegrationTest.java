@@ -27,7 +27,7 @@ class AiProviderIsolationIntegrationTest {
         when(provider.embed(any())).thenThrow(new AiFailure("AI_PROVIDER_UNAVAILABLE"));
         assertThatThrownBy(() -> rag.search(AiFixtures.ADMIN,"견적 정책")).hasMessage("AI_PROVIDER_UNAVAILABLE");
         User user=new User();user.setLoginId("ai-provider-"+System.nanoTime());user.setNickname("Provider isolation");
-        user=users.saveAndFlush(user);wallets.initializeBalances(user.getId());wallets.faucet(user.getId());
+        user=users.saveAndFlush(user);wallets.initializeBalances(user.getId());wallets.faucet(user.getId(), java.util.UUID.randomUUID().toString());
         assertThat(orders.buy(user.getId(),"mSEC",new BigDecimal("10000"),null).getStatus().name()).isEqualTo("FILLED");
         var result = tools.invoke(new com.pricetrack.exchange.auth.AuthenticatedUser(user.getId(),user.getLoginId(),UserRole.USER),
                 "getPortfolio", "{\"arguments\":{}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));

@@ -84,8 +84,17 @@ export class ApiClient {
     return this.#request(`/api/markets/mSEC/candles?${query}`);
   }
 
-  faucet() {
-    return this.#request('/api/wallet/faucet', { method: 'POST' });
+  faucet(key) {
+    return this.#request('/api/wallet/faucet', { method: 'POST', headers: { 'Idempotency-Key': key } });
+  }
+  faucetStatus() { return this.#request('/api/wallet/faucet/status'); }
+  faucetClaim(key) { return this.#request('/api/wallet/faucet/claims', { headers: { 'Idempotency-Key': key } }); }
+  faucetGrants(before=null) { return this.#request('/api/wallet/faucet/grants'+(before?'?before='+encodeURIComponent(before):'')); }
+  faucetAdmin() { return this.#request('/api/admin/faucet'); }
+  faucetAdminAccount(userId) { return this.#request('/api/admin/faucet/accounts/'+encodeURIComponent(userId)); }
+  faucetAdminGrants(userId=null,before=null) {
+    const query=new URLSearchParams();if(userId)query.set('userId',userId);if(before)query.set('before',before);
+    return this.#request('/api/admin/faucet/grants'+(query.size?'?'+query:''));
   }
 
   portfolio() {

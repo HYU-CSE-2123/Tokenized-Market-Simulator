@@ -34,7 +34,7 @@ class WalletWebSocketIntegrationTest {
         ArgumentCaptor<PortfolioEventPayload> payload =
                 ArgumentCaptor.forClass(PortfolioEventPayload.class);
 
-        walletService.faucet(user.getId());
+        walletService.faucet(user.getId(), java.util.UUID.randomUUID().toString());
 
         verify(eventPublisher).publishToUser(
                 eq(user.getId()),

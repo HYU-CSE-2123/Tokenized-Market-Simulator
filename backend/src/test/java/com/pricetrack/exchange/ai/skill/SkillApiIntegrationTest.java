@@ -57,7 +57,7 @@ class SkillApiIntegrationTest {
         assertThat(own.path("skill").path("id").asText()).isEqualTo("signed-quote-diagnosis");
         assertThat(orders.findById(order.getId()).orElseThrow().getStatus()).isEqualTo(OrderStatus.PENDING_ONCHAIN);
         assertThat(quotes.findById(quoteId).orElseThrow().getStatus()).isEqualTo(PriceQuoteStatus.ISSUED);
-        verifyNoInteractions(model);wallets.initializeBalances(other.getId());wallets.faucet(other.getId());
+        verifyNoInteractions(model);wallets.initializeBalances(other.getId());wallets.faucet(other.getId(), java.util.UUID.randomUUID().toString());
         assertThat(trading.buy(other.getId(),"mSEC",new BigDecimal("1000"),null).getStatus()).isEqualTo(OrderStatus.FILLED);
     }
     @Test void damagedLinkAndUntrustedProcedureParametersCannotExpandLookup()throws Exception{

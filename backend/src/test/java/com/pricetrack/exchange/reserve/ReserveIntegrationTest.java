@@ -32,8 +32,9 @@ class ReserveIntegrationTest {
     @Autowired JdbcTemplate jdbc; @Autowired PlatformTransactionManager transactions;
     @MockBean ReserveChainReader reader;
     @BeforeEach void setup() {
-        for(String table:List.of("reserve_runs","reserve_baselines","faucet_grants","trades","blockchain_transactions","orders","user_balances"))
+        for(String table:List.of("faucet_claims","faucet_account_usage","reserve_runs","reserve_baselines","faucet_grants","trades","blockchain_transactions","orders","user_balances"))
             jdbc.update("DELETE FROM "+table);
+        jdbc.update("UPDATE faucet_budget_usage SET grant_count=0,spent=0");
         when(reader.head()).thenReturn(ReserveServiceTest.BLOCK); when(reader.canonical(any())).thenReturn(true);
         when(reader.read(any())).thenReturn(ReserveServiceTest.INITIAL);
     }
@@ -56,10 +57,11 @@ class ReserveIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].status").value("MATCH"));
     }
     @Test void faucetEvidenceCommitsAndRollsBackWithBalance() {
-        wallet.initializeBalances(42L); wallet.faucet(42L);
-        assertThat(grants.count()).isEqualTo(1);
+        wallet.initializeBalances(42L);
         var tx=new TransactionTemplate(transactions);
-        tx.executeWithoutResult(s->{ wallet.faucet(42L); s.setRollbackOnly(); });
+        tx.executeWithoutResult(s->{ wallet.faucet(42L, java.util.UUID.randomUUID().toString()); s.setRollbackOnly(); });
+        assertThat(grants.count()).isZero();
+        wallet.faucet(42L, java.util.UUID.randomUUID().toString());
         assertThat(grants.count()).isEqualTo(1);
         assertThat(balances.findByUserIdAndSymbol(42L,"mKRW").orElseThrow().getAmount()).isEqualByComparingTo("1000000");
     }
@@ -68,7 +70,7 @@ class ReserveIntegrationTest {
         assertThat(annotation.readOnly()).isTrue();
         assertThat(annotation.isolation()).isEqualTo(org.springframework.transaction.annotation.Isolation.REPEATABLE_READ);
         assertThat(annotation.propagation()).isEqualTo(org.springframework.transaction.annotation.Propagation.REQUIRES_NEW);
-        service.createBaseline(1); wallet.initializeBalances(42L); wallet.faucet(42L);
+        service.createBaseline(1); wallet.initializeBalances(42L); wallet.faucet(42L, java.util.UUID.randomUUID().toString());
         var before=store.cut(); assertThat(before.grants()).hasSize(1);
         var result=service.run(1); assertThat(result.status()).isEqualTo("MATCH");
         assertThat(store.cut().balances()).isEqualTo(before.balances());

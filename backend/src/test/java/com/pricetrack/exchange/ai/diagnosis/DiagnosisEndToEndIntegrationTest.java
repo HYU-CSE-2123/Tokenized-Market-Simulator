@@ -92,7 +92,7 @@ class DiagnosisEndToEndIntegrationTest {
     }
     @Test void mockTradingLatencyRemainsIndependentOfUnavailableAutomaticAiDatabase()throws Exception{
         User user=new User();user.setLoginId("bench"+UUID.randomUUID().toString().replace("-","").substring(0,15));user.setNickname("test");user.setRole(UserRole.ADMIN);user=users.saveAndFlush(user);
-        long uid=user.getId();wallets.initializeBalances(uid);wallets.faucet(uid);
+        long uid=user.getId();wallets.initializeBalances(uid);wallets.faucet(uid, java.util.UUID.randomUUID().toString());
         var pending=orders.saveAndFlush(ToolFixtures.order(uid));var tx=ToolFixtures.tx(pending.getId());tx.setTxHash("0x"+UUID.randomUUID().toString().replace("-","").repeat(2));tx.setNonce(System.nanoTime());tx=txs.saveAndFlush(tx);
         List<Double> baseline=new ArrayList<>(),unavailable=new ArrayList<>();
         try{

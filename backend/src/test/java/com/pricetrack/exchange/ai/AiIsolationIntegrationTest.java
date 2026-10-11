@@ -39,7 +39,7 @@ class AiIsolationIntegrationTest {
         mvc.perform(post("/api/ai/index").with(authentication(auth(UserRole.ADMIN))))
                 .andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.code").value("AI_DATABASE_UNAVAILABLE"));
         User user=new User();user.setLoginId("ai-isolation-"+System.nanoTime());user.setNickname("AI isolation");
-        user=users.saveAndFlush(user);wallets.initializeBalances(user.getId());wallets.faucet(user.getId());
+        user=users.saveAndFlush(user);wallets.initializeBalances(user.getId());wallets.faucet(user.getId(), java.util.UUID.randomUUID().toString());
         assertThat(orders.buy(user.getId(),"mSEC",new BigDecimal("10000"),null).getStatus().name()).isEqualTo("FILLED");
         mvc.perform(get("/api/health")).andExpect(status().isOk());
         mvc.perform(get("/api/markets")).andExpect(status().isOk());

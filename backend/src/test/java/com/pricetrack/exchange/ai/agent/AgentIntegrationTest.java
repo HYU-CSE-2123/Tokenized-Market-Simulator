@@ -115,7 +115,7 @@ class AgentIntegrationTest {
         when(model.plan(any(),any(),any())).thenThrow(new RuntimeException("SECRET_PROVIDER"));
         var result=call(alice,orderBody(),200);assertThat(result.path("status").asText()).isEqualTo("PARTIAL");
         assertThat(result.toString()).doesNotContain("SECRET_RPC_MESSAGE","SECRET_AI_PASSWORD","SECRET_PROVIDER");assertThat(snapshot()).isEqualTo(before);
-        wallets.initializeBalances(bob.getId());wallets.faucet(bob.getId());assertThat(trading.buy(bob.getId(),"mSEC",new BigDecimal("1000"),null).getStatus()).isEqualTo(OrderStatus.FILLED);
+        wallets.initializeBalances(bob.getId());wallets.faucet(bob.getId(), java.util.UUID.randomUUID().toString());assertThat(trading.buy(bob.getId(),"mSEC",new BigDecimal("1000"),null).getStatus()).isEqualTo(OrderStatus.FILLED);
     }
     @Test void allFailedDependenciesWithoutFactsReturnSafe503()throws Exception{
         when(model.plan(any(),any(),any())).thenThrow(new RuntimeException("SECRET_PROVIDER"));
