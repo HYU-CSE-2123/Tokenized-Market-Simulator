@@ -30,6 +30,8 @@ server:
 
 # 애플리케이션 커스텀 설정
 app:
+  faucet:
+    policy-version: ${FAUCET_POLICY_VERSION:kst-v1}
   trade-audit:
     enabled: ${TRADE_AUDIT_ENABLED:false}
     max-rpc-calls: ${TRADE_AUDIT_MAX_RPC_CALLS:500}

@@ -131,5 +131,5 @@ class SyntheticMarketPostgresAnvilE2ETest {
         var result = http.exchange(path, HttpMethod.POST, new HttpEntity<>(body, headers(token)), JsonNode.class);
         assertThat(result.getStatusCode().value()).as("%s: %s", path, result.getBody()).isEqualTo(status); return result.getBody();
     }
-    private HttpHeaders headers(String token) { var h = new HttpHeaders(); h.setContentType(MediaType.APPLICATION_JSON); if (token != null) h.setBearerAuth(token); return h; }
+    private HttpHeaders headers(String token) { var h = new HttpHeaders(); h.setContentType(MediaType.APPLICATION_JSON); h.set("Idempotency-Key",java.util.UUID.randomUUID().toString()); if (token != null) h.setBearerAuth(token); return h; }
 }

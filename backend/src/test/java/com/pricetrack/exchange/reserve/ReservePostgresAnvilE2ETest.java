@@ -96,7 +96,9 @@ class ReservePostgresAnvilE2ETest {
         assertThat(store.cut().orders()).isEqualTo(before.orders());
         assertThat(context.getBean(ReserveChainReader.class).head()).isEqualTo(head);
         // Real separate JDBC writer commits after the first DB cut, while chain reads are gated in the test only.
-        concurrentCutChange(user,()->wallet.faucet(user));
+        post("/api/auth/signup",Map.of("loginId","reserve_faucet_writer","password","fixture-only-password","nickname","Faucet writer"),null,201);
+        long writer=jdbc.queryForObject("SELECT id FROM users WHERE login_id='reserve_faucet_writer'",Long.class);
+        concurrentCutChange(user,()->wallet.faucet(writer, java.util.UUID.randomUUID().toString()));
         assertThat(reserve.run(user).status()).isEqualTo("MATCH");
         long tradeId=jdbc.queryForObject("SELECT min(id) FROM trades",Long.class);
         var previous=jdbc.queryForObject("SELECT created_at FROM trades WHERE id=?",java.sql.Timestamp.class,tradeId);
@@ -155,6 +157,7 @@ class ReservePostgresAnvilE2ETest {
     private JsonNode post(String path,Map<String,?> body,String token,int status) {
         var headers=new HttpHeaders(); headers.setContentType(MediaType.APPLICATION_JSON);
         if(token!=null) headers.setBearerAuth(token);
+        if(path.equals("/api/wallet/faucet"))headers.set("Idempotency-Key",UUID.randomUUID().toString());
         var response=http.exchange(path,HttpMethod.POST,new HttpEntity<>(body,headers),JsonNode.class);
         assertThat(response.getStatusCode().value()).as(path).isEqualTo(status); return response.getBody();
     }

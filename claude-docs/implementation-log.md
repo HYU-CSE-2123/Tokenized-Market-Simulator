@@ -2474,3 +2474,17 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 그 후 새 전체backend **427개/395PASS/32SKIP/0FAIL/0ERROR**, 웹61/61·Vite92·Chrome desktop/mobile fixture PASS, Foundry36/36 PASS. 기존31 opt-in 미실행 및 별도 실행 PASS 감사1을 구분한다. 테스트 XML은 전용 private runtime에 보존한다.
 - 독립 읽기 전용 검토: 발견된 필수 수정 없음. 검토자 테스트 재실행으로 표현하지 않는다. 실제 Toss/AI/AWS·최종 제품 인수·운영 부하 등 미검증 유지. 보존 acceptance/dev 환경은 변경하지 않았다.
 - [Faucet 정책 설계](faucet-policy-design.md) 제출: 현행1,000,000 DB 지급·무제한 반복과 새 제안을 구분했다. 기간별 정액+계정/전역 한도, 성공 멱등 claim·짧은 DB lock/원자 commit, ADMIN 읽기 전용 관측을 제안한다. 정책 숫자·기간·key 계약은 미승인, 관련 제품 기능 미구현. raw key URL 제외와 기간/timezone 변경 별도 migration 승인 경계를 반영했다.
+
+# Faucet 정책 고도화 — 구현/격리 검증 진행 중 (2026-10-11)
+
+- 사용자 최종 승인:1회100만, KST일1회, 계정누적5회, 전체누적5천만, 기간예산/cooldown 없음, 필수멱등키, 기존인증계정, ADMIN읽기 전용. 최신 통합6720b4a에서 별도 feat/faucet-policy worktree 생성. 기존 거래 전수 대사/고아 Quote 통합·실제 검증은 이전 완료 기록으로 확인했다.
+- wallet/faucet의 고정 정책·JDBC quota/budget/claim·불변 version·전체 journal 비교·after-lock DBclock, 기존 mKRW row lock/AFTER_COMMIT WS를 구현했다. 기존 직접 지급 테스트를 필수 key 계약으로 변경했다. 웹 정책·이력·응답 유실 복구·ADMIN 관측과 Android 전달 문서를 추가했다. Android 코드는 접근했지만 변경하지 않았다.
+- 실행별 성공/실패·정확한 수치와 최종 미완료 범위는 [Faucet 구현 기록](faucet-policy-implementation.md)에 유지한다. 최초 전체436개에서 JSON 숫자 표현 assertion1 실패는 기존 scale 보존으로 수정했고 후속436개403PASS/33SKIP/실패0이었다. 그 뒤 수정이 있어 마지막 source 전체 회귀는 별도로 확정한다.
+- 새 전용 PostgreSQL/Anvil 준비는 Docker Linux engine _pingHTTP500으로 network 생성 전 실패했다. 기존 dev/acceptance로 대체하거나 Docker 전체 재시작/데이터 삭제를 하지 않았다. 실제 PG 동시성/Anvil E2E를 미실행 상태로 유지한다. 검증 완료 featurecommit/통합 merge는 아직 하지 않았고 외부Toss/유료AI/AWS도 사용하지 않았다.
+
+# Faucet 정책 고도화 — 기능 실제 검증·독립 재검토 완료 (2026-10-11 후속)
+
+- 위 미실행/미완료 문구는 최초 실패 시점의 기록이다. 이후 Docker engine 정상 응답 확인 후 새 fixture에서 Faucet9/9PASS(단위3/H2계약5/실제PGAnvil1), 별도 새 fixture 대사80개79PASS/1SKIP/실패0을 실행했다. 데이터는 보존하고 해당 컨테이너만 정지했다. 기존 DB/state 재사용·초기화나 engine 재시작은 없다.
+- 실제 DB 행 잠금·동일/다른 키·자정 대기·마지막 예산 경쟁·rollback·version/replay·계정5회/전역50m·회계/설정 차단, 실제BUY/SELL 경합과 잠금/REVIEW_REQUIRED 불변, 온체인 불변 및 두 대사 MATCH를 확인했다. 자정은 테스트 전용 DB fixture clock이며 실제 장기 대기가 아니다.
+- 웹 최종66/66PASS·Vite93·Chrome desktop/mobile REST/STOMP fixture PASS, Foundry36/36PASS. 최종 E2E assertion 포함 전체 source 회귀와 통합 source 회귀는 이어서 기록한다. standaloneReservePG opt-in skip을 실제 실행으로 표시하지 않는다.
+- 최초 독립 검토는 검토 불충분(실제PG 미실행)이었다. 첫 재검토 결론은 **발견된 필수 수정 없음**. 검토자는 source/assertion/문서·diff check 및 당시 XML80개0실패1skip을 직접 확인했고 실제DB/RPC 실행은 구현자 결과다. Android 코드 수정·실기기·Toss/유료AI/AWS·운영부하·기존원장 migration은 미검증/미실행이다.

@@ -11,6 +11,7 @@ import { writeFile } from 'node:fs/promises';
 const root = resolve('dist'); const artifacts = join(root, '.smoke'); await mkdir(artifacts, { recursive: true });
 const profile = await mkdtemp(join(artifacts, 'profile-'));
 let role = 'USER', orders = [], failWrite = false, failAi = false, delayedAi = false;
+const faucetClaims=new Map();let loseFaucetResponse=false;
 const quoteId = '0x' + '1'.repeat(64); let expiry = 30;
 const agent = { status: 'PARTIAL', answer: '<img src=x onerror=alert(1)> 관측 가능한 범위에서 설명합니다.', uncertainties: ['receipt를 확인할 수 없습니다.'],
   toolEvidence: [{ tool: 'getOrder', status: 'OK', data: { status: 'PENDING_ONCHAIN' } }],
@@ -28,7 +29,16 @@ const server = createServer(async (req, res) => {
   requests.push({ path: url.pathname, method: req.method, input });
   const now = new Date().toISOString(); let body = {}, status = 200;
   if (url.pathname.startsWith('/api/auth/')) { role = input.loginId === 'admin' ? 'ADMIN' : 'USER'; body = { accessToken: 'fixture-token', expiresIn: 3600 }; }
-  else if (url.pathname === '/api/me') body = { nickname: role === 'ADMIN' ? '관리자' : '모의 사용자', role };
+  else if (url.pathname === '/api/me') body = { id:role==='ADMIN'?2:1,nickname: role === 'ADMIN' ? '관리자' : '모의 사용자', role };
+  else if(url.pathname==='/api/wallet/faucet/status')body={eligible:true,remainingCount:5,decisionDate:'2026-10-11',policyVersion:'kst-v1'};
+  else if(url.pathname==='/api/wallet/faucet/grants'||url.pathname==='/api/admin/faucet/grants')body={items:[...faucetClaims.values()],nextBefore:null};
+  else if(url.pathname==='/api/admin/faucet')body={activeVersion:'kst-v1',configured:true,spent:'1000000',remainingBudget:'49000000',grantCount:1,journalConsistent:true,rejections:{FAUCET_DAILY_LIMIT:1},rejectionMetricsStartedAt:now};
+  else if(url.pathname==='/api/wallet/faucet'||url.pathname==='/api/wallet/faucet/claims'){
+    const key=req.headers['idempotency-key'];if(!key){status=400;body={code:'FAUCET_INVALID_KEY'};}else if(req.method==='POST'){
+      body=faucetClaims.get(key)||{grantId:'fixture-grant',userId:1,amount:'1000000',receivedAmount:'1000000',balance:'1000000',grantedAt:now,policyVersion:'kst-v1'};faucetClaims.set(key,body);
+      if(loseFaucetResponse){res.destroy();return;}
+    }else{body=faucetClaims.get(key);if(!body){status=404;body={code:'FAUCET_CLAIM_NOT_FOUND'};}}
+  }
   else if (url.pathname.includes('/candles')) {
     const interval = url.searchParams.get('interval'); const max = { '1m': 100, '5m': 100, '15m': 50, '30m': 30, '1h': 20, '1d': 100 }[interval];
     if (+url.searchParams.get('count') > max) { status = 400; body = { code: 'INVALID_CANDLE_QUERY' }; }
@@ -104,7 +114,9 @@ try {
   await waitText('latest-order', '체결 완료');
   // An older REST snapshot must not roll back a terminal event.
   await poll(() => evaluate(`document.getElementById('latest-order').textContent.includes('체결 완료')`));
-  await evaluate(`location.hash='portfolio'`); await waitText('portfolio-summary', '평균 매수가'); await screenshot('desktop-portfolio');
+    await evaluate(`location.hash='portfolio'`); await waitText('portfolio-summary', '평균 매수가');await waitText('faucet-policy','KST');
+    loseFaucetResponse=true;await click('faucet');await waitText('faucet-message','응답이 유실');loseFaucetResponse=false;assert.equal(faucetClaims.size,1);
+    await click('faucet-resolve');await waitText('faucet-message','이전 성공');assert.equal(faucetClaims.size,1);await screenshot('desktop-portfolio');
   await evaluate(`location.hash='ai'`); await click('ask-policy'); await submit('ai-form'); await waitText('ai-result', '정책 출처');
   assert.equal(await evaluate(`document.getElementById('ai-result').querySelector('img')===null`), true); await screenshot('desktop-ai');
   failAi = true; await submit('ai-form'); await waitText('ai-message', '준비되지'); failAi = false;

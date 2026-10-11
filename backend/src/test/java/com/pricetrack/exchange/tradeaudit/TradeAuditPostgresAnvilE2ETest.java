@@ -156,6 +156,7 @@ class TradeAuditPostgresAnvilE2ETest {
     private void settle(long id) throws Exception { for(int i=0;i<100;i++) {reconciliation.reconcilePendingTransactions();if(orders.findById(id).orElseThrow().getStatus()==OrderStatus.FILLED) return;Thread.sleep(100);}throw new AssertionError("Settlement did not finish"); }
     private JsonNode post(String path,Map<String,?> body,String token,int expected) {
         var headers=new HttpHeaders();headers.setContentType(MediaType.APPLICATION_JSON);if(token!=null) headers.setBearerAuth(token);
+        if(path.equals("/api/wallet/faucet"))headers.set("Idempotency-Key",UUID.randomUUID().toString());
         var r=http.exchange(path,HttpMethod.POST,new HttpEntity<>(body,headers),JsonNode.class);assertThat(r.getStatusCode().value()).as(path).isEqualTo(expected);return r.getBody();
     }
     private JsonNode get(String path,String token,int expected) {

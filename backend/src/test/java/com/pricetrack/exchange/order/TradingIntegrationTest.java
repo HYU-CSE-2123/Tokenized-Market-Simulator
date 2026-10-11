@@ -65,7 +65,7 @@ class TradingIntegrationTest {
     void fullMockTradingFlow() throws Exception {
         String token = signup("trader1");
 
-        mockMvc.perform(post("/api/wallet/faucet").header("Authorization", bearer(token)))
+        mockMvc.perform(post("/api/wallet/faucet").header("Idempotency-Key", java.util.UUID.randomUUID().toString()).header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.receivedAmount", comparesEqualTo(new BigDecimal("1000000"))))
                 .andExpect(jsonPath("$.balance", comparesEqualTo(new BigDecimal("1000000"))));
@@ -138,7 +138,7 @@ class TradingIntegrationTest {
     void usersCannotReadEachOthersOrders() throws Exception {
         String ownerToken = signup("owner1");
         String otherToken = signup("other1");
-        mockMvc.perform(post("/api/wallet/faucet").header("Authorization", bearer(ownerToken)))
+        mockMvc.perform(post("/api/wallet/faucet").header("Idempotency-Key", java.util.UUID.randomUUID().toString()).header("Authorization", bearer(ownerToken)))
                 .andExpect(status().isOk());
         String response = mockMvc.perform(post("/api/orders/buy")
                         .header("Authorization", bearer(ownerToken))

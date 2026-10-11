@@ -231,7 +231,7 @@ class ToolIntegrationTest {
         when(receipts.read(any())).thenThrow(new ToolFailure("TOOL_TIMEOUT"));
         var result = call(alice, "getReceiptSummary", orderArgs(), 504);
         assertThat(result.path("data").isNull()).isTrue(); assertThat(result.path("error").asText()).isEqualTo("TOOL_TIMEOUT");
-        wallets.initializeBalances(bob.getId()); wallets.faucet(bob.getId());
+        wallets.initializeBalances(bob.getId()); wallets.faucet(bob.getId(), java.util.UUID.randomUUID().toString());
         assertThat(trading.buy(bob.getId(), "mSEC", new BigDecimal("1000"), null).getStatus()).isEqualTo(OrderStatus.FILLED);
     }
     Map<String, List<Map<String, Object>>> snapshot() {

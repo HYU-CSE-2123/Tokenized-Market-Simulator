@@ -156,7 +156,7 @@ class OnchainTradingIntegrationTest {
                                 + "\",\"password\":\"password123\",\"nickname\":\"Chain\"}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         String token = objectMapper.readTree(signup).get("accessToken").asText();
-        mockMvc.perform(post("/api/wallet/faucet").header("Authorization", "Bearer " + token))
+        mockMvc.perform(post("/api/wallet/faucet").header("Idempotency-Key", java.util.UUID.randomUUID().toString()).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
         return new TestUser(token, userRepository.findByLoginId(loginId).orElseThrow().getId());
     }

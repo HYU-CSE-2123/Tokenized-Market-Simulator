@@ -6,7 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pricetrack.exchange.common.exception.BalanceNotFoundException;
-import com.pricetrack.exchange.websocket.publisher.UserWebSocketPublisher;
+import com.pricetrack.exchange.wallet.faucet.FaucetService;
+import com.pricetrack.exchange.wallet.faucet.FaucetStore.Result;
 
 /**
  * 사용자별 모의 자산 잔고를 초기화하고 변경한다.
@@ -20,14 +21,11 @@ public class WalletService {
     public static final BigDecimal FAUCET_AMOUNT = new BigDecimal("1000000.000000000000000000");
 
     private final UserBalanceRepository balanceRepository;
-    private final UserWebSocketPublisher userEvents;
-    private final FaucetGrantRepository grantRepository;
+    private final FaucetService faucetService;
 
-    public WalletService(UserBalanceRepository balanceRepository, UserWebSocketPublisher userEvents,
-            FaucetGrantRepository grantRepository) {
+    public WalletService(UserBalanceRepository balanceRepository, FaucetService faucetService) {
         this.balanceRepository = balanceRepository;
-        this.userEvents = userEvents;
-        this.grantRepository = grantRepository;
+        this.faucetService = faucetService;
     }
 
     @Transactional
@@ -36,13 +34,8 @@ public class WalletService {
         balanceRepository.save(new UserBalance(userId, TOKEN_SYMBOL));
     }
 
-    @Transactional
-    public FaucetResult faucet(Long userId) {
-        UserBalance balance = getForUpdate(userId, KRW_SYMBOL);
-        balance.setAmount(balance.getAmount().add(FAUCET_AMOUNT));
-        grantRepository.save(new FaucetGrant(userId, FAUCET_AMOUNT));
-        userEvents.publishPortfolio(userId);
-        return new FaucetResult(KRW_SYMBOL, FAUCET_AMOUNT, balance.getAmount());
+    public Result faucet(Long userId, String key) {
+        return faucetService.credit(userId,key,FaucetService.REQUEST);
     }
 
     public UserBalance getForUpdate(Long userId, String symbol) {
@@ -50,6 +43,5 @@ public class WalletService {
                 .orElseThrow(BalanceNotFoundException::new);
     }
 
-    public record FaucetResult(String symbol, BigDecimal receivedAmount, BigDecimal balance) {}
 
 }

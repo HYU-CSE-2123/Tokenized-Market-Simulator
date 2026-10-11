@@ -7,11 +7,13 @@ import { RequestState, number, time, label, positiveAmount, uncertainWrite, mark
 import { node, button, fields, empty, orderCard, tradeCard, renderDiagnosis } from './ui.js';
 import { createReservePanel } from './reserve-panel.js';
 import { createTradeAuditPanel } from './trade-audit-panel.js';
+import { createFaucetPanel } from './faucet-panel.js';
 
 const $ = (id) => document.getElementById(id);
 const api = new ApiClient(); const requests = new RequestState();
 const reservePanel = createReservePanel(api);
 const tradeAuditPanel = createTradeAuditPanel(api);
+const faucetPanel = createFaucetPanel(api, () => void loadPortfolio(), expireSession);
 const state = { user: null, market: null, portfolio: null, orders: [], trades: [], side: 'BUY', quote: null,
   historyTab: 'orders', authMode: 'login', destination: 'market', latestId: null, detailId: null, uncertain: null, history: [], nextBefore: null };
 const chart = new ChartController(api, $('market-chart'), $('chart-message'));
@@ -64,6 +66,7 @@ function route() {
   if (name === 'admin') { void loadDiagnosisHistory(); void loadObservation(); }
   reservePanel.setContext(state.user, name);
   tradeAuditPanel.setContext(state.user, name);
+  faucetPanel.setContext(state.user, name);
 }
 function connect() { socket.connect({ transport: $('transport').value, token: api.token, debug: false }); }
 function renderIdentity() {
@@ -74,6 +77,7 @@ function renderIdentity() {
 function resetPrivate() {
   reservePanel.setContext(null, 'market');
   tradeAuditPanel.setContext(null, 'market');
+  faucetPanel.setContext(null, 'market');
   $('quote-dialog').close();
   requests.reset(); clearTimeout(sessionExpiry); state.user = null; state.quote = null; state.orders = []; state.trades = []; state.portfolio = null;
   state.latestId = null; state.detailId = null; state.uncertain = null; state.history = []; state.nextBefore = null; portfolioRevision++;
@@ -307,13 +311,6 @@ async function loadObservation() {
   }, null, true);
   if (requests.resources.get('observation')?.status === 'error') empty($('observation'), '관측 정보를 불러오지 못했습니다.');
 }
-async function faucet() {
-  if (!requireUser('portfolio') || requests.busy('faucet')) return;
-  const ticket = requests.begin('faucet'); $('faucet').disabled = true; message('faucet-message', '모의 자금을 지급받는 중입니다.');
-  try { await api.faucet(); if (!ticket.current()) return; ticket.finish('ready'); message('faucet-message', '모의 자금을 받았습니다.'); void loadPortfolio(); }
-  catch (error) { if (!ticket.current()) return; ticket.finish('error'); message('faucet-message', uncertainWrite(error) ? '지급 결과를 확인하지 못했습니다. 자동 재요청하지 않으며 자산을 다시 조회해 주세요.' : errorText(error), 'warning'); if (error.status === 401) expireSession(); }
-  finally { if (ticket.current()) $('faucet').disabled = false; }
-}
 
 window.addEventListener('hashchange', route);
 $('auth-open').onclick = () => showAuth();
@@ -334,7 +331,7 @@ $('acknowledge-order').onclick = () => {
   }
 };
 $('history-refresh').onclick = loadActivity; for (const tab of ['orders', 'trades']) $(`history-${tab}`).onclick = () => { state.historyTab = tab; renderHistory(); };
-$('portfolio-refresh').onclick = loadPortfolio; $('faucet').onclick = faucet;
+$('portfolio-refresh').onclick = () => {void loadPortfolio();faucetPanel.setContext(state.user,'portfolio');};
 $('ai-kind').onchange = syncAiTarget; $('ai-form').onsubmit = runAi;
 $('ask-policy').onclick = () => selectAi('general', null, 'mSEC와 모의 원화, 견적과 체결 방식을 설명해주세요.');
 $('ask-market').onclick = () => selectAi('market', null, '지금 시장에서 신규 거래가 가능한지 진단해주세요.');
