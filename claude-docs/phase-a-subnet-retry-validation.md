@@ -64,6 +64,8 @@ clock preflight4개 모두 기존2초 경계를 통과했다. DB-host offset은 
 
 ## 키움 실제 시세 인수 착수 판정
 
+독립 증거 검토 `review_phase_a_subnet`: **발견된 필수 수정 없음(신규 실행 증거·보고 범위)**. reviewer가 신규 session의 sourceHead/externalProviders=false,5개 XML/summary의각1PASS/FAIL·ERROR·SKIP0,4개isolation·별도포트,network후보2/1/1/3회,clock원시수치와최대0.581249초,별도Gradle restart selector/gate/전용XML을직접읽어확인했다. 테스트재실행·raw stderr·현재Docker/컨테이너정지·비밀설정·실제JVM PID는직접확인하지않았으며해당항목은구현자확인/harness흐름으로구분한다. 기존환경접근·수정없음. 실행결과문서5개를통합브랜치의doc-only `a3237f9`로커밋했으며테스트입력a317의제품/harness는그대로다.
+
 **격리 기반·기존 거래의 전제는 통과했으며, 실제 키와 별도 승인이 있으면 읽기 전용 키움 인증/WS/차트 사전 인수에 진입할 수 있다.** 실제 데이터 BUY/SELL 성공이나 제품 실환경 적합성을 의미하지 않는다.
 
 먼저 사용자가 App Key/Secret·사용 mode/endpoint·접근/IP 조건을 확인하고, 전용 runtime·read-only capture 수단·실제 호출 상한을 승인해야 한다. 현재 capture 도구는 미구현이며 이번 작업에서 추가하지 않았다. 기존 [준비 절차](kiwoom-live-acceptance-preparation.md)에 따라 장중 최초 연결과 재연결의0s/215/20이 현재 동일 generation/fresh 판정에 맞는지, native 분봉 cntr_tm이 시작/종료 어느 경계인지, 웹 tick/OHLCV/asOf가 일치하는지부터 판정한다.
