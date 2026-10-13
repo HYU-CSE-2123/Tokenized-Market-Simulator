@@ -23,6 +23,11 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(com.pricetrack.exchange.market.provider.kiwoom.KiwoomApiException.class)
+    public ResponseEntity<ApiErrorResponse> kiwoomUnavailable(HttpServletRequest request) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "KIWOOM_UNAVAILABLE", "키움 시세를 현재 사용할 수 없습니다.", request);
+    }
+
     @ExceptionHandler(DuplicateLoginIdException.class)
     public ResponseEntity<ApiErrorResponse> duplicateLoginId(
             DuplicateLoginIdException exception, HttpServletRequest request) {

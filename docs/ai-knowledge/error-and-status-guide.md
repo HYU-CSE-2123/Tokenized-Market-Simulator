@@ -2,15 +2,15 @@
 title: "상태·오류 코드 해석"
 domain: support
 type: reference
-version: 1
+version: 2
 status: active
 minimum_role: USER
-updated_at: 2026-09-27
+updated_at: 2026-10-13
 ---
 
 # 상태·오류 코드 해석
 
-> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
+> 2026-10-13 통합 추가 기능 및 키움 기능 소스 기준 갱신. 기존9문서 역할·active 승인 경계를 유지하며 manifest의 버전/내용 해시와 일치할 때만 ingest한다. 기존 AI DB 재색인이나 최신 실환경 인수 완료를 의미하지 않는다.
 
 ## 해석 원칙
 
@@ -65,6 +65,14 @@ custom error가 위 이름 그대로 REST code로 변환되는 구현은 아니�
 ## 확인 순서
 
 사용자는 입력 조건·시장 상태·견적 만료와 본인 주문 REST 결과를 확인한다. 운영자 원인 진단은 권한 있는 조회로 거래 상태·실패 단계를 확인해야 한다. 문서에는 특정 사용자의 잔고, txHash, receipt 또는 현재 장애 여부를 저장하지 않는다.
+
+## 추가 기능의 상태와 한계
+
+조건부 의도는 WAITING/PREPARING/EXECUTING/SUCCEEDED/FAILED/CANCELLED/EXPIRED/REVIEW_REQUIRED다. 기존 Order의 CANCELED enum과 조건부 CANCELLED를 혼동하지 않는다. 조건부 취소 API는 구현됐지만 이미 실행된 즉시 주문의 강제 취소 API는 아니다.
+
+장부-체인/전수 대사의 MATCH·MISMATCH·INCONCLUSIVE는 주문 체결 상태가 아니다. 전수 대사의 coverage가 불완전하거나 근거가 부족하면 일부 MATCH를 전수 MATCH로 설명하지 않는다. LONG_WAIT는 기본300초 정체 경고이며 실패 확정이나 REVIEW_REQUIRED 변경이 아니다. 기록 없는 마지막 관측은 UNRECORDED다.
+
+Faucet 오류는 FAUCET_INVALID_KEY(400), FAUCET_DAILY_LIMIT(429), FAUCET_LIFETIME_LIMIT/FAUCET_BUDGET_EXHAUSTED(409), FAUCET_POLICY_UNAVAILABLE/FAUCET_ACCOUNTING_INCONSISTENT(503) 등이다. KIWOOM_UNAVAILABLE(503)은 정제된 시세 조회 실패이며 특정 인증/네트워크 원인을 단정하지 않는다. 신규 서명 거절은 기존 견적 오류 경계를 유지한다.
 
 ## 근거
 

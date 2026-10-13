@@ -89,6 +89,15 @@ app:
     simulation:
       seed: ${SIMULATION_SEED:20261006}
       bootstrap-days: ${SIMULATION_BOOTSTRAP_DAYS:0}
+    kiwoom:
+      base-url: ${KIWOOM_API_BASE_URL:https://api.kiwoom.com}
+      websocket-url: ${KIWOOM_WEBSOCKET_URL:wss://api.kiwoom.com:10000/api/dostk/websocket}
+      app-key: ${KIWOOM_APP_KEY:}
+      secret-key: ${KIWOOM_SECRET_KEY:}
+      connect-timeout: ${KIWOOM_CONNECT_TIMEOUT:2s}
+      read-timeout: ${KIWOOM_READ_TIMEOUT:5s}
+      degraded-after: ${KIWOOM_PRICE_DEGRADED_AFTER:15s}
+      stale-after: ${KIWOOM_PRICE_STALE_AFTER:60s}
     toss:
       base-url: ${TOSS_API_BASE_URL:https://openapi.tossinvest.com}
       client-id: ${TOSS_CLIENT_ID:}

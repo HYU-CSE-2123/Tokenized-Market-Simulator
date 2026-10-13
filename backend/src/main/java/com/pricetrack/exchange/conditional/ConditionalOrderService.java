@@ -80,14 +80,13 @@ public class ConditionalOrderService {
     }
     public boolean registrationEnabled(){
         if(!enabled())return false;
-        try{return market.current().provider().equalsIgnoreCase("TOSS")||fixtureAllowed();}
+        try{return !com.pricetrack.exchange.market.MarketDataEligibility.synthetic(market.current())||fixtureAllowed();}
         catch(RuntimeException unavailable){return false;}
     }
     public MarketPriceSnapshot checkedMarket(){
         if(!enabled())throw new Failure(409,"CONDITIONAL_DISABLED");
         var snapshot=market.current();
-        boolean valid=(snapshot.provider().equalsIgnoreCase("TOSS") && snapshot.marketStatus()==MarketStatus.OPEN
-            && snapshot.priceStatus()==PriceStatus.LIVE)
+        boolean valid=com.pricetrack.exchange.market.MarketDataEligibility.liveExternal(snapshot)
             || (fixtureAllowed() && snapshot.provider().equalsIgnoreCase("SIMULATED")
                 && snapshot.marketStatus()==MarketStatus.OPEN && snapshot.priceStatus()==PriceStatus.SIMULATED);
         Duration age=Duration.between(snapshot.observedAt(),now());
@@ -130,7 +129,7 @@ public class ConditionalOrderService {
         }
         if(!enabled())throw new Failure(409,"CONDITIONAL_DISABLED");
         var snapshot=market.current();
-        if(!snapshot.provider().equalsIgnoreCase("TOSS") && !fixtureAllowed())throw new Failure(409,"CONDITIONAL_PROVIDER_DISABLED");
+        if(com.pricetrack.exchange.market.MarketDataEligibility.synthetic(snapshot) && !fixtureAllowed())throw new Failure(409,"CONDITIONAL_PROVIDER_DISABLED");
         Instant at=now();
         if(!r.expiresAt().isAfter(at))throw new Failure(400,"INVALID_EXPIRY");
         ConditionalOrder c=new ConditionalOrder(); c.setId(UUID.randomUUID().toString());c.setUserId(uid);c.setSide(r.side());

@@ -2,15 +2,15 @@
 title: "WebSocket 알림과 REST 재동기화"
 domain: realtime
 type: policy
-version: 1
+version: 2
 status: active
 minimum_role: USER
-updated_at: 2026-09-27
+updated_at: 2026-10-13
 ---
 
 # WebSocket 알림과 REST 재동기화
 
-> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
+> 2026-10-13 통합 추가 기능 및 키움 기능 소스 기준 갱신. 기존9문서 역할·active 승인 경계를 유지하며 manifest의 버전/내용 해시와 일치할 때만 ingest한다. 기존 AI DB 재색인이나 최신 실환경 인수 완료를 의미하지 않는다.
 
 ## 역할
 
@@ -42,6 +42,12 @@ Native WebSocket과 SockJS 모두 STOMP 구독 정책을 따른다. CONNECT의 B
 이벤트를 못 받았다는 이유만으로 주문을 다시 제출하지 않는다. REST 조회도 실패하면 최신 상태 확인 불가로 표시하며 마지막 화면을 현재 확정 상태라고 단정하지 않는다.
 
 ## 근거
+
+## Faucet·조건부 주문·새 시세 공급자
+
+Faucet 최초 지급의 포트폴리오 알림은 commit 후 전달하며 성공 키 replay는 새 지급·추가 알림을 만들지 않는다. 응답 유실 시 동일 키로 결과를 조회하고 현재 잔고는 별도 REST로 재확인한다. 조건부 상태 알림과 실제 실행 Order 결과는 별도이며 취소·대기를 온체인 체결 완료로 표시하지 않는다.
+
+Toss/KIWOOM 실제 tick은 공급자 스트림이고 사용자 거래 체결이 아니다. KIWOOM의 체결량은 기초 주식 수량이며 Synthetic는 합성 수량이다. 실제 키움 stream/차트 시간 경계는 아직 실환경 미검증이다. 같은 초의 서로 다른 체결량을 무조건 timestamp 중복으로 버리지 않는다. 로그아웃·계정 전환 후 늦은 REST/개인 WS가 다른 계정을 덮지 않도록 기존 화면 세대 경계를 유지한다.
 
 - [websocket/publisher/WebSocketDeliveryListener.java](../../backend/src/main/java/com/pricetrack/exchange/websocket/publisher/WebSocketDeliveryListener.java)
 - [websocket/config/WebSocketAuthInterceptor.java](../../backend/src/main/java/com/pricetrack/exchange/websocket/config/WebSocketAuthInterceptor.java)

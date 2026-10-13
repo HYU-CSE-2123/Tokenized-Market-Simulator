@@ -1,5 +1,11 @@
 # 구현 로그 — Phase 0: 모노레포 뼈대
 
+## 2026-10-13: Phase A 통합·신규 서명 시장 정책·키움 시세
+
+- Phase A harness/doc 병합cfbd625: 신규 실제 필수E2E5/5 PASS, backend427 PASS/35 SKIP·웹84/Foundry36/Chrome PASS. [실행 기록](phase-a-merged-regression.md). 사용자 경험 문서와 원본 인수 계획은 별도 문서 커밋으로 보존했다.
+- 신규 실제 공급자 서명 발급 OPEN+LIVE+fresh: 기능966fa76 → 병합a626d7a. 병합 source431 PASS/35 SKIP·웹/Foundry·신규 실제PG/Anvil 조건부/별도JVM1+1 PASS. 독립 검토 필수 수정 없음. DB-only/Synthetic와 소비·복구·정산 계약 변경 없음. [기록](signed-market-eligibility-implementation.md).
+- 키움 읽기 전용 시세는 `feat/kiwoom-market-provider`에서 진행한다. 최초 source450 PASS/35 SKIP·Mock18·KIWOOM 조건부H2/Mock1·새Synthetic PG/Anvil1+재시작1 PASS. 독립 검토에서 재연결 후 OPEN 재사용 결함을 발견하여 연결 세대 경계를 수정했고 최종 재검증/통합 결과는 [기록](kiwoom-market-provider-implementation.md)에 추가한다. 실제 키움/Toss·유료AI·AWS/Sepolia는 NOT_RUN이다.
+
 ## 2026-10-13: 최종 통합 인수 Phase A — 미완료/BLOCKED
 
 - 입력efb3a69, feat/phase-a-acceptance에서 새session/fixture·가변포트·전용키·identity/source/image/clock guard를 추가했다. 제품코드/거래·보안정책/계약/승인지식은변경없음.

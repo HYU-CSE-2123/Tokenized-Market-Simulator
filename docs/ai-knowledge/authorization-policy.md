@@ -2,15 +2,15 @@
 title: "사용자 데이터와 관리자 권한 경계"
 domain: security
 type: policy
-version: 6
+version: 7
 status: active
 minimum_role: USER
-updated_at: 2026-10-02
+updated_at: 2026-10-13
 ---
 
 # 사용자 데이터와 관리자 권한 경계
 
-> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
+> 2026-10-13 통합 추가 기능 및 키움 기능 소스 기준 갱신. 기존9문서 역할·active 승인 경계를 유지하며 manifest의 버전/내용 해시와 일치할 때만 ingest한다. 기존 AI DB 재색인이나 최신 실환경 인수 완료를 의미하지 않는다.
 
 ## 현재 인증
 
@@ -22,7 +22,7 @@ JWT 검증 후 DB 사용자를 조회하여 userId와 USER/ADMIN 역할을 복�
 
 시장 가격·캔들 및 공개 가격/체결 스트림과 개인 주문·잔고를 구분한다. 공개 체결 알림은 개인 식별 정보 공개를 뜻하지 않는다. WebSocket handshake가 공개여도 개인 queue는 STOMP CONNECT 인증이 필요하다.
 
-현재 ADMIN 역할과 초기 관리자 생성 기반은 있지만 범용 관리자 조회 API가 이미 있는 것은 아니다. ADMIN이 기존 본인 주문 API를 호출해도 자동으로 다른 사용자의 주문을 볼 수 없다.
+ADMIN 역할과 초기 관리자 생성 기반에 더해 장부-체인 대사·거래 전수 대사·정체 관측·Faucet 정책/지급 이력의 ADMIN API가 있다. 이 권한은 기존 본인 주문 API를 전체 사용자 조회로 확대하지 않는다. 일반 USER는 관리자 감사·운영 상세에 접근할 수 없다.
 
 ## AI 인가 — 현재 구현과 후속 경계
 
@@ -47,6 +47,15 @@ Phase 7 자동 진단은 서버가 설정한 기존 ADMIN 계정의 현재 DB �
 현재 사용자나 특정 주문 소유권을 문서만으로 판정할 수 없다. 인가 조회에 실패하면 접근 범위를 넓히거나 관리자 역할을 가정하지 않고 확인할 수 없다고 응답한다.
 
 ## 근거
+
+## Faucet와 조건부 주문 인가
+
+DB Faucet은 인증된 본인 계정에만 정액 지급하며 클라이언트 userId/지급액을 신뢰하지 않는다. Idempotency-Key는 필수이며 같은 본인 성공 키의 replay는 추가 지급이나 WS 알림을 만들지 않는다. ADMIN의 Faucet API는 조회 전용이며 한도 우회·임의 지급·초기화 권한이 없다.
+
+조건부 주문 등록·조회·취소는 본인 기준이다. 실행 Order 연결 후 취소 불가와 REVIEW_REQUIRED의 잠금 유지 경계를 따른다. ADMIN 관측 API가 raw transaction·개인 키·원문 RPC 오류를 노출하는 API라는 뜻은 아니다. AI 읽기 Tool/Skill에 대사 실행·Faucet 지급·조건부 주문 실행 권한을 새로 부여하지 않는다.
+
+- [Faucet 정책](../../claude-docs/faucet-policy-design.md)
+- [관측 구현](../../claude-docs/transaction-stall-observability-implementation.md)
 
 - [ai/tool/read/ToolReadFacade.java](../../backend/src/main/java/com/pricetrack/exchange/ai/tool/read/ToolReadFacade.java)
 - [ai/tool/ToolDispatcher.java](../../backend/src/main/java/com/pricetrack/exchange/ai/tool/ToolDispatcher.java)

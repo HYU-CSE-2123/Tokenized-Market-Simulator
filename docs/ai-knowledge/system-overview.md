@@ -2,15 +2,15 @@
 title: "시스템 책임과 지식의 경계"
 domain: architecture
 type: overview
-version: 7
+version: 8
 status: active
 minimum_role: USER
-updated_at: 2026-10-06
+updated_at: 2026-10-13
 ---
 
 # 시스템 책임과 지식의 경계
 
-> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
+> 2026-10-13 통합 추가 기능 및 키움 기능 소스 기준 갱신. 기존9문서 역할·active 승인 경계를 유지하며 manifest의 버전/내용 해시와 일치할 때만 ingest한다. 기존 AI DB 재색인이나 최신 실환경 인수 완료를 의미하지 않는다.
 
 ## 정의와 목적
 
@@ -35,7 +35,7 @@ mSEC는 삼성전자 기준 가격의 변동을 모사하는 교육용 합성자
 
 현재 온체인 executor는 백엔드 운영자 지갑이다. 개인별 온체인 지갑이 아니므로 체인 이벤트의 user 주소는 서비스 사용자의 DB ID가 아니다. 사용자별 자산 귀속의 기준은 PostgreSQL 내부 원장이고, 체인 receipt와 검증된 이벤트는 운영자 거래의 실행·정산 근거다.
 
-DB와 체인은 하나의 ACID 트랜잭션이 아니다. 먼저 입력 자산을 잠그고, 체인 실행을 확인한 뒤 DB 정산을 확정하며, 중간 장애는 저장한 상태로 복구한다. 온체인 유동성과 사용자 원장의 준비금 대사는 별도 미완료 과제다.
+DB와 체인은 하나의 ACID 트랜잭션이 아니다. 먼저 입력 자산을 잠그고, 체인 실행을 확인한 뒤 DB 정산을 확정하며, 중간 장애는 저장한 상태로 복구한다. ADMIN 장부-체인 자산 대사와 거래 전수 대사는 구현·격리 검증됐다. 대사 MATCH는 해당 기준점·관측 범위의 일치이며 사용자별 온체인 소유권, 원화/주식 상환권 또는 미래 지급 능력 보증이 아니다. 유동성 조회와 장부 대사는 별도다.
 
 블록체인 비활성 모드에서는 DB 모의 거래가 즉시 정산된다. 이를 온체인 거래 성공으로 설명하지 않는다. DB faucet 잔고 지급이 Vault의 온체인 유동성까지 자동 충당한다는 뜻도 아니다.
 
@@ -58,6 +58,15 @@ Phase 7은 커밋된 blockchain_transactions의 REVIEW_REQUIRED를 별도 pollin
 현재 가격, 특정 계정 잔고, 주문 상태, txHash·receipt는 이 문서에서 알 수 없다. 최신 인가 조회가 없으면 확인 불가로 설명한다. 승인된 Phase 2 선택은 기존 Boot 내부 어댑터, 별도 pgvector DB, text-embedding-3-small 1536차원과 gpt-5.6-terra다. 거래 DB와 AI DB 사이의 분산 트랜잭션은 없다.
 
 ## 근거
+
+## 추가 기능과 검증 경계
+
+공식 모델은 A: 운영자 통합 지갑 + PostgreSQL 사용자별 모의자산 장부다. 사용자별 지갑·CustodyVault·사용자 서명·사용자 간 호가장은 도입하지 않는다. DB Faucet 정책, 가격 조건부 BUY/SELL, 두 ADMIN 대사, SIGNED/SUBMITTED 정체 관측은 구현 및 격리 검증 대상이다. Google/이메일 인증·Sepolia·AWS 배포·Android 기기 인수 완료를 뜻하지 않는다.
+
+키움 읽기 전용 공급자는 Toss/Synthetic와 별도로 선택한다. 실제 키움 App Key 연결은 아직 NOT_RUN이며 장중 Toss 최종 인수와 최신 통합 AI 유료 인수도 별도 승인 후 수행한다. 승인 지식9문서 갱신은 기존 AI DB 활성 index의 유료 재색인 완료가 아니다. 새 manifest/hash/index version을 확인하지 못하면 낡은 내용을 최신 정책이라고 응답하지 않는다.
+
+- [자산 보관 확정](../../claude-docs/asset-custody-final-check.md)
+- [최종 인수 계획](../../claude-docs/final-integration-acceptance-plan.md)
 
 - [ai/tool/ToolRegistry.java](../../backend/src/main/java/com/pricetrack/exchange/ai/tool/ToolRegistry.java)
 - [ai/RagService.java](../../backend/src/main/java/com/pricetrack/exchange/ai/RagService.java)

@@ -2,19 +2,19 @@
 title: "체인 전송 장애의 읽기 전용 진단"
 domain: operations
 type: runbook
-version: 2
+version: 3
 status: active
 minimum_role: ADMIN
-updated_at: 2026-09-30
+updated_at: 2026-10-13
 ---
 
 # 체인 전송 장애의 읽기 전용 진단
 
-> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
+> 2026-10-13 통합 추가 기능 및 키움 기능 소스 기준 갱신. 기존9문서 역할·active 승인 경계를 유지하며 manifest의 버전/내용 해시와 일치할 때만 ingest한다. 기존 AI DB 재색인이나 최신 실환경 인수 완료를 의미하지 않는다.
 
 ## 목적과 접근 범위
 
-운영자가 전송 장애를 구분하기 위한 읽기 전용 점검 기준이다. 재서명·수동 raw 전송·DB 상태 수정·자산 잠금 해제를 지시하는 절차가 아니다. AI 자동 진단은 아직 구현되지 않았다.
+운영자가 전송 장애를 구분하기 위한 읽기 전용 점검 기준이다. 재서명·수동 raw 전송·DB 상태 수정·자산 잠금 해제를 지시하는 절차가 아니다. 제한된 AI 자동 진단은 구현됐으며 기본 비활성이고 승인된 ADMIN Skill로 설명만 제공한다. 최신 통합 실환경 유료 인수는 별도다.
 
 ## 정상 저장·전송 경계
 
@@ -54,9 +54,17 @@ EventValidationException 또는 SettlementConsistencyException이면 트랜잭�
 
 getBlockchainTransaction의 errorCategory는 NONE/UNCLASSIFIED이며 상세 원인 분류가 아니다. getReceiptSummary의 executionStatus, confirmations, eventValidation, databaseStatus는 별도 사실이며 DB 정산 완료를 대신하지 않는다. NOT_FOUND는 실행 실패가 아니고 NOT_LINKED는 모의 거래 확정 근거가 아니다. timeout은 조회 실패다. 조회는 서명·전송·복구를 실행하지 않는다.
 
-관리자 listAbnormalOrders는 REVIEW_REQUIRED 또는 SIGNED/SUBMITTED 중 조회 기준보다 오래된 WAITING_LONG을 제한된 페이지로 조회한다. WAITING_LONG은 진단 필터이며 새로운 저장 상태나 자동 복구 조건이 아니다. 개인별 타인 포트폴리오·전체 원장 대사 기능은 제공하지 않는다.
+관리자 listAbnormalOrders는 REVIEW_REQUIRED 또는 SIGNED/SUBMITTED 중 조회 기준보다 오래된 WAITING_LONG을 제한된 페이지로 조회한다. WAITING_LONG은 진단 필터이며 새로운 저장 상태나 자동 복구 조건이 아니다. Tool에 임의 타인 포트폴리오·대사 실행 기능을 새로 추가하지 않았다. 별도 ADMIN 두 대사 REST는 존재하며 Tool 계약과 구분한다.
 
 ## 근거
+
+## 정체 관측과 감사
+
+ADMIN transaction-observations는 SIGNED/SUBMITTED 경과 시간과 기본300초 LONG_WAIT, 적용 기준·관측 시각·조건부 실행 연결·마지막 복구 시도를 보여준다. transaction별 최신 시도 snapshot을 영속화하고 과거 무기록은 UNRECORDED다. 순서 역전 기록을 차단하며 관측 실패가 기존 업무 오류를 대체하지 않는다. 조회 때문에 RPC를 추가 반복하지 않는다.
+
+LONG_WAIT만으로 ETH 부족·영구 미채굴·거래 실패를 단정하지 않는다. 동일 raw/nonce/hash 복구와 REVIEW_REQUIRED의 기존 잠금 정책은 계속 유지한다. 강제 종료·잠금 해제·새 nonce 재주문 기능은 없다. operator ETH 조회는 읽기 잔고이며 미래 모든 거래의 Gas 충분성을 보증하지 않는다. 대사 coverage와 일관된 cut, 불변 기준점·역사 검증 근거를 함께 확인한다.
+
+- [blockchain/observation/TransactionObservationService.java](../../backend/src/main/java/com/pricetrack/exchange/blockchain/observation/TransactionObservationService.java)
 
 - [ai/tool/read/ToolReadFacade.java](../../backend/src/main/java/com/pricetrack/exchange/ai/tool/read/ToolReadFacade.java)
 - [ai/tool/receipt/ReadOnlyReceiptClient.java](../../backend/src/main/java/com/pricetrack/exchange/ai/tool/receipt/ReadOnlyReceiptClient.java)
