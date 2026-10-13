@@ -1,5 +1,7 @@
 # Phase A 마무리·시장 품질 보완·키움 전환 최종 기록
 
+> 2026-10-14 후속: subnet overlap 제한재시도 harness를72915fd→6ed6d5a로통합했고Python/독립검토15/15PASS. 새5종 재실행은 DockerLinuxEngine 이미지·version API500으로준비단계BLOCKED,5종NOT_RUN이다. 제품 변경·기존환경 조치 없음. [후속 변경/실행 보고](phase-a-subnet-retry-validation.md), [키움 장중0s·봉 timestamp 사전 준비](kiwoom-live-acceptance-preparation.md). 아래13일 실행 결과는 이력으로 보존한다.
+
 > 2026-10-13. 구현·기능 검증·통합 완료. 최종 통합 전체 기본 회귀 PASS, 실제 PG/Anvil 추가5종 재실행은 신규 subnet 충돌로 부분 BLOCKED. 전체 최종 인수 PASS가 아니다.
 
 ## 커밋과 보존

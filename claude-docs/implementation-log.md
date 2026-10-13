@@ -1,5 +1,12 @@
 # 구현 로그 — Phase 0: 모노레포 뼈대
 
+## 2026-10-14: Phase A subnet 후보 제한 재시도 — 구현 통합/실제E2E BLOCKED
+
+- 새fixture network create의 확인된overlap stderr에만8개서로다른후보/명령당15초로재시도한다. 일반실패·timeout즉시중단,시도별private증거보존. 기존network조회·변경·삭제/제품코드/시각·격리guard변경없음.
+- 기능72915fd→통합6ed6d5a。Python15/15PASS(SKIP0),별도검토자도독립15/15PASS·필수수정없음. 실제Docker overlap재현은미실행이다.
+- 새session phase-a-20261013163039-aa3060c7에서postgres이미지조회가DockerLinuxEngineAPI500으로중단. 추가읽기version도500/Windows서비스Stopped,정확한내부원인미확정. 신규업무fixture/clock/E2E5종NOT_RUN,환경BLOCKED. 이전테스트수치를재실행으로표시하지않는다.
+- [harness후속보고](phase-a-subnet-retry-validation.md)와[키움장중0s·분봉경계인수준비](kiwoom-live-acceptance-preparation.md)를추가했다. 정상DockerServer확인후새fixture검증필요. 기존acceptance/devDB/Anvil/melon-init/실패state보존,외부시세·유료AI호출없음.
+
 ## 2026-10-13: Phase A 통합·신규 서명 시장 정책·키움 시세
 
 최종 추가 기록: 키움 기능5e39dbf→병합cffe471. 병합 소스 신규486 total/451 PASS/35 SKIP/0 FAIL·ERROR, 웹84/Foundry36/Chrome PASS. 새 실제 Faucet1 PASS 이후 reserve fixture 네트워크 생성의 subnet overlap으로 중단하여 reserve BLOCKED, audit/조건부/별도JVM NOT_RUN이다. 기능 수정 source의 실제 조건부/재시작1+1 PASS를 통합 source 재실행으로 표현하지 않는다. reviewer 필수 지적1개(재연결 OPEN 재사용)를 generation 경계로 해결·재검토 필수 수정 없음. 승인 지식9개/manifest 갱신 뒤별도 전체 backend451/35 PASS. [최종 기록](kiwoom-transition-final-report.md). 제품·기존 환경 수정으로 우회하지 않았으며 안전한 harness 충돌 처리 후보와 남은 통합4종 검증은 후속 과제다.
