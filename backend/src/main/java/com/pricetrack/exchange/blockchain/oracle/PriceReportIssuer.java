@@ -4,6 +4,7 @@ import com.pricetrack.exchange.blockchain.BlockchainService;
 import com.pricetrack.exchange.blockchain.contract.ContractGateway;
 import com.pricetrack.exchange.blockchain.support.PriceUnits;
 import com.pricetrack.exchange.market.MarketPriceService;
+import com.pricetrack.exchange.market.MarketDataEligibility;
 import com.pricetrack.exchange.market.model.MarketPriceSnapshot;
 
 import java.math.BigInteger;
@@ -60,6 +61,14 @@ public class PriceReportIssuer {
         String oracleAddress = blockchainService.oracleAddress();
         String executor = blockchainService.operatorAddress();
         validateSnapshot(snapshot, clock.instant());
+        if (!MarketDataEligibility.synthetic(snapshot)) {
+            // RPC 동안 연결/장 상태가 바뀌었다면 서명하지 않는다. 계산에 사용한 고정 가격은 바꾸지 않는다.
+            MarketPriceSnapshot latest = marketPriceService.requireTradableSnapshot();
+            if (!snapshot.provider().equalsIgnoreCase(latest.provider())) {
+                throw new PriceReportIssuanceException("견적 발급 중 시세 공급자가 변경되었습니다.");
+            }
+            validateSnapshot(latest, clock.instant());
+        }
 
         BigInteger observedAt = BigInteger.valueOf(snapshot.observedAt().getEpochSecond());
         PriceReport report = new PriceReport(
@@ -86,6 +95,10 @@ public class PriceReportIssuer {
     }
 
     private void validateSnapshot(MarketPriceSnapshot snapshot, Instant now) {
+        // 신규 서명 발급 경계만 강화한다. 기존 quote 소비·SIGNED 복구·receipt 정산과 DB-only는 변경하지 않는다.
+        if (!MarketDataEligibility.synthetic(snapshot) && !MarketDataEligibility.liveExternal(snapshot)) {
+            throw new PriceReportIssuanceException("실제 시세의 신규 서명 보고서는 OPEN + LIVE 상태에서만 발급할 수 있습니다.");
+        }
         if (!MarketPriceService.SYMBOL.equals(snapshot.symbol())) {
             throw new PriceReportIssuanceException("지원하지 않는 가격 종목입니다: " + snapshot.symbol());
         }

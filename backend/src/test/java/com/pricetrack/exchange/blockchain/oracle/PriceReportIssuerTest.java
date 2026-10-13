@@ -133,6 +133,62 @@ class PriceReportIssuerTest {
         return snapshot("mSEC", observedAt);
     }
 
+    @Test
+    void rejectsEveryNonLiveExternalStateBeforeRpcWithoutProviderAllowlist() {
+        for (String provider : new String[]{"TOSS", "KIWOOM", "FUTURE_PROVIDER"}) {
+            for (PriceStatus status : PriceStatus.values()) {
+                if (status == PriceStatus.LIVE) continue;
+                when(prices.requireTradableSnapshot()).thenReturn(quality(provider, MarketStatus.OPEN, status));
+                assertThatThrownBy(() -> issuer.issue(PriceReport.Side.BUY, INPUT))
+                        .isInstanceOf(PriceReportIssuanceException.class).hasMessageContaining("OPEN + LIVE");
+            }
+            for (MarketStatus state : new MarketStatus[]{MarketStatus.UNKNOWN, MarketStatus.CLOSED}) {
+                when(prices.requireTradableSnapshot()).thenReturn(quality(provider, state, PriceStatus.LIVE));
+                assertThatThrownBy(() -> issuer.issue(PriceReport.Side.BUY, INPUT))
+                        .isInstanceOf(PriceReportIssuanceException.class).hasMessageContaining("OPEN + LIVE");
+            }
+        }
+        org.mockito.Mockito.verifyNoInteractions(blockchain);
+    }
+
+    @Test
+    void preservesSyntheticAndAllowsFreshLiveFutureExternalProvider() {
+        when(prices.requireTradableSnapshot()).thenReturn(quality("SIMULATED", MarketStatus.OPEN, PriceStatus.SIMULATED));
+        assertThat(issuer.issue(PriceReport.Side.BUY, INPUT).report().validUntil())
+                .isEqualTo(BigInteger.valueOf(NOW.getEpochSecond() + 30));
+        when(prices.requireTradableSnapshot()).thenReturn(quality("KIWOOM", MarketStatus.OPEN, PriceStatus.LIVE));
+        assertThat(issuer.issue(PriceReport.Side.BUY, INPUT).report().executor()).isEqualTo(OPERATOR);
+    }
+
+    @Test
+    void rejectsFreshnessLostDuringRpcWithoutSigning() {
+        Clock delayed = mock(Clock.class);
+        when(delayed.instant()).thenReturn(NOW, NOW.plusSeconds(5).plusNanos(1));
+        issuer = new PriceReportIssuer(prices, blockchain, signer, delayed);
+        when(prices.requireTradableSnapshot()).thenReturn(snapshot(NOW));
+        assertThatThrownBy(() -> issuer.issue(PriceReport.Side.BUY, INPUT))
+                .isInstanceOf(PriceReportIssuanceException.class).hasMessageContaining("5초");
+    }
+
+    private MarketPriceSnapshot quality(String provider, MarketStatus marketStatus, PriceStatus priceStatus) {
+        var s = snapshot(NOW);
+        return new MarketPriceSnapshot(s.symbol(), s.price(), s.previousClose(), s.change(), s.changeRate(),
+                marketStatus, priceStatus, provider, s.observedAt());
+    }
+
+    @Test
+    void refusesToSignIfLiveConnectionOrMarketIsLostDuringRpc() {
+        for (MarketPriceSnapshot changed : new MarketPriceSnapshot[]{
+                quality("TOSS", MarketStatus.OPEN, PriceStatus.DEGRADED),
+                quality("TOSS", MarketStatus.CLOSED, PriceStatus.LIVE),
+                quality("TOSS", MarketStatus.UNKNOWN, PriceStatus.LIVE),
+                quality("KIWOOM", MarketStatus.OPEN, PriceStatus.LIVE)}) {
+            when(prices.requireTradableSnapshot()).thenReturn(snapshot(NOW), changed);
+            assertThatThrownBy(() -> issuer.issue(PriceReport.Side.BUY, INPUT))
+                    .isInstanceOf(PriceReportIssuanceException.class);
+        }
+    }
+
     private MarketPriceSnapshot snapshot(String symbol, Instant observedAt) {
         return new MarketPriceSnapshot(symbol, new BigDecimal("75300"), new BigDecimal("75000"),
                 new BigDecimal("300"), new BigDecimal("0.4"), MarketStatus.OPEN, PriceStatus.LIVE,
