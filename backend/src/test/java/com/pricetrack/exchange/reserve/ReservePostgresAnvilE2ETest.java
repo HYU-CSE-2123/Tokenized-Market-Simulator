@@ -34,6 +34,8 @@ import org.web3j.protocol.http.HttpService;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT) @DirtiesContext
 class ReservePostgresAnvilE2ETest {
     @DynamicPropertySource static void fixture(DynamicPropertyRegistry registry) throws Exception {
+        var phaseA=com.pricetrack.exchange.support.PhaseAFixture.optional(System.getenv("RESERVE_E2E_RUN"));
+        if(phaseA!=null){phaseA.forEach((k,v)->registry.add(k.toString(),()->v));return;}
         Path runtime=Path.of(System.getenv("RESERVE_E2E_RUN")).toRealPath();
         Path expected=Path.of("../deployment/runtime").toRealPath();
         if(!runtime.getParent().equals(expected) || !runtime.getFileName().toString().matches("reserve-e2e-\\d{14}-[0-9a-f]{6}"))
@@ -107,7 +109,7 @@ class ReservePostgresAnvilE2ETest {
         assertThat(reserve.run(user).status()).isEqualTo("MATCH");
         var beforeMine=chainReader.head();
         concurrentCutChange(user,()-> {
-            var rpc=new HttpService("http://127.0.0.1:25545");
+            var rpc=new HttpService(com.pricetrack.exchange.support.PhaseAFixture.rpcOr("http://127.0.0.1:25545"));
             var client=org.web3j.protocol.Web3j.build(rpc);
             try {
                 var response=new Request<>("evm_mine",List.of(),rpc,VoidResponse.class).send();

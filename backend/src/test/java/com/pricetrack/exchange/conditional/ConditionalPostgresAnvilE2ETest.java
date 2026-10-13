@@ -40,6 +40,11 @@ class ConditionalPostgresAnvilE2ETest {
     static final AtomicBoolean dropBeforeSend=new AtomicBoolean();
     static final AtomicInteger rpcRequests=new AtomicInteger();
     @DynamicPropertySource static void fixture(DynamicPropertyRegistry registry) throws Exception {
+        Properties phaseA=com.pricetrack.exchange.support.PhaseAFixture.optional(System.getenv("CONDITIONAL_E2E_RUN"));
+        Properties p=phaseA==null?legacyFixture():phaseA;
+        startProxy(registry,p);
+    }
+    static Properties legacyFixture() throws Exception {
         Path root=Path.of(System.getenv("CONDITIONAL_E2E_RUN")).toRealPath();
         if(!root.getParent().equals(Path.of("../deployment/runtime").toRealPath())
             || !root.getFileName().toString().matches("audit-e2e-\\d{14}-[0-9a-f]{6}"))throw new IllegalStateException("Dedicated fixture required");
@@ -47,6 +52,10 @@ class ConditionalPostgresAnvilE2ETest {
         if(!p.getProperty("spring.datasource.url").startsWith("jdbc:postgresql://127.0.0.1:26542/exchange_trade_audit_e2e?")
             || !p.getProperty("app.blockchain.rpc-url").equals("http://127.0.0.1:26545")
             || !p.getProperty("app.price.provider").equals("simulated") || !p.getProperty("app.ai.enabled").equals("false"))throw new IllegalStateException("Unsafe fixture");
+        return p;
+    }
+    static void startProxy(DynamicPropertyRegistry registry,Properties p)throws Exception {
+        String upstream=p.getProperty("app.blockchain.rpc-url");
         proxy=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);proxyPool=Executors.newFixedThreadPool(4);proxy.setExecutor(proxyPool);
         var client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
         proxy.createContext("/",exchange->{
@@ -54,7 +63,7 @@ class ConditionalPostgresAnvilE2ETest {
                 byte[] body=exchange.getRequestBody().readAllBytes();
                 rpcRequests.incrementAndGet();
                 if(dropBeforeSend.get() && new String(body,java.nio.charset.StandardCharsets.UTF_8).contains("eth_sendRawTransaction"))return;
-                var response=client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:26545"))
+                var response=client.send(HttpRequest.newBuilder(URI.create(upstream))
                     .timeout(Duration.ofSeconds(5)).header("Content-Type","application/json")
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build(),HttpResponse.BodyHandlers.ofByteArray());
                 if(loseSendResponse.get() && new String(body,java.nio.charset.StandardCharsets.UTF_8).contains("eth_sendRawTransaction")){
@@ -219,7 +228,7 @@ class ConditionalPostgresAnvilE2ETest {
     JsonNode post(String path,Map<String,?> body,String auth,String key,int expected){var r=http.exchange(path,HttpMethod.POST,new HttpEntity<>(body,headers(auth,key)),JsonNode.class);assertThat(r.getStatusCode().value()).as(path+" "+r.getBody()).isEqualTo(expected);return r.getBody();}
     JsonNode get(String path,String auth,int expected){var r=http.exchange(path,HttpMethod.GET,new HttpEntity<>(headers(auth,null)),JsonNode.class);assertThat(r.getStatusCode().value()).as(path).isEqualTo(expected);return r.getBody();}
     void rpc(String method,List<?> args) throws Exception {
-        var rpc=new org.web3j.protocol.http.HttpService("http://127.0.0.1:26545");
+        var rpc=new org.web3j.protocol.http.HttpService(com.pricetrack.exchange.support.PhaseAFixture.rpcOr("http://127.0.0.1:26545"));
         try{
             assertThat(new org.web3j.protocol.core.Request<>(method,args,rpc,org.web3j.protocol.core.Response.class).send().hasError()).as(method).isFalse();
         }finally{rpc.close();}

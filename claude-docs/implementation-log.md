@@ -1,5 +1,12 @@
 # 구현 로그 — Phase 0: 모노레포 뼈대
 
+## 2026-10-13: 최종 통합 인수 Phase A — 미완료/BLOCKED
+
+- 입력efb3a69, feat/phase-a-acceptance에서 새session/fixture·가변포트·전용키·identity/source/image/clock guard를 추가했다. 제품코드/거래·보안정책/계약/승인지식은변경없음.
+- 이번새실행 backend427 PASS/35 SKIP, 웹84/Chrome/Foundry36 PASS, guard unit9 PASS, 실제reserve1 PASS. Faucet신규2시도·audit·conditional은각FAIL, 별도JVMrestart는전제미충족NOT_RUN.
+- 실패후신규fixture의읽기진단에서DB시각이호스트보다약3.05/3.87초늦음을확인했다. 기존2초허용을늘리거나정상데이터를수정해성공처리하지않는다. 전체최종PASS와B/C실행은금지.
+- 실제runId/ports/XML/state/미검증·시장정책과9지식갱신안·별도검토·커밋경계는 [보고서](phase-a-integration-acceptance-report.md)에기록한다. clock전제해결전integration병합은대기한다.
+
 ## 2026-10-12: SIGNED/SUBMITTED 거래 정체 관측 — 통합 검증 완료
 
 - 승인 범위①+②: ADMIN DB 조회, 기본300초 LONG_WAIT, 마지막 완료 복구 시도 best-effort snapshot. 상태/잠금/nonce/raw/재전송/Receipt 정책과 기존 AI Tool은 유지.
@@ -2542,3 +2549,30 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - [정체 관측 설계](transaction-stall-observability-design.md): 기존 WAITING_LONG ADMIN Tool·시각/원문 복구·조건부 EXECUTING 연결을 조사. 마지막 시도 영속 metadata는 없음. ①ADMIN 표시+②파생 LONG_WAIT 경고와 작은 관측 snapshot을 추천. 거래 상태/REVIEW_REQUIRED·자산 잠금·nonce·raw·재시도 의미를 변경하지 않는다. Grafana/Prometheus/Actuator가 설치됐다는 근거 없음; 외부 경고는 별도 승인.
 - [Sepolia 정책 설계](sepolia-mockkrw-issuance-design.md): 로컬 공개 MockKRW 유지, 공개용 최초 고정 공급 variant를 우선 추천. owner/minter capped 공급 대안도 비교. S0/O0/V0 수치·발행 역할·confirmation/환경 사용은 미확정. 현재 totalSupply 불변 대사에 기준점 이후 추가 mint를 정상 반영하려면 별도 설계가 필요하다.
 - 검증은 현재 코드/테스트/read-only Git/문서 링크 점검. 새 설계 기능 테스트·실제 DB/RPC/부족ETH·Toss/유료AI/AWS/Sepolia는 실행하지 않았다. 동작 변경 없는 조사/문서이므로 별도 검토자는 생략했고 독립 검토 통과로 기록하지 않는다. 원본/기존 acceptance·개발DB·Anvil/runtime 보존. 두 설계는 제출 후 사용자 구현 승인 대기이며 커밋 확정13개와 이후 설계 문서 변경을 구분한다.
+
+# Phase A 시각 차단 후속 조사 — BLOCKED 유지 (2026-10-13)
+
+## 구현·결정
+- feat/phase-a-acceptance 2455d66에서 진단-only 옵션, Windows 지속 JVM Instant.now와 Docker/WSL/PG/Anvil 반복 시각 측정을 추가했다. 신규 fixture 생성·조회만 하며 배포·제품 schema·E2E 전에 종료한다. 제품 거래·TTL/2초 허용·컨트랙트 변경 없음.
+- [인수 보고서 §9](phase-a-integration-acceptance-report.md#9-시각-원인-조사-후속--2026-10-13-여전히-blocked)에 실측 범위/불확실성, Windows unsynchronized 상태, 미확정 원인과 사용자 동기화 또는 Linux JVM B안 승인 사항을 기록했다.
+
+## 검증
+- 새 session phase-a-20261013081121-dbc7207f의 독립 진단 fixture3개,5회씩 실제 측정. 기존 preflight15/15 BLOCKED. SQL은 Windows보다1차2.839~3.296초,2차3.071~3.746초 늦으며 Windows/JVM은 거의 일치한다. 실제E2E와같은JDK21.0.9의3차도1.962~4.135초 차이와Linux벽시계역행을 재현했다. 시각 보정 주체·권위 UTC/NTP 또는 과거409의 정확한 원인은 미검증이다.
+- Python harness12/12 PASS, SKIP0. 필수 실제 E2E4종/별도 JVM 재시작 및 backend/web/Foundry 재실행은 NOT_RUN: 전제 미충족이므로 반복하지 않는다. 이전 실패·35 SKIP은 유지한다.
+- 새 전용 컨테이너만 종료·증거 보존. 기존 서비스/실패 fixture·acceptance·개발환경 접근/변경, 전역 clock/NTP/WSL 재시작, 외부 호출 없음.
+
+## 검토·남은 작업
+- 독립 최초/첫 재검토 모두 **발견된 필수 수정 없음(진단harness·문서 한정)**. reviewer 직접Python12/12PASS와세진단JSON의15BLOCKED·Linux역행 확인. 소유컨테이너6exited/후보7파일생성secret노출0/제품diff0 확인. 시각 전제 및 필수 E2E 미완료로 통합 병합 보류. 사용자 조치 또는 B안 명시 승인 후 새session/fixture에서 preflight와 필수 E2E를 진행한다.
+
+# Phase A Windows 동기화 이후 필수 E2E 재검증 — PASS (2026-10-13)
+
+## 실제 실행·결정
+- 입력feat/phase-a-acceptance bebfe11 clean, 제품·테스트·harness 변경 없이 신규session phase-a-20261013095239-ca6b9c6c 생성. Windows 시간 서비스는leap0/stratum5로읽기확인했으며에이전트의시간변경/전역재시작없음.
+- 새clock-only fixture에서JDK21.0.9/Windows/Docker/PG/WSL5회측정,DB-host offset+0.0945..+0.1798초(왕복불확실성포함최대0.3726초),preflight5PASS. 이번측정구간Linux역행없음,장기보증아님.
+- 신규독립Faucet/reserve/audit/conditional fixture의preflight도모두PASS,각실제PG/Anvil E2E1PASS. 성공conditional원장을유지한별도Gradle/test JVM snapshot restart1PASS:총5/5PASS,SKIP0. Python12/12PASS.
+- 기존409이번재발없음이나정확한과거revert원인은여전히미확정. 기존실패증거·35skip보존,제품미래2초/OracleTTL/거래정책변경없음. 이전backend427/35·웹84/Foundry36을이번재실행결과로보고하지않는다.
+
+## 검토·보존 경계
+- [보고서 §10](phase-a-integration-acceptance-report.md#10-사용자-windows-동기화-이후-재진단필수-e2e--2026-10-13)에각새run/포트/실행/증거와기존결과를구분했다. 독립증거검토·최종소유권/안전점검결과는보고서에기록한다.
+- 독립검토 **발견된 필수 수정 없음(시각/E2E증거·문서 한정)**. reviewer직접새clock/preflight9PASS·5 XML/summary·별도JVM gate/metadata를확인했다. 직접재실행과Windows/컨테이너실행확인은하지않았으며구현자결과로구분한다. 실제필수E2E미완료와시각차단은이번증거로닫고전체최종인수PASS는선언하지않는다.
+- 기존acceptance/개발환경·실패fixture변경없음,새전용컨테이너만정지·새성공DB/state/log보존. 통합merge없음. Toss/유료AI/Sepolia/AWS·PhaseD전체PASS는NOT_RUN이며B안구현불필요로대기한다.

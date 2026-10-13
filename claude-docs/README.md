@@ -50,6 +50,12 @@
 
 ## 단일 출처(Source of Truth)
 
+2026-10-13 **Windows 동기화 후 Phase A 재검증 PASS**: [보고서 §10](phase-a-integration-acceptance-report.md#10-사용자-windows-동기화-이후-재진단필수-e2e--2026-10-13). Windows 시간 서비스 동기화 상태 확인, 신규 clock-only5회·업무fixture4회 preflight 모두 PASS. 새 Faucet/reserve/audit/conditional·관측/별도JVM restart 총5개 실제E2E PASS, Python12PASS. 아래 BLOCKED는 이전 이력으로 보존하며 전체 회귀427/35·웹84/Foundry36은 이전 실행으로 구분한다. 제품 변경·통합 병합·외부 호출 없음, B/C/D 및 전체 최종 인수는 미실행이다.
+
+2026-10-13 **Phase A 시각 후속 진단 — BLOCKED 유지**: [보고서 §9](phase-a-integration-acceptance-report.md#9-시각-원인-조사-후속--2026-10-13-여전히-blocked). 새 진단 fixture 세 개에서 Windows/JVM과 Docker/WSL/SQL을 비교해 기존 preflight 15/15 차단을 실제 확인했다. 실제 E2E JDK21.0.9에서도 재현됐으며 Linux 측 벽시계 역행도 관측했다. 필수 E2E 재실행은 NOT_RUN이며 사용자 시각 동기화 확인 또는 전용 Linux JVM harness 확장 승인이 필요하다. 전역 재시작·제품 시각 허용 변경·통합 병합 없음.
+
+2026-10-13 **최종 통합 인수 Phase A 실행 — 미완료/BLOCKED**: [보고서](phase-a-integration-acceptance-report.md). 신규 격리 회귀는 backend427 PASS/35 SKIP·웹84/Foundry36/Chrome fixture PASS, 실제 reserve1 PASS. Faucet·audit·conditional 실제 E2E 실패와 신규 Docker DB-호스트3~4초 시각차를 보존했다. 제품2초 허용을 우회하지 않으며 별도 JVM 검증/통합 병합은 대기. [계획](final-integration-acceptance-plan.md)의 B/C/D는 미승인이다. 이 기록은 현재 feat/phase-a-acceptance의 부분 실행 상태이며 전체 인수 PASS가 아니다.
+
 2026-10-12 **SIGNED/SUBMITTED 관측 ①+② 통합 완료**: 기능e489b3c → 병합7bf459c. [구현/API·실행별 검증 기록](transaction-stall-observability-implementation.md): 병합 소스 backend427 PASS/35 SKIP, 웹84/Foundry36 PASS, 브라우저·신규 PG/Anvil1·별도 JVM PG1 PASS. ADMIN 읽기 전용 LONG_WAIT와 최신 완료 시도 snapshot이며 기존 복구/정산·AI WAITING_LONG 계약은 유지한다. 아래 승인 대기 문구는 이전 설계 시점 이력이다. 외부 모니터링은 제외. [Sepolia 정책](sepolia-mockkrw-issuance-design.md)은 별도 최초 고정 공급 A안으로 확정했지만 S0/O0/V0·계약 구현·배포/ETH/RPC는 미승인이다.
 
 2026-10-12 후속 점검 확정: A 모델 안내·문서·표시 테스트13개를 `c7bf4e8`로 커밋했다. 새 [SIGNED/SUBMITTED 정체 관측 설계](transaction-stall-observability-design.md)와 [Sepolia mKRW 발행 정책 설계](sepolia-mockkrw-issuance-design.md)는 **제안/구현 승인 대기**다. 기존 REVIEW_REQUIRED·거래 복구·계약·DB 및 acceptance는 변경하지 않았다.
