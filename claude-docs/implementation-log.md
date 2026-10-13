@@ -1,5 +1,12 @@
 # 구현 로그 — Phase 0: 모노레포 뼈대
 
+## 2026-10-14: Docker 정상 이후 최신 통합 Phase A 필수 E2E — 5/5 PASS
+
+- source a317f67 clean에서Docker version/info Server28.4/API1.51 Linux정상확인,새session phase-a-20261013173219-bb0717fd 생성. 기존실패session/환경재사용·서비스재시작없음.
+- 신규Faucet/reserve/audit/conditional·observation 실제PG/Anvil 각각1PASS,성공conditional원장의별도JVMrestart1PASS:5/5,FAIL·ERROR·SKIP0. backend/web/Foundry전체회귀는이번NOT_RUN이며이전451/35·84·36과구분한다.
+- Faucet1회/conditional2회의실제subnet충돌을2/3번째후보에서회복했고E2E도PASS. clock4/4PASS(불확실성포함최대0.581249초<2초),소유권·loopback·source/imageguard유지. 새컨테이너8개만정지확인하고모든신규state/로그/기존증거보존.
+- 제품/harness코드변경0,실제Toss/키움/AI호출없음. [실행·검토보고](phase-a-subnet-retry-validation.md),[키움실제시세인수준비/착수판정](kiwoom-live-acceptance-preparation.md)·최종보고/공통README를갱신한다. 독립증거검토결과는보고서에추가한다. 실제키/접근/IP·capture도구·호출승인후읽기전용키움0s/분봉경계부터검증가능하며전체실환경인수PASS는선언하지않는다.
+
 ## 2026-10-14: Phase A subnet 후보 제한 재시도 — 구현 통합/실제E2E BLOCKED
 
 - 새fixture network create의 확인된overlap stderr에만8개서로다른후보/명령당15초로재시도한다. 일반실패·timeout즉시중단,시도별private증거보존. 기존network조회·변경·삭제/제품코드/시각·격리guard변경없음.

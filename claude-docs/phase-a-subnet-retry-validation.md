@@ -2,6 +2,8 @@
 
 > 2026-10-14. 입력 integration/additional-features `73f8f3d`. 제품 소스·기존 환경 변경 없음. 실행 결과는 완료 후 추가한다.
 
+> 최신 후속: Docker 정상 응답 확인 후 통합 `a317f67`의 새 session에서 필수 실제E2E **5/5 PASS**. 아래 환경BLOCKED는 이전 실행 이력이며 재사용하지 않았다. 상세는 문서 끝의 후속 결과를 확인한다.
+
 ## 수정 범위
 
 `deployment/phase-a.py`: Docker network create의 확인된 subnet overlap stderr에만 최대8개 중복 없는10.240.x.0/24 후보를 순차 시도한다. 기존 네트워크 list/inspect/delete/update 없이 Docker 생성 결과로 판정한다. 각 시도의 metadata/원문 stderr는 신규 session private 로그에, 후보/결과는 신규 fixture network-allocation.json에 남긴다.
@@ -35,3 +37,35 @@ Python 단위와 독립 검토 후 기능 커밋을 통합하고 최신 통합 H
 - 이 문서: harness 변경·독립 검토·이번 차단 결과와 후속 실행 조건.
 - 신규 [키움 실제 인수 사전 준비](kiwoom-live-acceptance-preparation.md): App Key/전용runtime/승인, 장중 최초0s 수신·재연결·5초 시간 해석, native봉 시작/종료 가설과tick/OHLCV 대조·asOf 한계 검증 절차. 실제 키움 호출/수집도구 구현은 하지 않았다.
 - 기존 최종 통합 보고서와 공통README/implementation-log에는 후속상태 링크를 추가하며13일 실패/통과 이력을 지우지 않는다.
+
+## Docker 정상 확인 이후 최신 통합 E2E — 5/5 PASS
+
+실제 입력 HEAD `a317f678d1b06e323eb308a69bf022e65633a59b`, integration/additional-features clean. Docker version의 Server와 docker info 모두 정상응답: Engine28.4.0/API1.51/Linux/x86_64. 에이전트가Docker/WSL/서비스를 재시작하거나네트워크를초기화하지않았다.
+
+새 session `phase-a-20261013173219-bb0717fd`(UTC13일17:32/KST14일02:32), JDK21.0.9. 이전실패session을재사용하지않았다. offline init의이미지/sourceHash/digest검증후 다음4개업무fixture를각각신규DB/Anvil/키/loopback포트로실행했다. 성공conditional원장만별도JVM restart로검증한다.
+
+| 실제 클래스 | 새 fixture /DB·RPC 포트 | PASS /FAIL /SKIP |
+|---|---|---|
+| FaucetPostgresAnvilE2ETest | faucet-e76f5239 /44634·39143 | 1 /0 /0 |
+| ReservePostgresAnvilE2ETest | reserve-2211dd22 /43986·36300 | 1 /0 /0 |
+| TradeAuditPostgresAnvilE2ETest | audit-7464ce32 /44171·48094 | 1 /0 /0 |
+| ConditionalPostgresAnvilE2ETest | conditional-f273cb88 /39427·46449 | 1 /0 /0 |
+| ObservationRestartPostgresTest | 동일 conditional fixture, 별도 Gradle/test JVM | 1 /0 /0 |
+
+총계 **5 PASS /0 FAIL·ERROR /0 SKIP /0 BLOCKED /0 NOT_RUN**. 각1개는 여러 업무 assertion을 포함한 실제 macro E2E이며 assertion 수를 테스트 건수에 더하지 않는다. 시세는 Synthetic, AI는 비활성이다.
+
+clock preflight4개 모두 기존2초 경계를 통과했다. DB-host offset은 Faucet+0.132181초/reserve-0.326126초/audit+0.426517초/conditional-0.134473초, RTT는0.235005~0.309464초다. 왕복 불확실성을 포함한 worst는0.261854/0.443628/0.581249/0.263337초다. 장기 시각 안정성이나 모든 시각의 역행 부재를 보증하는 측정은 아니다.
+
+**실제 Docker 충돌 후 회복 확인**: Faucet은1회 overlap 후2번째 후보, conditional은2회 overlap 후3번째 후보 생성에 성공하고 E2E도 PASS했다. reserve/audit은 첫 후보에 생성했다. 후보별 stderr/metadata/network-allocation.json은 신규 private runtime에 보관한다. 8후보 소진·다른 오류 즉시 중단은 앞선 Mock 단위 검증이며 이번 실제 Docker에서 의도적으로 재현하지 않았다.
+
+이번에 만든 컨테이너8개만 fixture label/이름·정지 상태를 확인했다. 컨테이너/network/DB·chain state/XML/로그는 삭제하지 않고 보존했다. 기존 acceptance/devDB/Anvil/melon-init/실패 증거에 접근·변경하지 않았다. 제품/harness 코드 변경0. 백엔드 전체·웹·Foundry 재실행은 이번 범위가 아니며 이전451 PASS/35 SKIP·웹84·Foundry36은 이전 실행으로 남긴다.
+
+증거: `deployment/runtime/<session>/evidence/<fixture>/summary.json`과`xml/TEST-*.xml`, restart는 전용`<conditional>-restart` 디렉터리, fixture의`run.json`/`isolation.json`/`preflight-clock.json`/`network-allocation.json`과 실행 metadata다. 비밀 설정/raw/키는 공유 문서나 Git에 포함하지 않는다. 독립 증거 확인 결과는 완료 후 추가한다.
+
+## 키움 실제 시세 인수 착수 판정
+
+**격리 기반·기존 거래의 전제는 통과했으며, 실제 키와 별도 승인이 있으면 읽기 전용 키움 인증/WS/차트 사전 인수에 진입할 수 있다.** 실제 데이터 BUY/SELL 성공이나 제품 실환경 적합성을 의미하지 않는다.
+
+먼저 사용자가 App Key/Secret·사용 mode/endpoint·접근/IP 조건을 확인하고, 전용 runtime·read-only capture 수단·실제 호출 상한을 승인해야 한다. 현재 capture 도구는 미구현이며 이번 작업에서 추가하지 않았다. 기존 [준비 절차](kiwoom-live-acceptance-preparation.md)에 따라 장중 최초 연결과 재연결의0s/215/20이 현재 동일 generation/fresh 판정에 맞는지, native 분봉 cntr_tm이 시작/종료 어느 경계인지, 웹 tick/OHLCV/asOf가 일치하는지부터 판정한다.
+
+0s 미제공/오래된 시각이나 분봉 경계 불일치는 해당 단계에서 BLOCKED/FAIL/INCONCLUSIVE로 기록하며 OPEN 추정·시간 허용치 확대·임의 shift·제품 코드 변경으로 우회하지 않는다. 실제 키움/Toss·유료 AI/embedding·Sepolia/AWS·최종 Phase D는 계속 NOT_RUN이며 이번5 PASS로 대체하지 않는다.

@@ -2,6 +2,10 @@
 
 > 2026-10-14. 계획만 작성. 실제 키움/Toss/유료 AI 호출, 계정 생성, 키 주입, 신규 실환경 구축은 NOT_RUN이다. 제품 변경이나 실환경 인수 승인 문서가 아니다.
 
+## 최신 착수 판단
+
+통합a317f67의 새 Synthetic PostgreSQL/Anvil 필수E2E5/5가 실제 PASS했다. [실행 증거와 범위](phase-a-subnet-retry-validation.md). 따라서 격리 기반 검증 차단은 해소됐고 다음 단계로 키움 읽기 전용 사전 인수에 착수할 수 있다. 다만 실제 App Key/Secret·mode/endpoint·접근/IP 확인, 전용runtime/read-only frame수집 도구 준비·호출수 승인이 선행되어야 한다. 현재수집도구는미구현이며 이번에추가하지않았다. 장중최초0s bootstrap·분봉timestamp·asOf를먼저확인하고통과후에만실데이터BUY/SELL 인수를검토한다. 기존Synthetic5PASS는실제키움정상동작증거가아니다.
+
 ## 전제와 승인
 
 사용자가 키움 REST 서비스의 이용 자격·시세 권한·접근/IP 등록 조건을 공식 계정에서 확인하고 App Key/Secret을 전용 runtime에 준비해야 한다. 실제/모의 키와 endpoint를 혼용하지 않는다. 필수 설정 이름은 PRICE_PROVIDER=kiwoom, KIWOOM_APP_KEY, KIWOOM_SECRET_KEY, KIWOOM_API_BASE_URL, KIWOOM_WEBSOCKET_URL이다. 실제 값은 문서/일반 로그/Git에 남기지 않는다. 현재 기본 endpoint는 api.kiwoom.com의 HTTPS 및10000포트 WSS이며 모의는 mockapi.kiwoom.com의 짝으로 설정한다. `.env.example`은 이름 안내만 제공한다.
