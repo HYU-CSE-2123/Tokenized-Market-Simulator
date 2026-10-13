@@ -10,6 +10,33 @@ spec=importlib.util.spec_from_file_location('phase_a',Path(__file__).with_name('
 a=importlib.util.module_from_spec(spec);spec.loader.exec_module(a)
 
 class PhaseAGuardTest(unittest.TestCase):
+    def test_network_overlap_uses_distinct_bounded_candidates(self):
+        collision=a.CommandFailed('network',1,'Error: invalid pool request: Pool overlaps with other one on this address space')
+        with tempfile.TemporaryDirectory() as folder,patch.object(a,'execute',side_effect=[collision,'new-id']) as execute:
+            run=Path(folder);a.create_fixture_network(run,run,'new-fixture','test')
+            self.assertEqual(execute.call_count,2)
+            subnets=[call.args[1][4] for call in execute.call_args_list]
+            self.assertEqual(len(set(subnets)),2)
+            for call in execute.call_args_list:
+                self.assertEqual(call.args[1][:3],['docker','network','create'])
+                self.assertEqual(call.args[1][-1],'new-fixture-network')
+            evidence=json.loads((run/'network-allocation.json').read_text())
+            self.assertEqual([r['result'] for r in evidence['attempts']],['SUBNET_OVERLAP','CREATED'])
+    def test_network_overlap_exhaustion_stops_after_eight(self):
+        collision=a.CommandFailed('network',1,'invalid pool request: Pool overlaps with other one on this address space')
+        with tempfile.TemporaryDirectory() as folder,patch.object(a,'execute',side_effect=collision) as execute:
+            run=Path(folder)
+            with self.assertRaisesRegex(RuntimeError,'exhausted after 8'):a.create_fixture_network(run,run,'new','test')
+            self.assertEqual(execute.call_count,8)
+            self.assertEqual(len({c.args[1][4] for c in execute.call_args_list}),8)
+            self.assertEqual(len(json.loads((run/'network-allocation.json').read_text())['attempts']),8)
+    def test_network_other_failures_and_timeout_never_retry(self):
+        for error in (a.CommandFailed('network',1,'permission denied'),RuntimeError('uncertain timeout')):
+            with tempfile.TemporaryDirectory() as folder,patch.object(a,'execute',side_effect=error) as execute:
+                run=Path(folder)
+                with self.assertRaises(RuntimeError):a.create_fixture_network(run,run,'new','test')
+                self.assertEqual(execute.call_count,1)
+                self.assertTrue((run/'network-allocation.json').exists())
     def test_clean_environment_drops_credentials_and_all_live_gates(self):
         with patch.dict(os.environ,{'OPENAI_API_KEY':'never-inherit','TOSS_CLIENT_SECRET':'never-inherit',
                 'AI_PHASE8_LIVE_EVALUATION':'true','AI_TOOL_POSTGRES_TESTS':'true',

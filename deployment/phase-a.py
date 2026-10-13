@@ -63,6 +63,12 @@ def verify_session(session,meta):
     actual=execute(session,['docker','image','inspect',meta['toolsImage'],'--format','{{.Id}}'],'tools-identity')
     if actual!=meta['toolsDigest']:raise RuntimeError('Tools image identity changed')
 
+class CommandFailed(RuntimeError):
+    def __init__(self, step, returncode, stderr):
+        super().__init__(step+' failed; evidence retained; no reset/redeploy')
+        self.returncode=returncode
+        self.stderr=stderr  # private classification only; never print the vendor/command body
+
 def execute(session, args, step, cwd=REPO, env=None, timeout=900):
     stamp=dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%f')
     child=env or clean_env(session)
@@ -79,7 +85,7 @@ def execute(session, args, step, cwd=REPO, env=None, timeout=900):
             ((error.stdout or b'')+(error.stderr or b'')).decode('utf-8',errors='replace'))
         raise RuntimeError(step+' timeout; partial evidence retained') from None
     private(session/'logs'/(step+'-'+stamp+'.private.log'),(result.stdout+result.stderr).decode('utf-8',errors='replace'))
-    if result.returncode:raise RuntimeError(step+' failed; evidence retained; no reset/redeploy')
+    if result.returncode:raise CommandFailed(step,result.returncode,result.stderr.decode('utf-8',errors='replace'))
     return result.stdout.decode('utf-8',errors='replace').strip()
 
 def init():
@@ -172,6 +178,29 @@ def measure_clock(session,meta):
     return {'runId':meta['runId'],'hostEpochBefore':t0,'hostEpochAfter':t1,'dbEpoch':db,
             'dbMinusHostSeconds':db-(t0+t1)/2}
 
+def create_fixture_network(session,run,name,id):
+    # Docker atomically decides availability. Never list, inspect, delete or alter other networks.
+    attempts=[]
+    try:
+        for index,octet in enumerate(secrets.SystemRandom().sample(range(256),8),1):
+            subnet=f'10.240.{octet}.0/24'
+            entry={'attempt':index,'subnet':subnet,'result':'STARTED'};attempts.append(entry)
+            try:
+                execute(session,['docker','network','create','--subnet',subnet,'--label',
+                    'phase-a.fixture='+name,name+'-network'],id+f'-network-{index:02}',timeout=15)
+            except CommandFailed as error:
+                if 'invalid pool request: pool overlaps with other one on this address space' not in error.stderr.lower():
+                    entry['result']='COMMAND_FAILED';raise
+                entry['result']='SUBNET_OVERLAP'
+                continue
+            except Exception:
+                entry['result']='UNCONFIRMED_FAILURE';raise  # timeout/uncertain creation is never retried
+            entry['result']='CREATED'
+            return
+        raise RuntimeError('New fixture subnet candidates exhausted after 8 attempts; no shared-network changes')
+    finally:
+        private(run/'network-allocation.json',json.dumps({'maxAttempts':8,'attempts':attempts},indent=2))
+
 def fixture(session,parent,case,clock_only=False):
     # Independent E2Es always allocate a fresh child. Each session keeps used ports forever.
     used=set()
@@ -191,7 +220,7 @@ def fixture(session,parent,case,clock_only=False):
     network=name+'-network';created=[]
     try:
         # Explicit subnet avoids exhaustion of Docker's predefined pools. No old networks inspected/removed.
-        execute(session,['docker','network','create','--subnet','10.240.'+str(secrets.randbelow(256))+'.0/24','--label','phase-a.fixture='+name,network],id+'-network')
+        create_fixture_network(session,run,name,id)
         execute(session,['docker','run','--pull=never','-d','--name',name+'-postgres','--label','phase-a.fixture='+name,
             '--network',network,'-p',f'127.0.0.1:{dbport}:5432','-e','POSTGRES_DB='+database,'-e','POSTGRES_USER=reserve',
             '-e','POSTGRES_PASSWORD_FILE=/run/secrets/db-password','-v',str(run/'secrets/db-password')+':/run/secrets/db-password:ro',
