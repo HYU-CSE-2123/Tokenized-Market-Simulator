@@ -2563,3 +2563,16 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 ## 검토·남은 작업
 - 독립 최초/첫 재검토 모두 **발견된 필수 수정 없음(진단harness·문서 한정)**. reviewer 직접Python12/12PASS와세진단JSON의15BLOCKED·Linux역행 확인. 소유컨테이너6exited/후보7파일생성secret노출0/제품diff0 확인. 시각 전제 및 필수 E2E 미완료로 통합 병합 보류. 사용자 조치 또는 B안 명시 승인 후 새session/fixture에서 preflight와 필수 E2E를 진행한다.
+
+# Phase A Windows 동기화 이후 필수 E2E 재검증 — PASS (2026-10-13)
+
+## 실제 실행·결정
+- 입력feat/phase-a-acceptance bebfe11 clean, 제품·테스트·harness 변경 없이 신규session phase-a-20261013095239-ca6b9c6c 생성. Windows 시간 서비스는leap0/stratum5로읽기확인했으며에이전트의시간변경/전역재시작없음.
+- 새clock-only fixture에서JDK21.0.9/Windows/Docker/PG/WSL5회측정,DB-host offset+0.0945..+0.1798초(왕복불확실성포함최대0.3726초),preflight5PASS. 이번측정구간Linux역행없음,장기보증아님.
+- 신규독립Faucet/reserve/audit/conditional fixture의preflight도모두PASS,각실제PG/Anvil E2E1PASS. 성공conditional원장을유지한별도Gradle/test JVM snapshot restart1PASS:총5/5PASS,SKIP0. Python12/12PASS.
+- 기존409이번재발없음이나정확한과거revert원인은여전히미확정. 기존실패증거·35skip보존,제품미래2초/OracleTTL/거래정책변경없음. 이전backend427/35·웹84/Foundry36을이번재실행결과로보고하지않는다.
+
+## 검토·보존 경계
+- [보고서 §10](phase-a-integration-acceptance-report.md#10-사용자-windows-동기화-이후-재진단필수-e2e--2026-10-13)에각새run/포트/실행/증거와기존결과를구분했다. 독립증거검토·최종소유권/안전점검결과는보고서에기록한다.
+- 독립검토 **발견된 필수 수정 없음(시각/E2E증거·문서 한정)**. reviewer직접새clock/preflight9PASS·5 XML/summary·별도JVM gate/metadata를확인했다. 직접재실행과Windows/컨테이너실행확인은하지않았으며구현자결과로구분한다. 실제필수E2E미완료와시각차단은이번증거로닫고전체최종인수PASS는선언하지않는다.
+- 기존acceptance/개발환경·실패fixture변경없음,새전용컨테이너만정지·새성공DB/state/log보존. 통합merge없음. Toss/유료AI/Sepolia/AWS·PhaseD전체PASS는NOT_RUN이며B안구현불필요로대기한다.

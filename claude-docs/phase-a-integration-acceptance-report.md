@@ -1,6 +1,6 @@
 # Phase A 통합 인수 보고서
 
-> 2026-10-13 · **Phase A 미완료 / BLOCKED: 호스트와 신규 Docker DB의 시각 차이 및 실제 E2E 실패**. 승인 범위는 무과금 회귀와 신규 격리 PostgreSQL/Anvil뿐이다. B 실제 Toss, C 유료 AI, D 전체 최종 PASS는 미승인/NOT_RUN.
+> 2026-10-13 최신 후속 결과: **Windows 동기화 이후 시각 preflight 및 필수 실제 E2E 재검증 PASS**. 최신 결과는 §10, §1~9의 BLOCKED/실패는 이전 실행 이력으로 보존한다. 승인 범위는 무과금 회귀와 신규 격리 PostgreSQL/Anvil뿐이다. B 실제 Toss, C 유료 AI, D 전체 최종 PASS는 미승인/NOT_RUN. 통합 병합은 수행하지 않았다.
 
 ## 1. 기준 소스와 신규 run
 
@@ -183,3 +183,61 @@ B는 Java fixture guard와 Linux Gradle 실행/증거 수집 경로까지 바뀌
 독립 검토 `review_phase_a_clock`: 최초 및 첫 재검토 모두 **발견된 필수 수정 없음 — 진단 harness·보고서에 한정**. 선택 제안인 clock-only 경로의 배포/schema/java_test 미호출 테스트를 반영했다. reviewer가 Python12/12 PASS·SKIP0 및 허용된 세 진단 JSON의 SQL15/15 BLOCKED, 마지막 SQL/Docker 역행 기록을 직접 확인했다. Docker/WSL/DB/외부 호출이나 과거 runtime 접근은 하지 않았으며 JDK21 버전 출력은 구현자 실행 확인과 구분했다. 필수 E2E/별도 JVM 미실행과 병합 보류는 유지한다.
 
 최종 자체 점검: 세 신규 fixture의6개 컨테이너 모두 정확한 소유label과exited 확인. 이번 생성 비밀값을7개 Git후보와 비출력 대조해 노출0, runtime/env/state/build/log 후보0. 제품backend/src/main·contracts/src·승인AI지식diff0, integration ref efb3a69 유지. 안전한harness·보고서만기능브랜치에기록하며통합하지않는다.
+
+## 10. 사용자 Windows 동기화 이후 재진단·필수 E2E — 2026-10-13
+
+### 10.1 기준과 실제 조치
+
+- 작업 브랜치 `feat/phase-a-acceptance`, 입력 HEAD `bebfe110c97f76b5ac379cd25e0fce26a6b62104`, 시작 시 clean. 제품·테스트·harness 소스는 이번에 변경하지 않았다. 통합 ref는 `efb3a69aa9b01c585109df18fdd4de2675efb6c3` 유지다.
+- 사용자 조치 뒤 `w32tm /query /status`를 읽기 전용 확인: leap indicator **0**, stratum **5**, source `time.windows.com,0x9`, 마지막 성공 동기화2026-10-13 KST18:49:07. root delay0.0065498초/root dispersion7.7702821초도 표시됐다. 서비스가 동기화 상태라는 사실과 권위 UTC 절대 오차를 구분한다. 에이전트는 NTP 요청·재동기화·시간 설정·Docker/WSL 재시작을 하지 않았다.
+- 새 session `phase-a-20261013095239-ca6b9c6c`, 기존 E2E와 같은 Temurin **21.0.9**를 명령 프로세스 PATH에만 지정했다. 과거 실패 session/fixture·제품.env·acceptance·개발환경은 재사용하거나 열지 않았다.
+- 새 진단-only `reserve-98c07bb1`(DB35058/RPC42139)에서5회 반복 측정 후 전용 컨테이너 종료. 배포/schema/E2E는 이 진단 fixture에서 하지 않았다. 아래 업무4종은 각각 별도의 신규 fixture다.
+
+### 10.2 전후 시각과 안정성
+
+진단 최초 호스트 UTC는2026-10-13 09:54:30.793193이다. midpoint 기준 offset 및 RTT/2 불확실성은 raw `fixtures/reserve-98c07bb1/clock-diagnostic.json`에 보존했다.
+
+| 대상 | 이번 5회 결과 | 불확실성/한계 |
+|---|---|---|
+| Windows JVM Instant.now | 호스트 대비 약±0.00000024초 | RTT0.000277..0.000620초; Windows 호출 해상도 한계 |
+| Windows .NET UTC | +0.0774..+0.1151초 | RTT0.2046..0.3191초, midpoint 편향 포함 |
+| Docker Linux date | +0.0506..+0.0898초 | RTT0.1226..0.2311초, 불확실성±0.0613..0.1155초 |
+| PostgreSQL clock_timestamp | **+0.0945..+0.1798초** | RTT0.2165..0.3855초; offset절댓값+RTT/2 최대 약**0.3726초** |
+| docker-desktop WSL | 1초 절삭 오차 포함한 각 구간이 호스트 시각과 양립 | fractional0을 나노초 정밀도로 해석하지 않음 |
+| Anvil 최신 블록 | genesis timestamp1791885252(UTC09:54:12) 유지 | 채굴 없는 block 시각은 벽시계가 아님 |
+
+기존 `require_clock_alignment` **5/5 PASS**, 허용2초 그대로다. 각 샘플의 Docker date·SQL epoch·WSL epoch는 증가했고 **이번 측정 구간에서 Linux 내부 시각 역행은 관측하지 않았다**. 호스트 epoch/perf_counter 차이는1밀리초 미만이다. 장기적인 시각 안정성이나 미래의 역행 부재를 보증하지 않는다.
+
+이전 §9의 SQL offset−1.962..−4.135초 및 역행 기록은 삭제하지 않는다. 사용자 동기화 조치 이후 현재 시각 전제가 개선된 것은 실측 사실이지만, 기존 보정/역행을 유발한 정확한 구성요소까지 확정한 것은 아니다. 이번에 B안 Linux 테스트 JVM은 필요하지 않았고 구현하지 않았다.
+
+### 10.3 새 독립 fixture E2E 결과
+
+다음은 이번에 **새로 실행한 결과**다. 클래스마다 macro E2E 한 개이며 내부 assertion 수를 테스트 개수로 부풀리지 않는다.
+
+| 구분 / 실제 클래스 | 신규 fixture | DB / RPC | 이번 결과 |
+|---|---|---|---|
+| FaucetPostgresAnvilE2ETest | faucet-8fbb7df8 |31029 /36736 | **1/1 PASS**, FAIL0/SKIP0 |
+| ReservePostgresAnvilE2ETest | reserve-4ec4db04 |37076 /42928 | **1/1 PASS**, FAIL0/SKIP0 |
+| TradeAuditPostgresAnvilE2ETest | audit-ff29c443 |37954 /38670 | **1/1 PASS**, FAIL0/SKIP0 |
+| ConditionalPostgresAnvilE2ETest | conditional-d4d7ecc4 |39268 /34533 | **1/1 PASS**, FAIL0/SKIP0 |
+| ObservationRestartPostgresTest | 성공 conditional fixture에서 별도 Gradle/test JVM |39268 /34533 | **1/1 PASS**, FAIL0/SKIP0 |
+
+Faucet/reserve/audit/conditional은 각각 새로운 키·DB·Anvil·namespace와 빈 제품 schema에서 실행했다. restart만 **성공한 conditional 데이터**를 보존한 채 `spring.sql.init.mode=never`로 읽어 서버 JVM 종료 이후 실제 FAILURE_SETTLED 관측 snapshot을 확인한다. 추가로 별도 fixture transactionId의 관측 metadata만 저장해 중복/오래된 시도 거절을 검증한다. 이 metadata 기록을 실제 RPC 시도로 표현하지 않으며 실제 transaction/raw/nonce/hash·사용자 자산 불변도 비교한다. 따라서 JVM 전체가 읽기 전용이었다고 주장하지 않는다. 초기화/새 baseline/reset으로 성공 처리하지 않았다.
+
+업무 fixture별 실제 preflight `(offset, RTT/2, worst)`는 각각 Faucet `(0.110747,0.115032,0.225779)`, reserve `(0.093750,0.130045,0.223795)`, audit `(0.119357,0.167782,0.287139)`, conditional `(0.139094,0.153672,0.292766)`초로 모두2초 안이다. clock-only5회와 업무4회 preflight를 합쳐 이번 **9/9 PASS**다. restart에는 SQL schema 재초기화나 새 체인 발급이 없다.
+
+실행 명령은 JDK21의 프로세스 PATH 지정 후 `python deployment/phase-a.py fixture --session <이번새session> --case <faucet|reserve|audit|conditional>`이다. 각 클래스의 opt-in gate/fixture property/clean env는 기존 도구가 설정했고 conditional 성공 후 OBSERVATION_RESTART_TESTS를 별도 JVM에 적용했다. `evidence/<fixture>/xml/TEST-*.xml`, `summary.json`, `logs`와 새DB/state를 비공개 보존한다.
+
+Faucet은 지급 정책/멱등성/실제PG 경합·rollback·예산50회·BUY 잠금·SELL 정산·두 대사 호환성의 후반 assertion까지 도달했다. reserve는 consistent cut/불변 baseline/MATCH·MISMATCH·INCONCLUSIVE를, audit은 양방향 비교·고아 Quote 포함 판정·불완전 coverage를 실행했다. conditional은 실제 BUY/SELL·취소 경합·재발급 가격 조건·동일 raw 응답유실 복구·실패receipt/REVIEW_REQUIRED·관측 불변성과 연결을 실행했다. 별도 JVM은 snapshot 영속성 읽기 검증이다. 상세 assertion의 정본은 각 실제 클래스와 해당 XML이다.
+
+### 10.4 회귀·원인 판정·미검증
+
+- 이번 추가 Python harness 회귀 **12/12 PASS**, SKIP0. 소스 변경 없이 같은 guard들을 다시 실행했다.
+- backend 전체427 PASS/35 SKIP, 웹84, Foundry36, Chrome desktop/mobile fixture는 **§3의 앞선 Phase A 실행 증거**다. 이번에는 전체 회귀를 재실행한 것처럼 보고하지 않는다. 입력 이후 backend/main·contracts·웹·테스트/harness 소스 변경 없음과 함께 참고한다. 35 SKIP은 계속 통과 수에서 제외한다.
+- 이번 Faucet 및 audit에서는 API409가 재발하지 않았다. 따라서 기존 estimateGas의 정확한 revert가 확인된 것처럼 기록하지 않고 **원인 미확정**을 유지한다. 전후 차이는 동기화 효과를 뒷받침하지만 모든 과거409를 시간 때문이라고 단정하지 않는다. 성공시키기 위한 제품2초/OracleTTL/거래/nonce/raw/정산 변경0이다.
+- Phase A의 이전 시각 차단 및 필수 E2E 미완료는 이번 실제 통과 증거로 닫을 수 있다. 이는 무과금/Synthetic/새 로컬 Anvil 범위다. 실제 Toss·유료AI·Sepolia·AWS·Android실기기·장시간운영·실제ETH부족 등 별도 미검증 범위를 해소하지 않는다. Phase B/C는 NOT_RUN, Phase D 전체 최종 인수 PASS는 선언하지 않는다.
+- 이번 전용 컨테이너만 종료하며 이전 실패·새 성공 원장/state/log를 모두 보존한다. 통합 병합은 이번에 실행하지 않고 검토 사항으로 남긴다. 독립 검토와 최종 안전 점검 결과는 아래에 추가한다.
+
+최종 자체 점검: 이번 clock-only1개와업무4개의PG/Anvil **10개 모두 정확한 소유label·exited 확인**. 새 fixture의 실제 키/DB비밀번호를 변경문서3개와비출력대조해노출0. gitdiff에서제품/main·contracts·웹·backend테스트·harness·승인AI지식 변경0,변경후보는문서3개뿐이며.env/runtime/log/DB/state/빌드산출물없음. 통합ref efb3a69 유지다. fixture에는의도적인장애/불일치assertion자료가있으므로정상제품또는Toss acceptance환경으로재사용하지않는다.
+
+독립 검토 `review_phase_a_resync`: **발견된 필수 수정 없음 — 이번 시각 재진단·필수 E2E 증거/문서에 한정**. reviewer는새clockJSON5PASS·업무preflight4PASS·각E2E XML/summary5개1PASS/0FAIL/0ERROR/0SKIP 및restart selector/gate의별도Gradle실행metadata를직접확인했다. 소스의schema never·실제snapshot읽기·별도synthetic metadata쓰기·거래/자산불변assertion과문서구분이일치한다. reviewer의E2E/Python재실행은없으며Windows상태·컨테이너종료/소유권·비밀값점검은구현자실행결과로구분했다. Docker/WSL/DB/외부호출·과거runtime접근없음. 이번근거로PhaseA시각차단·필수E2E미완료를닫을수있지만전체최종인수PASS가아니라는결론이다.
