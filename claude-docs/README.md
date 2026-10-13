@@ -50,6 +50,8 @@
 
 ## 단일 출처(Source of Truth)
 
+2026-10-14 **키움 읽기 전용 진단 도구 준비**: [구현·실행 안내](kiwoom-readonly-diagnostics.md). 제품과분리된Python도구,외부기본OFF/명시적한도·private설정·whitelist기록·generation/0s·봉경계/asOf검증. `python -S` Mock26/26 및Phase A guard15/15PASS,실제키/API/AI사용0. 독립검토후기능통합결과는구현문서에기록한다. [사전인수계획](kiwoom-live-acceptance-preparation.md)은도구안내와새최소호출profile로연결한다.
+
 2026-10-14 **최신 통합 Phase A 필수 실제E2E5/5 PASS**: Docker Server version/info 정상확인후a317f67의새session phase-a-20261013173219-bb0717fd에서Faucet/reserve/audit/conditional·observation/별도JVM 모두PASS(FAIL·SKIP0). actual subnet overlap3회회복·clock4/4PASS·새컨테이너8개정지/증거보존,제품변경0. [실행보고](phase-a-subnet-retry-validation.md), [키움인수착수조건](kiwoom-live-acceptance-preparation.md). 아래BLOCKED는이전이력이다. 실키움/Toss·유료AI·최종실환경인수는NOT_RUN이다.
 
 2026-10-14 **Phase A subnet 충돌 harness 보완 통합, 새 E2E 환경BLOCKED**:72915fd→6ed6d5a,Python15/15PASS·독립검토필수수정없음. 신규session에서DockerLinuxEngine 이미지/version API500으로중단,필수E2E5종NOT_RUN이며제품/기존환경은변경하지않았다. [변경·이번결과](phase-a-subnet-retry-validation.md), [키움실제인수사전준비](kiwoom-live-acceptance-preparation.md). 실제키움/AI호출없음.
