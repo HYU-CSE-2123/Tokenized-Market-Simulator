@@ -4,7 +4,7 @@
 
 ## 최신 착수 판단
 
-통합a317f67의 새 Synthetic PostgreSQL/Anvil 필수E2E5/5가 실제 PASS했다. [실행 증거와 범위](phase-a-subnet-retry-validation.md). 따라서 격리 기반 검증 차단은 해소됐고 다음 단계로 키움 읽기 전용 사전 인수에 착수할 수 있다. 다만 실제 App Key/Secret·mode/endpoint·접근/IP 확인, 전용runtime/read-only frame수집 도구 준비·호출수 승인이 선행되어야 한다. 현재수집도구는미구현이며 이번에추가하지않았다. 장중최초0s bootstrap·분봉timestamp·asOf를먼저확인하고통과후에만실데이터BUY/SELL 인수를검토한다. 기존Synthetic5PASS는실제키움정상동작증거가아니다.
+통합a317f67의 새 Synthetic PostgreSQL/Anvil 필수E2E5/5가 실제 PASS했다. [실행 증거와 범위](phase-a-subnet-retry-validation.md). 격리 기반 검증 차단은 해소됐다. 후속으로 [읽기 전용 진단 도구](kiwoom-readonly-diagnostics.md)를 구현·Mock 검증했으며 실제 App Key/Secret·mode/endpoint·접근/IP 확인과외부호출승인이남아있다. 초기profile은도구안내의token1+1분봉3/WS1·180초로축소하여제안한다. 장중최초0s bootstrap·분봉timestamp·asOf를먼저확인하고통과후에만실데이터BUY/SELL 인수를검토한다. 기존Synthetic5PASS나진단Mock는실제키움정상동작증거가아니다.
 
 ## 전제와 승인
 
@@ -20,7 +20,7 @@
 
 1. 호스트/JVM/RPC 시각을 기록하고 신규 실행 generation=G를 식별한다. LOGIN 성공 ACK(return_code=0) → REG 성공 ACK 순서를 확인한다. 신규 서명 견적은 이 단계에서 아직 발급하지 않는다.
 2. 실제 발신 구독은 KRX005930의0B와 item빈문자열의0s다. 최대60초 관찰하는 것을 초기 인수 상한으로 제안한다(제품 timeout 변경 아님). 성공 REG만 보고 OPEN으로 판단하지 않는다.
-3. 수신 증거를 whitelist로 남긴다: 수신UTC·연결generation, trnm/type/item,0s의215/20,0B의20/290/10/11/12/13/15. **LOGIN token/App Key/Secret/Authorization/header·원문 오류는 기록하지 않는다.** 현재 공급자는 원문 frame을 영속 로그로 남기지 않으므로 증거 수집에는 추후 승인된 전용 read-only capture 도구가 필요하다. 이번에 그 도구를 구현하거나 실행하지 않았다. REST 시장 응답만으로0s 수신 사실을 증명하지 않는다.
+3. 허용필드만수집한다:수신UTC/generation·고정이벤트종류,검증된시장상태/관측시각/시간호환,005930가격·체결량·누적량·안전한OHLCV/native시각/asOf후보다. **LOGIN token/App Key/Secret/Authorization/header·원문오류는기록하지않는다.** 현재공급자는원문frame을영속로그로남기지않으므로별도[진단도구](kiwoom-readonly-diagnostics.md)를사용한다. 원본필드전체가아닌정제값만기록하며외부실행은별도승인이필요하다. REST시장응답만으로0s수신을증명하지않는다.
 4. 0s가 왔는지, item이 현재 parser와 일치하는지,215=3인지,20이 현재 시각인지 또는 개장 전이 시각인지 확인한다. 현재 `KiwoomProtocol.time`은0s와0B 모두 수신일KST로 해석하고 나이≤5초/미래≤2초를 요구한다. 예를 들어 오전에 연결했는데0s/20이개장시각을 그대로 반환하면 현재 parser는 거절할 수 있다. payload가 없거나 오래되었으면 장중 최초 연결 지원은 **BLOCKED/FAIL**로 기록하고 기준을 완화하지 않는다.
 5. 같은 generation에서 fresh0s=OPEN과0B 체결·연결을 모두 확인한 뒤 서버 시장 API의 providerKIWOOM/OPEN/LIVE/observedAt을 대조한다.0B의290=2 또는 실제 주가가 보인다는 이유만으로 OPEN을 대신 확정하지 않는다.
 6. 새로운 연결 G+1에서도0s 확인 전 UNKNOWN, fresh0B만 받아도UNKNOWN, G의 지연0s가G+1에 적용되지 않는지 확인한다. 새 연결의 유효0s 이후에만 정상화해야 한다. 재연결/토큰 갱신 검증은 별도 횟수 상한 승인을 받는다.
