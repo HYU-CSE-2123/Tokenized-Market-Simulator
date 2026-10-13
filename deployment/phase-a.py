@@ -172,7 +172,7 @@ def measure_clock(session,meta):
     return {'runId':meta['runId'],'hostEpochBefore':t0,'hostEpochAfter':t1,'dbEpoch':db,
             'dbMinusHostSeconds':db-(t0+t1)/2}
 
-def fixture(session,parent,case):
+def fixture(session,parent,case,clock_only=False):
     # Independent E2Es always allocate a fresh child. Each session keeps used ports forever.
     used=set()
     for f in (session/'fixtures').glob('*/run.json'):
@@ -208,6 +208,10 @@ def fixture(session,parent,case):
                 time.sleep(.5)
             else:raise RuntimeError('SQL/RPC readiness unavailable')
         inspect_owned(session,meta)
+        if clock_only:
+            import phase_a_clock
+            phase_a_clock.probe(session,meta,clean_env(session),measure_clock,require_clock_alignment,private)
+            return # diagnostic only: no contracts, tokens, application schema or E2E
         clock=measure_clock(session,meta)
         private(run/'preflight-clock.json',json.dumps(clock,indent=2))
         require_clock_alignment(clock) # before mint/deploy/schema/test, never widen product clock limits
@@ -279,13 +283,14 @@ def main():
     for action in ('regression','fixture','clock-evidence'):
         p=sub.add_parser(action);p.add_argument('--session',required=True)
         if action=='fixture':p.add_argument('--case',choices=CASES,required=True)
+        if action=='fixture':p.add_argument('--clock-only',action='store_true')
         if action=='clock-evidence':p.add_argument('--child',required=True)
     args=parser.parse_args()
     if args.action=='init':init();return
     session,meta=load_session(args.session)
     verify_session(session,meta)
     if args.action=='regression':regression(session)
-    elif args.action=='fixture':fixture(session,meta,args.case)
+    elif args.action=='fixture':fixture(session,meta,args.case,args.clock_only)
     else:clock_evidence(session,args.child)
 
 if __name__=='__main__':

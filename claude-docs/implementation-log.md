@@ -2549,3 +2549,17 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - [정체 관측 설계](transaction-stall-observability-design.md): 기존 WAITING_LONG ADMIN Tool·시각/원문 복구·조건부 EXECUTING 연결을 조사. 마지막 시도 영속 metadata는 없음. ①ADMIN 표시+②파생 LONG_WAIT 경고와 작은 관측 snapshot을 추천. 거래 상태/REVIEW_REQUIRED·자산 잠금·nonce·raw·재시도 의미를 변경하지 않는다. Grafana/Prometheus/Actuator가 설치됐다는 근거 없음; 외부 경고는 별도 승인.
 - [Sepolia 정책 설계](sepolia-mockkrw-issuance-design.md): 로컬 공개 MockKRW 유지, 공개용 최초 고정 공급 variant를 우선 추천. owner/minter capped 공급 대안도 비교. S0/O0/V0 수치·발행 역할·confirmation/환경 사용은 미확정. 현재 totalSupply 불변 대사에 기준점 이후 추가 mint를 정상 반영하려면 별도 설계가 필요하다.
 - 검증은 현재 코드/테스트/read-only Git/문서 링크 점검. 새 설계 기능 테스트·실제 DB/RPC/부족ETH·Toss/유료AI/AWS/Sepolia는 실행하지 않았다. 동작 변경 없는 조사/문서이므로 별도 검토자는 생략했고 독립 검토 통과로 기록하지 않는다. 원본/기존 acceptance·개발DB·Anvil/runtime 보존. 두 설계는 제출 후 사용자 구현 승인 대기이며 커밋 확정13개와 이후 설계 문서 변경을 구분한다.
+
+# Phase A 시각 차단 후속 조사 — BLOCKED 유지 (2026-10-13)
+
+## 구현·결정
+- feat/phase-a-acceptance 2455d66에서 진단-only 옵션, Windows 지속 JVM Instant.now와 Docker/WSL/PG/Anvil 반복 시각 측정을 추가했다. 신규 fixture 생성·조회만 하며 배포·제품 schema·E2E 전에 종료한다. 제품 거래·TTL/2초 허용·컨트랙트 변경 없음.
+- [인수 보고서 §9](phase-a-integration-acceptance-report.md#9-시각-원인-조사-후속--2026-10-13-여전히-blocked)에 실측 범위/불확실성, Windows unsynchronized 상태, 미확정 원인과 사용자 동기화 또는 Linux JVM B안 승인 사항을 기록했다.
+
+## 검증
+- 새 session phase-a-20261013081121-dbc7207f의 독립 진단 fixture3개,5회씩 실제 측정. 기존 preflight15/15 BLOCKED. SQL은 Windows보다1차2.839~3.296초,2차3.071~3.746초 늦으며 Windows/JVM은 거의 일치한다. 실제E2E와같은JDK21.0.9의3차도1.962~4.135초 차이와Linux벽시계역행을 재현했다. 시각 보정 주체·권위 UTC/NTP 또는 과거409의 정확한 원인은 미검증이다.
+- Python harness12/12 PASS, SKIP0. 필수 실제 E2E4종/별도 JVM 재시작 및 backend/web/Foundry 재실행은 NOT_RUN: 전제 미충족이므로 반복하지 않는다. 이전 실패·35 SKIP은 유지한다.
+- 새 전용 컨테이너만 종료·증거 보존. 기존 서비스/실패 fixture·acceptance·개발환경 접근/변경, 전역 clock/NTP/WSL 재시작, 외부 호출 없음.
+
+## 검토·남은 작업
+- 독립 최초/첫 재검토 모두 **발견된 필수 수정 없음(진단harness·문서 한정)**. reviewer 직접Python12/12PASS와세진단JSON의15BLOCKED·Linux역행 확인. 소유컨테이너6exited/후보7파일생성secret노출0/제품diff0 확인. 시각 전제 및 필수 E2E 미완료로 통합 병합 보류. 사용자 조치 또는 B안 명시 승인 후 새session/fixture에서 preflight와 필수 E2E를 진행한다.

@@ -116,3 +116,70 @@ Phase A 최종 실제 실행 결과·skip/blocked를 검토한 뒤, 신규 Toss 
 Phase A 전제와 필수 E2E가 미완료라 **integration 병합·병합 후 인수는 대기**한다. 안전한 harness·문서의 기능 브랜치 기록은 별도로 남기되 이를 Phase A 통과/제품 구현 완료라고 표현하지 않는다. 기존 integration HEAD/미추적 설계 문서는 그대로 보존한다. 전체 제품 source와 승인 knowledge/manifest는 입력HEAD 대비diff0이며 시장 정책·AI 지식 최신화는 제안만 했다.
 
 실행 전제 해결은 사용자 조치 또는 별도 harness 확장 승인 필요사항이다. Windows/Docker 전역 재시작·시간 변경, 과거 환경 초기화, 제품 오차 허용 확대는 이 작업에서 하지 않는다. 전제 해결 후 같은 실패 DB를 wipe/rebaseline하지 않고 새session/fixture로필수E2E4종+restart를재실행한후통합여부를확정한다.
+
+## 9. 시각 원인 조사 후속 — 2026-10-13, 여전히 BLOCKED
+
+입력 기능 HEAD는 `2455d6607d7d2e9f5754cc40ad640fe3a8fc8c97`, 작업 시작 시 clean이었다. integration 입력은 여전히 `efb3a69`이며 이번에는 병합하지 않는다. 아래는 이전 실패의 덮어쓰기가 아니라 **새로 실행한 진단**이다.
+
+### 9.1 이번 실제 조치와 측정
+
+- 새 session `phase-a-20261013081121-dbc7207f`, 독립 진단 fixture `reserve-61771129`, `reserve-9b07a846`, `reserve-21712856`. 신규 PG/Anvil만 생성·조회·정지한다. PostgreSQL 자체 초기 DB 외에 제품 schema·기준점·계약·토큰을 생성하지 않았다. 기존 실패 fixture나 다른 환경은 열지 않았다.
+- `deployment/phase-a.py fixture --session <새 session> --case reserve --clock-only`는 기존 소유권/loopback/readiness 검증 후 시각만 진단하고 배포/schema/E2E 전에 반환한다. 각 fixture의 `clock-diagnostic.json`과 기존 실행 도구의 private logs에 증거를 보존한다. 진단 명령 exit0은 **측정 완료**이지 preflight 또는 E2E PASS가 아니다.
+- Windows Python epoch와 `.NET DateTimeOffset.UtcNow`, 지속 기동한 Windows JVM의 **Instant.now()**, 신규 Docker PG 컨테이너 `date`, 이미 실행 중인 docker-desktop WSL의 `date`, SQL `clock_timestamp()`, 신규 Anvil `eth_getBlockByNumber(latest)`를 각각5회씩3시리즈 측정했다. inactive WSL distro를 시작하지 않는다. JVM 시작 지연은 READY handshake 뒤 제외하며 입출력 timeout을 둔다. 첫 두 시리즈는 PATH 기본Java23이며, 기존 E2E XML의 Java21.0.9와 구분한다. 마지막은 기존 E2E와 같은 로컬 Temurin21.0.9로 **명령 프로세스 PATH만** 지정하고 버전 출력을 확인했다. Windows 전역 PATH를 바꾸지 않았다.
+- 기존 `measure_clock` 및 `require_clock_alignment`를 총15회 실제 호출했다. **15/15 BLOCKED_CLOCK_SKEW**다. 요구된 기존 preflight 실제 실행은 이제 완료됐지만 통과하지 못했다.
+- Windows 시간 서비스의 읽기 전용 `w32tm /query /status`는 leap indicator3(unsynchronized), stratum0, 설정 source `time.windows.com,0x9`를 표시했다. 이를 조회했다고 해당 NTP 공급자와 통신·동기화한 것은 아니다. 외부 NTP/시간 API를 호출하지 않아 **권위 있는 실제 UTC는 미검증**이다.
+
+### 9.2 반복 결과와 오차 범위
+
+offset은 원격 epoch − 호스트 요청 전후 midpoint다. 왕복시간의 절반을 불확실성으로 함께 기록한다. 순차 측정이므로 개별 차이를 같은 순간의 직접 비교로 오인하지 않는다.
+
+| 대상 | 1차 5회 offset | 2차 5회 offset | 측정 한계 |
+|---|---|---|---|
+| Windows JVM Instant.now | 약0..+0.00050초 | 약0..+0.00100초 | 2차 RTT 약0.00034..0.00198초; Windows epoch 호출 해상도 영향 포함 |
+| Windows .NET UTC | +0.070..+0.114초 | +0.091..+0.165초 | 프로세스 호출 RTT 2차0.236..0.468초. midpoint 편향은 범위 안이며 Windows/JVM 간 수초 차이 증거 없음 |
+| Docker Linux date | -3.404..-2.923초 | -3.844..-3.128초 | 2차 RTT0.164..0.382초, 불확실성 약±0.082..0.191초 |
+| PostgreSQL clock_timestamp | -3.296..-2.839초 | -3.746..-3.071초 | 1차 RTT0.218..0.288초; 2차0.278..0.500초. 기존 guard는 이 왕복 절반도 포함해 판정 |
+| docker-desktop WSL date | 정수초 샘플 보존 | 정수초 샘플 및 보수적 offset interval 보존 | BusyBox 출력 fractional0: 최대1초 절삭 오차를 추가, 나노초 정밀도로 주장하지 않음. Docker Linux/PG 범위와 양립 |
+| Anvil 최신 블록 timestamp | genesis `1791879132`(UTC 08:12:12) 유지 | genesis `1791879373`(UTC 08:16:13) 유지 | 트랜잭션·채굴 없이 block0 유지. 조회 RTT 약0.140..0.505초. 28~39초 블록 나이는 OS 시각 오차가 아님 |
+
+첫 Windows 호스트 UTC 샘플은08:12:38.931945, 두 번째는08:16:42.979151이다. 원시 epoch·전후 시각·각 왕복 지연은 private JSON에 그대로 남는다. 1차 진단의 monotonic 해상도 한계는 삭제하지 않고 2차부터 `perf_counter`로 개선했다.
+
+**실제 E2E와 같은 JDK21.0.9의 마지막 시리즈**: 첫 호스트 UTC09:00:03.256889. JVM offset0..+0.000039초(RTT0.000335..0.000750초), Docker date -4.064..-1.910초(RTT0.121..0.202초), SQL -4.135..-1.962초(RTT0.220..0.249초), preflight5/5 BLOCKED다. 첫 SQL offset1.962초도 왕복 불확실성을 더하면2초를 넘어 올바르게 차단됐다. Anvil genesis timestamp1791881981(UTC08:59:41)은 채굴 없이 유지됐다.
+
+이 마지막 시리즈에서 **신규 Linux 측 벽시계가 역행한 관측**도 있다. SQL epoch가 index0 `1791882001.948857`에서 index1 `1791882001.290084`로0.659초 감소한 동안 호스트 요청 midpoint는 약1.514초 증가했다. Docker date도 index1 `1791882003.0737069`에서 index2 `1791882002.5081332`로0.566초 감소했다. 호스트 epoch/perf_counter 차이는 같은 샘플에서 밀리초 수준이었다. 따라서 단순 고정3초 offset이나 Java 버전 문제만으로 설명할 수 없다. Docker/WSL 계열의 시각 보정/역행이 후보지만 **어떤 서비스가 왜 조정했는지는 미확정**이며 원인을 조회 없이 NTP로 단정하지 않는다.
+
+**확정 사실**: Windows와 Windows JVM은 같은 시각을 보며, 신규 Docker Linux/PG와의 수초 차이가 약4분 간격의 두 독립 시리즈에서 반복되고 기존2초 preflight를 벗어난다. DB만의 clock 설정 문제라는 증거는 없다. **미확정**: 절전/WSL 동기화/Windows NTP 실패 등 근본 원인, 어느 OS가 권위 UTC에 가까운지, 기존 Faucet/audit estimateGas 거절의 정확한 revert. 한 시리즈 안에서 offset이 줄지만 다음 시리즈에도 차이가 반복되어 자연 해소를 확인하지 못했다. Windows unsynchronized 상태만으로 Docker가 잘못됐다고 단정하지 않는다.
+
+### 9.3 새 검증 결과
+
+| 항목 | 이번 후속 결과 |
+|---|---|
+| 진단용 신규 SQL/RPC readiness·소유권·시각 측정 | 세 fixture 실행 완료, 측정 JSON 보존 |
+| 기존2초 시각 preflight | BLOCKED 15/15 |
+| Python harness 회귀 | 9개 PASS, 새 진단 단위3개 PASS: 합12개, SKIP0. clock-only fixture의 배포/schema/E2E 미호출도 확인 |
+| Faucet / 자산 대사 / 전수 대사 / 조건부·관측 실제 E2E 재실행 | **모두 NOT_RUN / BLOCKED**, 시각 조건 미충족이므로 반복하지 않음 |
+| 별도 JVM snapshot 재시작 | NOT_RUN / BLOCKED |
+| backend/web/Foundry 전체 재실행 | NOT_RUN; §3의427/35·84·36은 이전 실행 기록으로 유지 |
+
+이번에는 새로운409가 발생할 업무 실행 자체가 없었다. 따라서 operator 잔고/allowance/Vault 유동성, 견적 소비·잠금 해제 및 revert selector를 새로 조사했다고 주장하지 않는다. 시각 통과 후 새 fixture에서409가 재발하면 별도 읽기 진단으로 이 근거들을 수집하며 제품 수정은 재승인 사항이다. 이전35 SKIP을 PASS에 합산하지 않는다.
+
+### 9.4 사용자 조치와 B안 승인 경계
+
+**A: 사용자 Windows 시각 확인 우선**. 사용자가 Windows 설정 → 시간 및 언어 → 날짜 및 시간에서 자동 시각·동기화 상태를 확인하고 필요하면 '지금 동기화'를 선택한다. 이는 전역 시스템 시각을 조정해 기존 서비스의 JWT/quote TTL/스케줄에도 영향을 줄 수 있으므로 기존 진행 거래·작업을 고려해 사용자가 판단한다. 에이전트는 실행하지 않았다. 재동기화 후 읽기 전용 상태 및 **새 진단 fixture**에서 preflight를 다시 확인한다. Docker/WSL 전체 restart, `wsl --shutdown`, WSL date 수동설정은 승인 없이 하지 않는다. Windows만 동기화해도 해결된다고 보증하지 않는다.
+
+**B: 전용 Linux 테스트 JVM(제안만, 미구현)**. 전역 restart가 곤란하면 새 fixture와 같은 Docker Linux 커널에서 테스트 JVM을 실행한다.
+
+1. JDK21 테스트 image와 별도 출력/cache volume 준비. 기존 backend/Dockerfile의 JDK21 base를 참고하되 제품 Dockerfile은 변경하지 않는다. 캐시 image/Gradle 의존성의 offline 가용성부터 확인하며 없으면 외부 다운로드 승인을 요청한다. 기존 실제.env·credential·runtime/build·사용자 Gradle 설정은 복사하지 않는다.
+2. 신규 PG/Anvil/JVM을 새 전용 network에 배치한다. 내부PG/Anvil endpoint는 정확한 fixture alias와 port만 허용. 테스트-only PhaseAFixture guard를 Linux 경로/manifest/소유 식별자에 맞게 확장하며 DB identity와 chainId 검증을 유지한다. 검증되지 않은 주소를 임의 허용하지 않는다. Docker socket/privileged/SYS_TIME/host network는 JVM에 주지 않는다.
+3. Linux JVM Instant.now↔새PG SQL의 RTT 포함 기존2초 preflight를 **컨테이너 안에서** 실행한다. 호스트 Windows는 orchestration·증거만 담당하고 fixture 시장 Clock/quote 시각은 Linux JVM이 생성한다. 체인 block timestamp와 report observedAt 검증은 별도로 유지한다.
+4. 테스트 source만 복사하고 `gradlew test --offline` 실행, 기존 opt-in gate/외부 차단·개별 새 fixture/증거 archive 유지. conditional 성공 뒤 **두 번째 신규 JVM 프로세스/컨테이너**에서 같은 성공 fixture snapshot을 읽는다. 기존 제품2초·TTL·quote/정산 정책은 변경하지 않는다.
+
+B는 Java fixture guard와 Linux Gradle 실행/증거 수집 경로까지 바뀌는 큰 harness 확장이므로 **사용자 승인 전 구현·실행하지 않는다**. Linux 시계끼리 맞는 것은 권위 UTC 동기화나 실제 Toss 시각 인수 PASS를 의미하지 않는다. 이번처럼 Linux 벽시계 자체가 역행하면 같은 커널로 옮겨도 발급-검증 사이 미래시각 문제가 남을 수 있으므로 B가 성공을 보장하지 않는다. B 진입 시 Linux 시각의 안정성도 확인하고 역행/guard 실패는 별도로 차단한다. Phase B 전에 실제 공급자 시각과의 정합성은 별도 확인한다.
+
+### 9.5 보존·검토
+
+전역 시각/NTP/서비스 설정 변경0, Docker/WSL 재시작0, 외부 호출0, 제품·컨트랙트 수정0이다. 진단용 세 fixture와 로그/키/state는 Git 제외하고 전용 컨테이너만 종료한다. 기존 실패 기록·melon-init·acceptance·개발환경에 접근하거나 변경하지 않는다. Phase A BLOCKED와 통합 병합 보류를 유지한다. 독립 검토 결과와 최종 안전 점검은 후속 기록에 남긴다.
+
+독립 검토 `review_phase_a_clock`: 최초 및 첫 재검토 모두 **발견된 필수 수정 없음 — 진단 harness·보고서에 한정**. 선택 제안인 clock-only 경로의 배포/schema/java_test 미호출 테스트를 반영했다. reviewer가 Python12/12 PASS·SKIP0 및 허용된 세 진단 JSON의 SQL15/15 BLOCKED, 마지막 SQL/Docker 역행 기록을 직접 확인했다. Docker/WSL/DB/외부 호출이나 과거 runtime 접근은 하지 않았으며 JDK21 버전 출력은 구현자 실행 확인과 구분했다. 필수 E2E/별도 JVM 미실행과 병합 보류는 유지한다.
+
+최종 자체 점검: 세 신규 fixture의6개 컨테이너 모두 정확한 소유label과exited 확인. 이번 생성 비밀값을7개 Git후보와 비출력 대조해 노출0, runtime/env/state/build/log 후보0. 제품backend/src/main·contracts/src·승인AI지식diff0, integration ref efb3a69 유지. 안전한harness·보고서만기능브랜치에기록하며통합하지않는다.
