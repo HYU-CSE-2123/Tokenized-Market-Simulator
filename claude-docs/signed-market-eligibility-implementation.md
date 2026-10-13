@@ -21,4 +21,4 @@
 
 독립 검토 `review_signed_market_policy`: 변경4파일과 주변 DB-only/저장 견적/복구 경계를 검토하여 **필수 수정 없음**. 검토자는 테스트를 직접 실행하지 않았고 private runtime ACL 때문에 최종 XML을 직접 확인하지 못했다. 실행 수치는 구현자가 새 runner 결과로 확인한 것이며 독립 재실행으로 표현하지 않는다. 동일 공급자의 최신 가격이 달라도 원래 서명 가격을 유지하는 추가 성공 테스트는 선택 보완으로 제안되었다.
 
-기능커밋·통합 및 병합 source 새 회귀는 완료 후 추가 기록한다. AI 승인 지식9개는 키움 구현 이후 갱신하며 이번에는 수정/유료색인하지 않는다.
+기능 커밋 `966fa76`, 통합 병합 `a626d7a`. 병합 소스 신규 session `phase-a-20261013140013-a1c80720`: backend **466 total /431 PASS /35 SKIP /0 FAIL·ERROR**, 웹 단위/Chrome desktop·mobile/Foundry 회귀 명령 성공. 신규 실제 PG/Anvil `conditional-056189ef`(DB42158/RPC42229) **1 PASS**, 별도 JVM restart **1 PASS**. 이전 source 결과와 별도 실행이다. AI 승인 지식9개는 키움 구현 이후 갱신하며 이번에는 수정/유료색인하지 않는다.
