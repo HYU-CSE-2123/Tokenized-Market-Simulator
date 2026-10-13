@@ -59,6 +59,18 @@ python deployment/kiwoom-diagnostic.py capture --run 'DIAGNOSTIC_RUN의 실제 �
 
 ## 커밋·통합 및 최종 재실행
 
+### 2026-10-14 실제 연결 전 읽기 전용 점검 — 승인 대기
+
+- 조사 소스: 통합 `d5311f7b36bcbf79483742c710c4618bfc564607`, 시작 작업 트리 clean. 사용자 입력 후 기존 진단 전용 credential을 도구의 `private_credentials`로 로컬 검사했다. 이전 빈 설정 기록은 당시 이력이다.
+- 현재 mode=`real`, appKey/secretKey 모두 존재하고 구조 검사 PASS. 값·길이·fingerprint·원문은 출력하거나 기록하지 않았다. ACL은 현재 사용자/SYSTEM 외 Allow 0건. 실제 키 유효성·발급 모드 일치는 인증 전이므로 미확인이다.
+- 선택 endpoint는 `https://api.kiwoom.com` 및 `wss://api.kiwoom.com:10000/api/dostk/websocket`로 코드와 공식 실전 도메인 구분이 일치한다. 실제 TLS handshake·도메인 접근·10000 포트 통신은 NOT_RUN이다.
+- Python의 UTC와 Windows KST 표시를 확인했고 로컬 websockets=16.0/SSL 라이브러리 존재 확인. Windows 시간 서비스는 leap=0, stratum=5, source=time.windows.com, 최근 동기화 KST 03:55:15였다. 이것만으로 UTC 정확도 2초 이내를 보증하지 않으며 이번에는 Docker/DB/JVM/체인에 접근하지 않았다. 점검 시각은 KST 04:22~04:24로 장중 관찰을 실행하지 않았다.
+- 공식 [이용안내](https://openapi.kiwoom.com/intro/serviceInfo): 서비스 신청, 실전/모의 App Key 구분, 허용 IP에서 인증 필요. 로그인된 계정의 서비스 상태·키 만료/폐기·등록 IP·시세 접근 권한은 로컬 파일만으로 확인할 수 없으므로 사용자 확인 사항이다. 공인 IP 확인 서비스를 자동 호출하지 않았다.
+- 공식 [사용안내](https://openapi.kiwoom.com/intro?dummyVal=0): 국내 조회 TR 초당 5회, 계좌별(토큰별) 세션 1개. 기존 동일 계정의 실시간 클라이언트와 경쟁할 수 있으므로 사용자가 동일 계정/토큰의 다른 WS 연결 사용 여부를 확인해야 한다. 기존 backend/서비스를 임의 종료하거나 설정 변경하지 않는다.
+- 위 공개 사용안내의 HTS 동일 수수료는 매매 안내이며 조회 API의 요청당 무료/과금 근거로 사용하지 않는다. 이번 조사에서 별도 시세 조회 요금을 확정하지 못했으므로 비용은 미확정, 사용자 계정 약관/요금 확인 필요. 조회 자료의 공개·재배포 권한도 승인하지 않는다. 공식 정적 안내 조회 외 broker 인증/시세/API 호출 0회, AI 0회.
+- 최초 승인 요청: 실전 계정 시세 읽기만, token 1 + ka10080 1분봉 최대 3 = REST 최대 4회, WS 최대 1회, 관찰 최대 180초, 이벤트 상한 5000. LOGIN/REG/0s/0B 및 봉 경계/asOf 근거를 정제된 private artifact에 보존한다. 실패·누락은 중단/판정불가로 보고하고 재시도·추가 호출·정책 변경하지 않는다.
+- WS 1회 제한이므로 실제 재연결/토큰 만료는 이번 실행 범위에 포함하지 않는다. 재연결의 Mock 검증과 실제 검증을 구분한다. 주식 주문/모의 BUY·SELL/DB·Anvil·기존 acceptance 변경 없음. 장중 여부는 실제 0s/0B로 확인하며 달력 시각만으로 OPEN을 선언하지 않는다.
+
 - 기능 브랜치 `feat/kiwoom-readonly-diagnostics`: `a772d37`.
 - `integration/additional-features` 병합: `3ca4945c4f4e1400e076758d9835bfe81f8e1dd3`.
 - 위 병합 소스에서 새로 실행한 `python -S` 진단 26/26, Phase A guard 15/15, CLI Mock replay 모두 PASS, FAIL/ERROR/SKIP 0. 이 기록 이후 변경은 문서뿐이다.
