@@ -36,6 +36,10 @@
 - 독립 첫 재검토 **발견된 필수 수정 없음**. reviewer는 generation 수정/추가 회귀,9문서 및 normalized hash/version9/9·USER8/ADMIN1·diff check를 직접 확인했다. 테스트를 직접 재실행하거나 private runtime을 열지 않았으며 위 실행 수치는 구현자의 새 runner 결과다.
 - 이번 작업의 새 격리 컨테이너18개는 정확한 fixture label/이름으로 정지·소유권을 확인했다. 상태/로그는 보존하며 기존 acceptance/devDB/Anvil/runtime은 조회·변경하지 않았다. 기능 커밋/통합과 병합 소스 결과는 후속 기록한다.
 
-## 실제 연결 준비
+## 통합 및 최종 재실행
+
+기능 `5e39dbf` → 통합 `cffe471`. 신규 session `phase-a-20261013144612-1cf75377`에서 backend451 PASS/35 SKIP/0 FAIL·ERROR, 웹84/Chrome desktop·mobile/Foundry36 PASS. 실제 신규 Faucet E2E1 PASS 후 reserve 전용 네트워크 생성이 subnet overlap으로 BLOCKED되어 audit/조건부/별도JVM은 이 실행에서 NOT_RUN이다. 제품/시각/거래 오류로 추론하지 않으며 기존 네트워크·환경은 건드리지 않았다. [최종 파일·실행·중단 보고](kiwoom-transition-final-report.md). 기능 브랜치의 앞선 실제 조건부/별도JVM PASS와 이번 병합 source 결과를 구분한다.
+
+## 실제 연결 준비 사항
 
 사용자가 발급한 적절한 키움 REST App Key/Secret, 실제/모의 endpoint 조합, 공식 서비스의 계정·접근/IP 조건 확인과 별도 외부 호출 승인 필요. 실계좌/모의 키를 혼용하지 않는다. 실제 값은 전용 runtime secret으로만 준비하며 기존 .env를 수정하거나 자동 import하지 않는다. 시세 read-only라 해도 실환경 검증 전 LIVE 인수 완료라고 표시하지 않는다.

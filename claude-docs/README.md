@@ -50,6 +50,8 @@
 
 ## 단일 출처(Source of Truth)
 
+2026-10-13 **키움 Mock 구현·통합 완료, 최종 E2E 부분 BLOCKED**: 기능5e39dbf→병합cffe471. 새 통합 회귀 backend451 PASS/35 SKIP·웹84/Foundry36/Chrome PASS, Faucet 실제E2E1 PASS 후 신규 reserve 네트워크 subnet overlap으로중단. reserve BLOCKED, audit/조건부/별도JVM NOT_RUN이며 앞선 feature 조건부1+1 PASS와 구분한다. [전체 변경 파일·실행 증거·후속 항목](kiwoom-transition-final-report.md). 승인 지식9문서/manifest 갱신·독립 재검토 필수 수정 없음. 실제 키움/Toss·유료AI/재색인·AWS/Sepolia는 NOT_RUN이며 전체 인수PASS가 아니다. 아래 진행 중 문구는 이전 시점 기록이다.
+
 2026-10-13 추가 기능 후속: Phase A harness 병합 `cfbd625`의 새 전체 회귀와 필수 실제 E2E5/5 PASS는 [병합 회귀](phase-a-merged-regression.md)에 기록했다. 실제 공급자의 신규 서명 견적 OPEN+LIVE 경계는 기능 `966fa76` → 병합 `a626d7a`, 병합 소스 backend431 PASS/35 SKIP·웹/Foundry·신규 조건부/별도JVM PASS로 검증했다. [시장 품질 구현](signed-market-eligibility-implementation.md). [키움 읽기 전용 공급자](kiwoom-market-provider-implementation.md)는 별도 기능 브랜치에서 구현·검증 중이며 실제 App Key/장중 연결 및 AI 유료 호출은 NOT_RUN이다.
 
 2026-10-13 **Windows 동기화 후 Phase A 재검증 PASS**: [보고서 §10](phase-a-integration-acceptance-report.md#10-사용자-windows-동기화-이후-재진단필수-e2e--2026-10-13). Windows 시간 서비스 동기화 상태 확인, 신규 clock-only5회·업무fixture4회 preflight 모두 PASS. 새 Faucet/reserve/audit/conditional·관측/별도JVM restart 총5개 실제E2E PASS, Python12PASS. 아래 BLOCKED는 이전 이력으로 보존하며 전체 회귀427/35·웹84/Foundry36은 이전 실행으로 구분한다. 제품 변경·통합 병합·외부 호출 없음, B/C/D 및 전체 최종 인수는 미실행이다.

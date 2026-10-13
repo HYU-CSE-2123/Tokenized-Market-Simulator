@@ -2,6 +2,8 @@
 
 ## 2026-10-13: Phase A 통합·신규 서명 시장 정책·키움 시세
 
+최종 추가 기록: 키움 기능5e39dbf→병합cffe471. 병합 소스 신규486 total/451 PASS/35 SKIP/0 FAIL·ERROR, 웹84/Foundry36/Chrome PASS. 새 실제 Faucet1 PASS 이후 reserve fixture 네트워크 생성의 subnet overlap으로 중단하여 reserve BLOCKED, audit/조건부/별도JVM NOT_RUN이다. 기능 수정 source의 실제 조건부/재시작1+1 PASS를 통합 source 재실행으로 표현하지 않는다. reviewer 필수 지적1개(재연결 OPEN 재사용)를 generation 경계로 해결·재검토 필수 수정 없음. 승인 지식9개/manifest 갱신 뒤별도 전체 backend451/35 PASS. [최종 기록](kiwoom-transition-final-report.md). 제품·기존 환경 수정으로 우회하지 않았으며 안전한 harness 충돌 처리 후보와 남은 통합4종 검증은 후속 과제다.
+
 - Phase A harness/doc 병합cfbd625: 신규 실제 필수E2E5/5 PASS, backend427 PASS/35 SKIP·웹84/Foundry36/Chrome PASS. [실행 기록](phase-a-merged-regression.md). 사용자 경험 문서와 원본 인수 계획은 별도 문서 커밋으로 보존했다.
 - 신규 실제 공급자 서명 발급 OPEN+LIVE+fresh: 기능966fa76 → 병합a626d7a. 병합 source431 PASS/35 SKIP·웹/Foundry·신규 실제PG/Anvil 조건부/별도JVM1+1 PASS. 독립 검토 필수 수정 없음. DB-only/Synthetic와 소비·복구·정산 계약 변경 없음. [기록](signed-market-eligibility-implementation.md).
 - 키움 읽기 전용 시세는 `feat/kiwoom-market-provider`에서 진행한다. 최초 source450 PASS/35 SKIP·Mock18·KIWOOM 조건부H2/Mock1·새Synthetic PG/Anvil1+재시작1 PASS. 독립 검토에서 재연결 후 OPEN 재사용 결함을 발견하여 연결 세대 경계를 수정했고 최종 재검증/통합 결과는 [기록](kiwoom-market-provider-implementation.md)에 추가한다. 실제 키움/Toss·유료AI·AWS/Sepolia는 NOT_RUN이다.
