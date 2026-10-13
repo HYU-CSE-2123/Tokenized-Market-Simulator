@@ -1,5 +1,12 @@
 # 구현 로그 — Phase 0: 모노레포 뼈대
 
+## 2026-10-13: 최종 통합 인수 Phase A — 미완료/BLOCKED
+
+- 입력efb3a69, feat/phase-a-acceptance에서 새session/fixture·가변포트·전용키·identity/source/image/clock guard를 추가했다. 제품코드/거래·보안정책/계약/승인지식은변경없음.
+- 이번새실행 backend427 PASS/35 SKIP, 웹84/Chrome/Foundry36 PASS, guard unit9 PASS, 실제reserve1 PASS. Faucet신규2시도·audit·conditional은각FAIL, 별도JVMrestart는전제미충족NOT_RUN.
+- 실패후신규fixture의읽기진단에서DB시각이호스트보다약3.05/3.87초늦음을확인했다. 기존2초허용을늘리거나정상데이터를수정해성공처리하지않는다. 전체최종PASS와B/C실행은금지.
+- 실제runId/ports/XML/state/미검증·시장정책과9지식갱신안·별도검토·커밋경계는 [보고서](phase-a-integration-acceptance-report.md)에기록한다. clock전제해결전integration병합은대기한다.
+
 ## 2026-10-12: SIGNED/SUBMITTED 거래 정체 관측 — 통합 검증 완료
 
 - 승인 범위①+②: ADMIN DB 조회, 기본300초 LONG_WAIT, 마지막 완료 복구 시도 best-effort snapshot. 상태/잠금/nonce/raw/재전송/Receipt 정책과 기존 AI Tool은 유지.

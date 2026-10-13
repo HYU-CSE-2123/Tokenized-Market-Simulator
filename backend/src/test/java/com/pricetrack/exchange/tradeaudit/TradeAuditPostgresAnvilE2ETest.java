@@ -33,6 +33,8 @@ import org.web3j.protocol.http.HttpService;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT) @DirtiesContext
 class TradeAuditPostgresAnvilE2ETest {
     @DynamicPropertySource static void fixture(DynamicPropertyRegistry registry) throws Exception {
+        var phaseA=com.pricetrack.exchange.support.PhaseAFixture.optional(System.getenv("AUDIT_E2E_RUN"));
+        if(phaseA!=null){phaseA.forEach((k,v)->registry.add(k.toString(),()->v));return;}
         Path root=Path.of(System.getenv("AUDIT_E2E_RUN")).toRealPath();
         if(!root.getParent().equals(Path.of("../deployment/runtime").toRealPath()) || !root.getFileName().toString().matches("audit-e2e-\\d{14}-[0-9a-f]{6}")) throw new IllegalStateException("Dedicated audit fixture required");
         Properties p=new Properties(); try(var in=Files.newInputStream(root.resolve("secrets/test.properties"))) { p.load(in); }
@@ -134,14 +136,14 @@ class TradeAuditPostgresAnvilE2ETest {
         throw new AssertionError("Audit worker did not finish");
     }
     private void rpc(String method) {
-        var rpc=new HttpService("http://127.0.0.1:26545"); var client=org.web3j.protocol.Web3j.build(rpc);
+        var rpc=new HttpService(com.pricetrack.exchange.support.PhaseAFixture.rpcOr("http://127.0.0.1:26545")); var client=org.web3j.protocol.Web3j.build(rpc);
         try {assertThat(new Request<>(method,List.of(),rpc,VoidResponse.class).send().hasError()).isFalse();}
         catch(Exception e) {throw new AssertionError("Fixture RPC failed");} finally {client.shutdown();}
     }
     private void rotateCurrentSettings() throws Exception {
         var cfg=context.getBean(com.pricetrack.exchange.blockchain.config.BlockchainProperties.class);
         String operator=org.web3j.crypto.Credentials.create(cfg.operatorPrivateKey()).getAddress();
-        var rpc=new HttpService("http://127.0.0.1:26545");var client=org.web3j.protocol.Web3j.build(rpc);
+        var rpc=new HttpService(com.pricetrack.exchange.support.PhaseAFixture.rpcOr("http://127.0.0.1:26545"));var client=org.web3j.protocol.Web3j.build(rpc);
         try {
             assertThat(new Request<>("anvil_impersonateAccount",List.of(operator),rpc,VoidResponse.class).send().hasError()).isFalse();
             var fee=new org.web3j.abi.datatypes.Function("setFeeBps",List.of(new org.web3j.abi.datatypes.generated.Uint256(20)),List.of());

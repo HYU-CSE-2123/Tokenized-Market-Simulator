@@ -50,6 +50,8 @@
 
 ## 단일 출처(Source of Truth)
 
+2026-10-13 **최종 통합 인수 Phase A 실행 — 미완료/BLOCKED**: [보고서](phase-a-integration-acceptance-report.md). 신규 격리 회귀는 backend427 PASS/35 SKIP·웹84/Foundry36/Chrome fixture PASS, 실제 reserve1 PASS. Faucet·audit·conditional 실제 E2E 실패와 신규 Docker DB-호스트3~4초 시각차를 보존했다. 제품2초 허용을 우회하지 않으며 별도 JVM 검증/통합 병합은 대기. [계획](final-integration-acceptance-plan.md)의 B/C/D는 미승인이다. 이 기록은 현재 feat/phase-a-acceptance의 부분 실행 상태이며 전체 인수 PASS가 아니다.
+
 2026-10-12 **SIGNED/SUBMITTED 관측 ①+② 통합 완료**: 기능e489b3c → 병합7bf459c. [구현/API·실행별 검증 기록](transaction-stall-observability-implementation.md): 병합 소스 backend427 PASS/35 SKIP, 웹84/Foundry36 PASS, 브라우저·신규 PG/Anvil1·별도 JVM PG1 PASS. ADMIN 읽기 전용 LONG_WAIT와 최신 완료 시도 snapshot이며 기존 복구/정산·AI WAITING_LONG 계약은 유지한다. 아래 승인 대기 문구는 이전 설계 시점 이력이다. 외부 모니터링은 제외. [Sepolia 정책](sepolia-mockkrw-issuance-design.md)은 별도 최초 고정 공급 A안으로 확정했지만 S0/O0/V0·계약 구현·배포/ETH/RPC는 미승인이다.
 
 2026-10-12 후속 점검 확정: A 모델 안내·문서·표시 테스트13개를 `c7bf4e8`로 커밋했다. 새 [SIGNED/SUBMITTED 정체 관측 설계](transaction-stall-observability-design.md)와 [Sepolia mKRW 발행 정책 설계](sepolia-mockkrw-issuance-design.md)는 **제안/구현 승인 대기**다. 기존 REVIEW_REQUIRED·거래 복구·계약·DB 및 acceptance는 변경하지 않았다.

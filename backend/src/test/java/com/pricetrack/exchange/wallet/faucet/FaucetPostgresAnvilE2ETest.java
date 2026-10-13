@@ -39,6 +39,8 @@ import org.web3j.protocol.core.DefaultBlockParameterName;
 class FaucetPostgresAnvilE2ETest {
     static Properties config=new Properties();
     @DynamicPropertySource static void fixture(DynamicPropertyRegistry registry) throws Exception {
+        var phaseA=com.pricetrack.exchange.support.PhaseAFixture.optional(System.getenv("FAUCET_E2E_RUN"));
+        if(phaseA!=null){config=phaseA;phaseA.forEach((k,v)->registry.add(k.toString(),()->v));return;}
         Path root=Path.of(System.getenv("FAUCET_E2E_RUN")).toRealPath();
         if(!root.getParent().equals(Path.of("../deployment/runtime").toRealPath())||!root.getFileName().toString().matches("audit-e2e-\\d{14}-[0-9a-f]{6}"))throw new IllegalStateException("New faucet fixture required");
         try(var in=Files.newInputStream(root.resolve("secrets/test.properties"))){config.load(in);}
@@ -147,6 +149,6 @@ class FaucetPostgresAnvilE2ETest {
     void waitForLock() throws Exception {long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);while(System.nanoTime()<end){if(jdbc.queryForObject("SELECT count(*) FROM pg_stat_activity WHERE wait_event_type='Lock' AND datname=current_database()",Integer.class)>0)return;Thread.sleep(10);}throw new AssertionError("No actual PostgreSQL lock wait observed");}
     List<Object> parallel(Callable<?> a,Callable<?> b) throws Exception {var pool=Executors.newFixedThreadPool(2);var gate=new CountDownLatch(1);try{var x=pool.submit(()->{gate.await();try{return a.call();}catch(Exception e){return e;}});var y=pool.submit(()->{gate.await();try{return b.call();}catch(Exception e){return e;}});gate.countDown();return List.of(x.get(15,TimeUnit.SECONDS),y.get(15,TimeUnit.SECONDS));}finally{pool.shutdownNow();}}
     void settle(long id) throws Exception {long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);while(System.nanoTime()<end){reconciliation.reconcilePendingTransactions();if(orders.findById(id).orElseThrow().getStatus()==OrderStatus.FILLED)return;Thread.sleep(50);}throw new AssertionError("Fixture settlement not FILLED");}
-    JsonNode post(String path,Object body,String token,String key,int status){var h=new HttpHeaders();h.setContentType(MediaType.APPLICATION_JSON);if(token!=null)h.setBearerAuth(token);if(key!=null)h.set("Idempotency-Key",key);var r=http.exchange(path,HttpMethod.POST,new HttpEntity<>(body,h),JsonNode.class);assertThat(r.getStatusCode().value()).as(path).isEqualTo(status);return r.getBody();}
+    JsonNode post(String path,Object body,String token,String key,int status){var h=new HttpHeaders();h.setContentType(MediaType.APPLICATION_JSON);if(token!=null)h.setBearerAuth(token);if(key!=null)h.set("Idempotency-Key",key);var r=http.exchange(path,HttpMethod.POST,new HttpEntity<>(body,h),JsonNode.class);String code=r.getBody()==null?"NO_BODY":r.getBody().path("code").asText();if(!code.matches("[A-Z0-9_]*"))code="UNKNOWN";assertThat(r.getStatusCode().value()).as(path+" publicCode="+code).isEqualTo(status);return r.getBody();}
     JsonNode get(String path,String token,String key,int status){var h=new HttpHeaders();if(token!=null)h.setBearerAuth(token);if(key!=null)h.set("Idempotency-Key",key);var r=http.exchange(path,HttpMethod.GET,new HttpEntity<>(h),JsonNode.class);assertThat(r.getStatusCode().value()).as(path).isEqualTo(status);return r.getBody();}
 }

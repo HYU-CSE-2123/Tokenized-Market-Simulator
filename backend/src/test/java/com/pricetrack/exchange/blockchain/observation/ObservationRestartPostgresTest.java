@@ -16,6 +16,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SpringBootTest @org.springframework.test.annotation.DirtiesContext
 class ObservationRestartPostgresTest {
     @DynamicPropertySource static void fixture(DynamicPropertyRegistry registry)throws Exception{
+        var phaseA=com.pricetrack.exchange.support.PhaseAFixture.optional(System.getenv("CONDITIONAL_E2E_RUN"));
+        if(phaseA!=null){phaseA.forEach((k,v)->registry.add(k.toString(),()->v));registry.add("spring.sql.init.mode",()->"never");return;}
         Path root=Path.of(System.getenv("CONDITIONAL_E2E_RUN")).toRealPath();
         if(!root.getParent().equals(Path.of("../deployment/runtime").toRealPath())||!root.getFileName().toString().matches("audit-e2e-\\d{14}-[0-9a-f]{6}"))throw new IllegalStateException("New feature fixture required");
         var p=new Properties();try(var in=Files.newInputStream(root.resolve("secrets/test.properties"))){p.load(in);}
