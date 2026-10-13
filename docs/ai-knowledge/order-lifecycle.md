@@ -2,15 +2,15 @@
 title: "주문 상태와 트랜잭션 상태"
 domain: trading
 type: policy
-version: 1
+version: 2
 status: active
 minimum_role: USER
-updated_at: 2026-09-27
+updated_at: 2026-10-13
 ---
 
 # 주문 상태와 트랜잭션 상태
 
-> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
+> 2026-10-13 통합 추가 기능 및 키움 기능 소스 기준 갱신. 기존9문서 역할·active 승인 경계를 유지하며 manifest의 버전/내용 해시와 일치할 때만 ingest한다. 기존 AI DB 재색인이나 최신 실환경 인수 완료를 의미하지 않는다.
 
 ## 정의
 
@@ -43,6 +43,14 @@ RPC 응답을 못 받았다는 사실만으로 주문이 실패했다고 판단�
 체결 결과는 본인 주문 REST 조회로 확인한다. 잠금액은 이중 사용을 막기 위한 것이며 체결 완료된 차감과 구분한다. 모의 모드에서는 체인을 기다리지 않고 DB에서 즉시 FILLED로 정산한다.
 
 ## 근거
+
+## 조건부 의도와 실제 주문
+
+조건부 의도는 별도 ConditionalOrder다. BUY 입력은 사용할 mKRW, SELL 입력은 판매할 mSEC이며 목표 가격은 E8 정수다. 등록 시 자산을 예약하지 않고 실행 준비 시 최신 가격·새 서명 견적·자산을 확인하여 실행 Order와 견적 소비·입력 자산 잠금을 원자적으로 연결한다. 오래 대기했다고 자산 확보가 보장되지는 않는다.
+
+WAITING/PREPARING에서 실행 Order가 만들어지기 전 취소·만료할 수 있다. EXECUTING 이후에는 체인 결과·기존 복구/정산을 따르며 단순 취소나 시간 경과로 잠금을 해제하지 않는다. REVIEW_REQUIRED는 수동 확인 필요를 뜻하며 자동 재주문하지 않는다. 조건 충족 후 가격/견적 조건이 달라지면 실행하지 않고 정책에 따른 대기/만료/실패 사유를 확인한다. 부분 체결·시간 지정 예약·사용자 간 매칭은 없다.
+
+- [conditional/ConditionalOrderService.java](../../backend/src/main/java/com/pricetrack/exchange/conditional/ConditionalOrderService.java)
 
 - [order/OrderStatus.java](../../backend/src/main/java/com/pricetrack/exchange/order/OrderStatus.java)
 - [order/OrderService.java](../../backend/src/main/java/com/pricetrack/exchange/order/OrderService.java)

@@ -39,6 +39,19 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
     "app.conditional.initial-delay-ms=2147483647","app.price.initial-delay-ms=2147483647"})
 @ActiveProfiles("conditional-fixture") @AutoConfigureMockMvc @DirtiesContext
 class ConditionalOrderIntegrationTest {
+    @Test void kiwoomRegistrationAndExecutionUseTheSameLiveBoundary() {
+        when(market.current()).thenAnswer(i->snapshot("75000",MarketStatus.OPEN,PriceStatus.LIVE,"KIWOOM",Instant.now()));
+        assertThat(service.registrationEnabled()).isTrue();
+        assertThat(service.checkedMarket().provider()).isEqualTo("KIWOOM");
+        var created=create(OrderSide.BUY,"75000");
+        assertThat(created.state()).isEqualTo(ConditionalOrder.State.WAITING);
+        for (var quality:List.of(PriceStatus.DEGRADED,PriceStatus.STALE,PriceStatus.INITIALIZING)) {
+            when(market.current()).thenAnswer(i->snapshot("75000",MarketStatus.OPEN,quality,"KIWOOM",Instant.now()));
+            assertThatThrownBy(service::checkedMarket).hasMessage("MARKET_UNAVAILABLE");
+        }
+        when(market.current()).thenAnswer(i->snapshot("75000",MarketStatus.UNKNOWN,PriceStatus.LIVE,"KIWOOM",Instant.now()));
+        assertThatThrownBy(service::checkedMarket).hasMessage("MARKET_UNAVAILABLE");
+    }
     @Autowired ConditionalOrderService service;@Autowired ConditionalOrderWorker worker;
     @Autowired ConditionalOrderRepository intents;@Autowired PriceQuoteRepository quotes;
     @Autowired UserRepository users;@Autowired WalletService wallets;@Autowired UserBalanceRepository balances;

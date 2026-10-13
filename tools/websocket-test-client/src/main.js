@@ -122,9 +122,9 @@ function marketRender(market) {
   const synthetic = market.provider === 'SIMULATED';
   $('price-change').textContent = `${synthetic ? '합성 전일 대비' : '전일 대비'} ${number(market.change, 'mKRW', 2)} (${number(market.changeRate, '%', 2)})`;
   $('price-change').className = Number(market.changeRate) > 0 ? 'up' : Number(market.changeRate) < 0 ? 'down' : 'muted';
-  $('provider').textContent = market.provider === 'TOSS' ? 'Toss 기준 시세' : synthetic ? 'SIMULATED · 합성 시장' : '공급자 확인 불가';
+  $('provider').textContent = market.provider === 'KIWOOM' ? '키움 기준 시세' : market.provider === 'TOSS' ? 'Toss 기준 시세' : synthetic ? 'SIMULATED · 합성 시장' : '공급자 확인 불가';
   $('market-mode').textContent = $('provider').textContent;
-  $('market-description').textContent = synthetic ? '자체 생성한 합성 가격·거래량으로 거래하는 mSEC 모의 시장입니다. 실제 삼성전자 시세가 아닙니다.' : market.provider === 'TOSS' ? 'Toss 삼성전자 기준 시세로 모의 자산을 거래합니다. 실제 주식 거래가 아닙니다.' : '시세 출처를 확인할 수 없습니다.';
+  $('market-description').textContent = synthetic ? '자체 생성한 합성 가격·거래량으로 거래하는 mSEC 모의 시장입니다. 실제 삼성전자 시세가 아닙니다.' : market.provider === 'KIWOOM' ? '키움 삼성전자 기준 시세로 모의 자산을 거래합니다. 실제 주식 거래가 아닙니다.' : market.provider === 'TOSS' ? 'Toss 삼성전자 기준 시세로 모의 자산을 거래합니다. 실제 주식 거래가 아닙니다.' : '시세 출처를 확인할 수 없습니다.';
   $('volume-description').textContent = synthetic ? '한국 시간 기준 · 24시간 합성 시장 · 합성 거래량은 사용자 체결량이 아닙니다. 초기 과거 봉도 자체 생성한 합성 이력입니다.' : '한국 시간 기준 · 왼쪽으로 이동해 과거 봉 조회 · 거래량은 공급자 체결량입니다.';
   $('market-state').textContent = `${label(market.marketStatus)} · ${label(market.priceStatus)}`;
   $('price-time').textContent = time(market.observedAt); message('market-message', marketNotice(market));
