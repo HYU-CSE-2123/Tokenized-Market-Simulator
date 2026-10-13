@@ -56,3 +56,11 @@ python deployment/kiwoom-diagnostic.py capture --run 'DIAGNOSTIC_RUN의 실제 �
 독립 첫 재검토: **발견된 필수 수정 없음**. 검토자가 직접 `python -S` 진단26/26, Phase A guard15/15 및 CLI Mock replay를 실행했다. 실제 API/자격 증명/runtime/DB/체인 및 실제 Windows ACL 생성은 검토자가 검증하지 않았다. 구현자는 신규 빈 private 설정 생성과 외부 승인 옵션 없는 capture의 `EXTERNAL_DISABLED` 종료만 확인했다. 이번 작업의 backend/web/Foundry/제품 E2E 재실행은 NOT_RUN이며 기존 Phase A 5/5 결과를 새 실행 결과로 사용하지 않는다.
 
 실제빈설정 scaffold의init만 실행했다: `deployment/runtime/kiwoom-diagnostic-20261013184802-2ab7ce66/credentials.json`이현재준비된입력위치다. mode=real, appKey/secretKey는빈값이며실제정보를입력하거나인증에사용하지않았다. private runtime와기존인수증거는Git에서제외한다. 필요하면사용자가init으로새진단run을만들수있으며기존run에capture로그가생기면재사용하지않는다.
+
+## 커밋·통합 및 최종 재실행
+
+- 기능 브랜치 `feat/kiwoom-readonly-diagnostics`: `a772d37`.
+- `integration/additional-features` 병합: `3ca4945c4f4e1400e076758d9835bfe81f8e1dd3`.
+- 위 병합 소스에서 새로 실행한 `python -S` 진단 26/26, Phase A guard 15/15, CLI Mock replay 모두 PASS, FAIL/ERROR/SKIP 0. 이 기록 이후 변경은 문서뿐이다.
+- 커밋 대상은 도구/테스트/공식 형식 기반 가짜 fixture/의존성 안내와 문서 총 9개 파일뿐이다. 실제 `.env`, credential, DB dump, chain state, runtime, 로그와 빌드 산출물은 포함하지 않았다. staged private-key/token 패턴 검사 0건, 새 빈 credential의 Git ignore 확인.
+- `melon-init`은 `f069a1085fd7cfe1d8d75f7bb454fc20feb50ede` 그대로다. 기존 acceptance/개발 환경/제품 정책 변경 없음, 실제 broker 인증 및 데이터 호출·유료 AI 0회.

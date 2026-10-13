@@ -3,7 +3,7 @@
 ## 2026-10-14: 키움 읽기 전용 진단 도구 — 구현/Mock 검증
 
 - 입력860885c,feat/kiwoom-readonly-diagnostics에서deployment단독CLI/순수파서·판정/fixture/테스트·의존성pin을추가했다. 외부기본OFF,token+ka10080만고정호출,REST/WS/시간/프레임한도·ACL/exclusiveartifact·정제로그. 제품/Oracle/시장정책·DB/Anvil·기존환경변경없음.
-- 최종`python -S` 진단26/26+기존Phase A guard15/15PASS(SKIP/FAIL0),CLI MockPASS. 최초독립검토의stdlib-test모듈의존1건을수정하고OTHER체결후새0s요구회귀를추가했다. 독립재검토결과는[진단구현문서](kiwoom-readonly-diagnostics.md)에추가한다.
+- 최종`python -S` 진단26/26+기존Phase A guard15/15PASS(SKIP/FAIL0),CLI MockPASS. 최초독립검토의stdlib-test모듈의존1건을수정하고OTHER체결후새0s요구회귀를추가했다. 독립 첫 재검토 **발견된 필수 수정 없음**, 검토자도 같은 테스트를 직접 통과했다. 기능 `a772d37` → 통합 병합 `3ca4945` 후 최종 소스에서 진단26/26·guard15/15·Mock replay를 새로 실행해 통과했다. 상세 범위와 미검증은 [진단구현문서](kiwoom-readonly-diagnostics.md)에 기록한다.
 - 신규빈credential scaffold만private runtime에준비했다. 실제키/API/AI사용0,HTTPS/WSS실환경·장중0s/native봉/웹watermark검증은NOT_RUN. [실행·입력위치·범위](kiwoom-readonly-diagnostics.md),[기존실인수계획](kiwoom-live-acceptance-preparation.md)을갱신한다. 초기실행제안은REST최대4/WS1·180초이며실키/시세권한/IP·호출승인후에만가능하다.
 
 ## 2026-10-14: Docker 정상 이후 최신 통합 Phase A 필수 E2E — 5/5 PASS
