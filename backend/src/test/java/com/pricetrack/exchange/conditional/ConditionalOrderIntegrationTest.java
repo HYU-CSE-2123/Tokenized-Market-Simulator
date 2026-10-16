@@ -39,6 +39,14 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
     "app.conditional.initial-delay-ms=2147483647","app.price.initial-delay-ms=2147483647"})
 @ActiveProfiles("conditional-fixture") @AutoConfigureMockMvc @DirtiesContext
 class ConditionalOrderIntegrationTest {
+    @Test void kiwoomUnknownUsesExplicitMockReadinessWithoutInventingOpen() {
+        var price=snapshot("75000",MarketStatus.UNKNOWN,PriceStatus.LIVE,"KIWOOM",Instant.now());
+        doReturn(new TradingPriceContext(price,true,"REGULAR_TICK",7L)).when(market).currentForTrading();
+        assertThat(service.checkedMarket().marketStatus()).isEqualTo(MarketStatus.UNKNOWN);
+        assertThat(create(OrderSide.BUY,"75000").state()).isEqualTo(ConditionalOrder.State.WAITING);
+        doReturn(new TradingPriceContext(price,false,"NO_CURRENT_GENERATION_TICK",8L)).when(market).currentForTrading();
+        assertThatThrownBy(service::checkedMarket).hasMessage("MARKET_UNAVAILABLE");
+    }
     @Test void kiwoomRegistrationAndExecutionUseTheSameLiveBoundary() {
         when(market.current()).thenAnswer(i->snapshot("75000",MarketStatus.OPEN,PriceStatus.LIVE,"KIWOOM",Instant.now()));
         assertThat(service.registrationEnabled()).isTrue();
@@ -69,7 +77,7 @@ class ConditionalOrderIntegrationTest {
         service.create(uid,key,request(OrderSide.BUY,"75000"));
         verify(broker,times(1)).convertAndSendToUser(eq(Long.toString(uid)),eq("/queue/conditional-orders"),any());
     }
-    @BeforeEach void account(){when(market.current()).thenAnswer(i->snapshot("75000",MarketStatus.OPEN,PriceStatus.SIMULATED,"SIMULATED",Instant.now()));when(market.currentPrice()).thenReturn(new BigDecimal("75000"));
+    @BeforeEach void account(){when(market.currentForTrading()).thenAnswer(i->TradingPriceContext.standard(market.current()));when(market.current()).thenAnswer(i->snapshot("75000",MarketStatus.OPEN,PriceStatus.SIMULATED,"SIMULATED",Instant.now()));when(market.currentPrice()).thenReturn(new BigDecimal("75000"));
         User u=new User();u.setLoginId("conditional"+System.nanoTime());u.setNickname("Fixture");u.setPasswordHash("fixture-not-used-for-login");u=users.save(u);uid=u.getId();wallets.initializeBalances(uid);wallets.faucet(uid,UUID.randomUUID().toString());}
     static MarketPriceSnapshot snapshot(String p,MarketStatus m,PriceStatus s,String provider,Instant at){return new MarketPriceSnapshot("mSEC",new BigDecimal(p),new BigDecimal("75000"),BigDecimal.ZERO,BigDecimal.ZERO,m,s,provider,at);}
     ConditionalOrderService.Request request(OrderSide side,String target){return new ConditionalOrderService.Request("mSEC",side,new BigDecimal("100000"),new BigDecimal(target),Instant.now().plusSeconds(3600).truncatedTo(java.time.temporal.ChronoUnit.SECONDS));}

@@ -3,6 +3,7 @@ package com.pricetrack.exchange.blockchain.oracle;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import com.pricetrack.exchange.blockchain.BlockchainService;
@@ -37,6 +38,7 @@ class PriceReportIssuerTest {
 
     @BeforeEach
     void setUp() {
+        when(prices.requireTradingContext()).thenAnswer(i -> com.pricetrack.exchange.market.TradingPriceContext.standard(prices.requireTradableSnapshot()));
         issuer = new PriceReportIssuer(prices, blockchain, signer, Clock.fixed(NOW, ZoneOffset.UTC));
         when(blockchain.chainId()).thenReturn(BigInteger.valueOf(31_337));
         when(blockchain.oracleAddress()).thenReturn(ORACLE);
@@ -193,5 +195,22 @@ class PriceReportIssuerTest {
         return new MarketPriceSnapshot(symbol, new BigDecimal("75300"), new BigDecimal("75000"),
                 new BigDecimal("300"), new BigDecimal("0.4"), MarketStatus.OPEN, PriceStatus.LIVE,
                 "TOSS", observedAt);
+    }
+
+    @Test void allowsUnknownKiwoomWithCurrentGenerationEvidenceWithoutChangingSignedPriceOrTtl() {
+        var snapshot=quality("KIWOOM",MarketStatus.UNKNOWN,PriceStatus.LIVE);
+        doReturn(new com.pricetrack.exchange.market.TradingPriceContext(snapshot,true,"REGULAR_TICK",7L)).when(prices).requireTradingContext();
+        var report=issuer.issue(PriceReport.Side.BUY,INPUT).report();
+        assertThat(snapshot.marketStatus()).isEqualTo(MarketStatus.UNKNOWN);
+        assertThat(report.priceE8()).isEqualTo("7530000000000");
+        assertThat(report.validUntil().subtract(report.observedAt())).isEqualTo("30");
+    }
+
+    @Test void rejectsGenerationChangeDuringRpcEvenWithFreshNewTick() {
+        var snapshot=quality("KIWOOM",MarketStatus.UNKNOWN,PriceStatus.LIVE);
+        doReturn(
+            new com.pricetrack.exchange.market.TradingPriceContext(snapshot,true,"REGULAR_TICK",7L),
+            new com.pricetrack.exchange.market.TradingPriceContext(snapshot,true,"REGULAR_TICK",8L)).when(prices).requireTradingContext();
+        assertThatThrownBy(()->issuer.issue(PriceReport.Side.BUY,INPUT)).hasMessageContaining("연결 세대");
     }
 }

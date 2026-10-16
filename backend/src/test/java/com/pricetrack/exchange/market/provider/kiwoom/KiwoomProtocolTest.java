@@ -35,6 +35,13 @@ class KiwoomProtocolTest {
         var r=p.parse(p.subscribe());assertThat(r.path("trnm").asText()).isEqualTo("REG");
         assertThat(r.path("data").get(0).path("type").get(0).asText()).isEqualTo("0B");
         assertThat(r.path("data").get(1).path("type").get(0).asText()).isEqualTo("0s");
+        assertThat(r.path("data").get(1).path("item").isArray()).isTrue();
+        assertThat(r.path("data").get(1).path("item").size()).isZero();
+        assertThat(r.path("data").get(0).path("item").get(0).asText()).isEqualTo("005930");
         assertThat(p.parse(p.login("fixture-token")).path("token").asText()).isEqualTo("fixture-token");
+    }
+    @Test void staleStateIsNotSilentlyAcceptedAndFreshTickCannotReplaceIt() {
+        assertThatThrownBy(()->p.state(p.parse(state("3").replace("100000","090000"))))
+            .isInstanceOf(KiwoomApiException.class);
     }
 }

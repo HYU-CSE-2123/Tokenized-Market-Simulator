@@ -3,7 +3,7 @@ import { ApiClient } from './api.js';
 import { MarketSocket } from './websocket.js';
 import { ChartController } from './chart-controller.js';
 import { normalizeQuote, quoteUsability, remainingSeconds, shouldRenderOrder, friendlyTradeError } from './trade-quote.js';
-import { RequestState, number, time, label, positiveAmount, uncertainWrite, marketNotice } from './state.js';
+import { RequestState, number, time, label, positiveAmount, uncertainWrite, marketNotice, mergeMarketRead } from './state.js';
 import { node, button, fields, empty, orderCard, tradeCard, renderDiagnosis } from './ui.js';
 import { createReservePanel } from './reserve-panel.js';
 import { createTradeAuditPanel } from './trade-audit-panel.js';
@@ -131,7 +131,7 @@ function marketRender(market) {
 }
 async function loadMarket() {
   const revision = marketRevision;
-  const body = await read('market', () => api.market(), (body) => { if (revision === marketRevision) marketRender(body); }, 'market-message');
+  const body = await read('market', () => api.market(), (body) => { const merged = mergeMarketRead(state.market, body, revision === marketRevision); if (merged) marketRender(merged); }, 'market-message');
   if (body && state.market) message('market-message', marketNotice(state.market));
 }
 function renderPortfolio() {
@@ -349,5 +349,7 @@ $('admin-filter-order').oninput = () => { requests.invalidate('diagnoses'); stat
 $('admin-older').onclick = () => { if (state.nextBefore) void loadDiagnosisHistory(state.nextBefore); }; $('observation-refresh').onclick = loadObservation;
 $('reconnect').onclick = connect; $('transport').onchange = connect; $('chart-reload').onclick = () => chart.load();
 document.querySelectorAll('[data-interval]').forEach((element) => element.onclick = () => { document.querySelectorAll('[data-interval]').forEach((other) => other.setAttribute('aria-pressed', other === element)); void chart.select(element.dataset.interval); });
-setInterval(() => { if (state.quote) renderQuote(); }, 1000);
+setInterval(() => { if (state.quote) renderQuote(); if (state.market?.provider === 'KIWOOM') message('market-message', marketNotice(state.market)); }, 1000);
+// Read only the local server's in-memory readiness. No additional broker request or WS contract.
+setInterval(() => { if (state.market?.provider === 'KIWOOM' && !requests.busy('market')) void loadMarket(); }, 2000);
 renderIdentity(); route(); void loadMarket(); void chart.load(); connect();

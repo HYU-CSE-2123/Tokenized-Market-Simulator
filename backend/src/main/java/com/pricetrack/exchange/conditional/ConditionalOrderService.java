@@ -85,8 +85,9 @@ public class ConditionalOrderService {
     }
     public MarketPriceSnapshot checkedMarket(){
         if(!enabled())throw new Failure(409,"CONDITIONAL_DISABLED");
-        var snapshot=market.current();
-        boolean valid=com.pricetrack.exchange.market.MarketDataEligibility.liveExternal(snapshot)
+        var context=market.currentForTrading();
+        var snapshot=context.snapshot();
+        boolean valid=(!MarketDataEligibility.synthetic(snapshot) && context.allowed())
             || (fixtureAllowed() && snapshot.provider().equalsIgnoreCase("SIMULATED")
                 && snapshot.marketStatus()==MarketStatus.OPEN && snapshot.priceStatus()==PriceStatus.SIMULATED);
         Duration age=Duration.between(snapshot.observedAt(),now());

@@ -9,6 +9,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import java.math.BigDecimal;
 import java.time.*;
+import com.pricetrack.exchange.market.TradingPriceContext;
 
 /** REST bootstrap is not a timestamped live tick. OPEN requires an explicit current-day 0s message. */
 public class KiwoomPriceProvider implements MarketPriceProvider {
@@ -23,6 +24,10 @@ public class KiwoomPriceProvider implements MarketPriceProvider {
     private MarketStatus market=MarketStatus.UNKNOWN;
     private LocalDate marketDate,tradeDate;
     private long marketGeneration = -1;
+    private long tickGeneration = -1;
+    private boolean regularTick;
+    private LocalDate vetoDate;
+    private String vetoReason;
     private BigDecimal cumulative=BigDecimal.ZERO;
     public KiwoomPriceProvider(KiwoomRestClient rest,KiwoomRealtimeClient realtime,KiwoomProtocol protocol,
             KiwoomPriceProperties properties,MarketWebSocketPublisher publisher,Clock clock) {
@@ -46,14 +51,24 @@ public class KiwoomPriceProvider implements MarketPriceProvider {
         JsonNode frame=observation.payload();
         if(!frame.path("data").isArray())throw new KiwoomApiException();
         for(JsonNode entry:frame.path("data")) {
-            MarketStatus state=protocol.state(entry);
-            if(state!=null){market=state;marketDate=today();marketGeneration=observation.generation();continue;}
+            MarketStatus state;
+            try { state=protocol.state(entry); }
+            catch(RuntimeException invalid) {
+                if("0s".equals(entry.path("type").asText())) { vetoDate=today();vetoReason="INVALID_MARKET_STATE"; }
+                throw invalid;
+            }
+            if(state!=null){
+                market=state;marketDate=today();marketGeneration=observation.generation();
+                vetoDate=today();vetoReason=state==MarketStatus.OPEN?null:state==MarketStatus.CLOSED?"CLOSED":"UNSUPPORTED_MARKET_STATE";
+                continue;
+            }
             KiwoomProtocol.Trade trade=protocol.trade(entry);
             if(trade==null)continue;
             LocalDate date=trade.observedAt().atZone(KiwoomRestClient.KST).toLocalDate();
             if(date.equals(tradeDate) && (trade.cumulative().compareTo(cumulative)<=0
                     || (realTick && trade.observedAt().isBefore(latest.observedAt()))))continue;
-            if(!trade.regular()) { market=MarketStatus.CLOSED;marketDate=today();marketGeneration=observation.generation(); }
+            if(!trade.regular()) { market=MarketStatus.CLOSED;marketDate=today();marketGeneration=observation.generation();vetoDate=today();vetoReason="CLOSED"; }
+            tickGeneration=observation.generation();regularTick=trade.regular();
             cumulative=trade.cumulative();tradeDate=date;realTick=true;
             latest=new MarketPriceSnapshot("mSEC",trade.price(),trade.price().subtract(trade.change()),trade.change(),
                 trade.rate(),marketStatus(),PriceStatus.LIVE,"KIWOOM",trade.observedAt());
@@ -73,4 +88,18 @@ public class KiwoomPriceProvider implements MarketPriceProvider {
                 marketStatus(),status,"KIWOOM",latest.observedAt());
     }
     @PreDestroy public void stop(){realtime.stop();}
+
+    @Override public synchronized TradingPriceContext currentForTrading() {
+        long generation=realtime.connectionGeneration();
+        MarketPriceSnapshot snapshot=current();
+        String reason=null;
+        if(!realtime.connected()) reason="DISCONNECTED";
+        else if(today().equals(vetoDate) && vetoReason!=null) reason=vetoReason;
+        else if(!realTick || tickGeneration!=generation || !today().equals(tradeDate)) reason="NO_CURRENT_GENERATION_TICK";
+        else if(!regularTick) reason="NON_REGULAR_SESSION";
+        else if(snapshot.priceStatus()!=PriceStatus.LIVE) reason="PRICE_NOT_LIVE";
+        else if(!new TradingPriceContext(snapshot,true,"REGULAR_TICK",generation).freshAt(clock.instant())) reason="STALE_OR_FUTURE_PRICE";
+        if(generation!=realtime.connectionGeneration() || !realtime.connected()) reason="CONNECTION_CHANGED";
+        return new TradingPriceContext(snapshot,reason==null,reason==null?"REGULAR_TICK":reason,generation);
+    }
 }

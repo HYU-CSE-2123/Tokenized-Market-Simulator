@@ -43,9 +43,24 @@ export function positiveAmount(value) {
 export function uncertainWrite(error) {
   return !error?.status || error.status >= 500;
 }
-export function marketNotice(market) {
+export function mergeMarketRead(current, response, priceUnchanged) {
+  if (priceUnchanged) return { ...response, mockQuoteObservedAt: response.observedAt };
+  if (current?.provider !== 'KIWOOM' || response.provider !== current.provider) return current;
+  // A newer WS price must not discard the independently queried readiness evidence.
+  return { ...current, mockQuoteAllowed: response.mockQuoteAllowed,
+    mockQuoteReason: response.mockQuoteReason, mockQuoteObservedAt: response.observedAt };
+}
+export function marketNotice(market, now = Date.now()) {
   if (!market) return '시장 정보를 확인하는 중입니다.';
   if (market.priceStatus === 'SIMULATED') return '시뮬레이션 가격입니다. 실제 주식 거래가 아닙니다.';
+  if (market.provider === 'KIWOOM' && typeof market.mockQuoteAllowed === 'boolean') {
+    const age = now - Date.parse(market.mockQuoteObservedAt || market.observedAt);
+    const fresh = Number.isFinite(age) && age >= -2000 && age <= 5000;
+    const allowed = market.mockQuoteAllowed && fresh && market.marketStatus !== 'CLOSED' && market.priceStatus === 'LIVE';
+    return allowed
+      ? '시장 상태와 별개로 최신 장중 체결에 기반한 모의 견적 시세 조건이 충족됐습니다. 최종 발급은 서버에서 재검증합니다.'
+      : '모의 견적 시세 조건이 충족되지 않았습니다. 시장 OPEN을 추정하지 않으며 서버의 최신 확인이 필요합니다.';
+  }
   if (market.marketStatus !== 'OPEN') return '현재 시장이 열려 있지 않습니다. 새 견적 발급이 제한될 수 있습니다.';
   if (market.priceStatus !== 'LIVE') return '최신 가격을 확인할 수 없습니다. 새 견적 발급이 제한될 수 있습니다.';
   return '실제 삼성전자 기준 시세 · 거래와 손익은 모의 자산으로 처리합니다.';

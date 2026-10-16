@@ -19,7 +19,8 @@ public class KiwoomProtocol {
     public String login(String token) { return json(Map.of("trnm","LOGIN","token",token)); }
     public String subscribe() { return json(Map.of("trnm","REG","grp_no","1","refresh","1","data",List.of(
         Map.of("item",List.of("005930"),"type",List.of("0B")),
-        Map.of("item",List.of(""),"type",List.of("0s"))))); }
+        // Official market-wide 0s examples use an empty item array, not [""].
+        Map.of("item",List.of(),"type",List.of("0s"))))); }
     private String json(Object value) { try { return mapper.writeValueAsString(value); } catch (Exception ignored) { throw new KiwoomApiException(); } }
     public record Trade(BigDecimal price, BigDecimal change, BigDecimal rate, BigDecimal volume,
                         BigDecimal cumulative, Instant observedAt, boolean regular) {}
