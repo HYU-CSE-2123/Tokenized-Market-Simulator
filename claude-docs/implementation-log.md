@@ -2787,3 +2787,12 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 - 장부-체인 MATCH, 거래 감사 COMPLETED/MATCH, coverage4개true/sourceOrders2/scannedEvents2/inspected2. 개인WS7건. 외부Kiwoom/Toss/AI0, 새로운Syntheticproject만stop, 데이터·증거보존. 기존KRX/NXT/사용자playground보존, commit/merge/push없음.
 - 오프라인 playground8/8 및 adapter AST/JS구문/서브넷경계 검증PASS. 별도 검토 최초1+재검토2: 필수수정없음(runtime안전성/AST), 실제Docker/Chrome재실행은구현자. 제품필수수정문제확인없음. 전체회귀/장애/모바일/실환경PASS로확대하지않는다.
 - 변경·거래별txHash/Receipt/최종DB/검증한계 및 증거위치: [Synthetic 브라우저 E2E 보고서](synthetic-browser-e2e-2026-10-16.md).
+
+# 원본 루트 통합 — 로컬 merge·양쪽 회귀 완료 (2026-10-16)
+
+- 사용자 승인으로 feat/kiwoom-live-fixes의48개 변경을6커밋(b6edc72/79ae93e/84f99b2/fe361db/600f13b/2fb8cd6)으로 저장했다. 원본 actual branch melon-init에 일반 merge, 충돌0. merge8af86e8의부모는원본f069a10과기능2fb8cd6이다.
+- 커밋전기능worktree 및 merge후원본에서새실행: backend각463PASS/35SKIP/FAIL0(ERROR0)/bootJar성공, web각88PASS, Vite/Chrome desktop·mobile fixture PASS, Foundry각36PASS, 진단각68PASS, guard/clock각15PASS, playground각8PASS. 기존PG/Anvil·실제Synthetic거래증거는재실행결과로포함하지않았다. 실제KRX/NXT제품E2E는미완료다.
+- 48개파일 private백업·rawhash·staged검사후commit. 원본merge전체Git tree는기능tip과동일,기능worktree파일bytes/KRXsourceHash유지. 원본checkout15개파일은LF/CRLF차이만있어원본제품hash는KRX값과다름. manifest보정없음.
+- 기존runtime/DB/Anvil/baseline/credential/capture/image보존, Docker조작·빌드이미지변경·push·worktree제거없음. 앞으로개발은원본프로젝트루트에서한다. 기존KRX인수·NXT진단은절대경로와기존sourceguard때문에보존된worktree를유지해야한다.
+- 독립검토의mergegate/ROOT검증지적2건보완후첫재검토필수수정없음. 실제회귀는구현자실행. 상세커밋·검증·경로의존성과제거선행조건: [원본 루트 통합 보고서](root-integration-2026-10-16.md).
+- 최종2차독립재검토필수수정없음. reviewer가실제6커밋/48파일/merge부모및tree동일/원본XML498·skip35·실패0/문서구분을직접확인했다. 회귀재실행·private백업/hash·WT·Docker/DB/credentials는검토범위밖이다.
