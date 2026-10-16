@@ -1,0 +1,4 @@
+FROM nginx:1.28-alpine
+ENV BACKEND_UPSTREAM=backend:8082
+COPY deploy /etc/nginx/templates
+COPY dist /usr/share/nginx/html
