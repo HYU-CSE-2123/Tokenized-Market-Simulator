@@ -50,6 +50,10 @@
 
 ## 단일 출처(Source of Truth)
 
+2026-10-16 **NXT 실제 단독 구독 관측 완료**: [실제 응답·호출 수·미검증 범위](kiwoom-nxt-live-observation-2026-10-16.md). OAuth1/시세REST0/WS1, LOGIN·REG 승인, 동일 generation의005930_NX 체결742건/290=2 수신. 9081은정제null로누락/타입/필터사유미구분,0s0건. worker정상종료,파일시각기준전체약181.54초. 메인마켓관측이며프리/애프터·제품NXT지원·Quote/거래인수는미검증이다. 추가호출/제품/기존환경변경과Git명령없음.
+
+2026-10-15 **NXT 관측 프로필 오프라인 준비 완료 / 외부 실행 승인 대기**: [구현·검증·실행 명령](kiwoom-nxt-observe-diagnostics.md). 기존 진단 도구에 `nxt-observe` 추가, E2E secret 명시적 읽기 전용 참조, OAuth1/시세REST0/WS1/180초 관찰/전체210초/5000이벤트 제한. 진단65/65·기존guard/clock15/15 PASS, 최종 독립 재검토 필수 수정 없음. 새 private 진단 run만 준비했으며 제품·기존KRX E2E환경 변경 및 실제 키움 호출은 없다.
+
 2026-10-14 **키움 읽기 전용 진단 도구 준비**: [구현·실행 안내](kiwoom-readonly-diagnostics.md). 제품과분리된Python도구,외부기본OFF/명시적한도·private설정·whitelist기록·generation/0s·봉경계/asOf검증. `python -S` Mock26/26 및Phase A guard15/15PASS,실제키/API/AI사용0. 독립검토후기능통합결과는구현문서에기록한다. [사전인수계획](kiwoom-live-acceptance-preparation.md)은도구안내와새최소호출profile로연결한다.
 
 2026-10-14 **최신 통합 Phase A 필수 실제E2E5/5 PASS**: Docker Server version/info 정상확인후a317f67의새session phase-a-20261013173219-bb0717fd에서Faucet/reserve/audit/conditional·observation/별도JVM 모두PASS(FAIL·SKIP0). actual subnet overlap3회회복·clock4/4PASS·새컨테이너8개정지/증거보존,제품변경0. [실행보고](phase-a-subnet-retry-validation.md), [키움인수착수조건](kiwoom-live-acceptance-preparation.md). 아래BLOCKED는이전이력이다. 실키움/Toss·유료AI·최종실환경인수는NOT_RUN이다.

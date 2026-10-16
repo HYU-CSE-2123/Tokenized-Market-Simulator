@@ -8,7 +8,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch,Mock
-from kiwoom_diagnostic_core import Observer,UTC,analyze,DiagnosticError,stamp,number
+from kiwoom_diagnostic_core import Observer,UTC,analyze,DiagnosticError,stamp,number,subscription,asof_timing_comparison
 
 spec=importlib.util.spec_from_file_location('kiwoom_diagnostic',Path(__file__).with_name('kiwoom-diagnostic.py'))
 d=importlib.util.module_from_spec(spec);spec.loader.exec_module(d)
@@ -51,6 +51,63 @@ def complete_observer():
 
 
 class ParserTest(unittest.TestCase):
+    def test_state_only_subscription_is_exact_official_single_entry(self):
+        self.assertEqual(subscription('0s-only'),{'trnm':'REG','grp_no':'1','refresh':'1',
+            'data':[{'item':[],'type':['0s']}]})
+        with self.assertRaisesRegex(DiagnosticError,'INVALID_PROFILE'):subscription('SECRET_CANARY')
+
+    def test_wire_observation_precedes_ack_item_and_time_filters_without_secrets(self):
+        o=Observer(observe_state_wire=True);o.begin(T)
+        items=[('MISSING',{}),('NULL',{'item':None}),('EMPTY_STRING',{'item':''}),
+            ('STRING',{'item':'SECRET_CANARY'}),('EMPTY_ARRAY',{'item':[]}),
+            ('ARRAY',{'item':['SECRET_CANARY']}),('OTHER',{'item':{'token':'SECRET_CANARY'}})]
+        for shape,fields in items:
+            o.frame({'trnm':'REAL','token':'SECRET_CANARY','data':[{'type':'0s',**fields,
+                'values':{'215':'3','20':'090000','secretKey':'SECRET_CANARY'}}]},T)
+        wire=[r for r in o.rows if r['kind']=='MARKET_STATE_WIRE']
+        self.assertEqual(len(wire),7)
+        self.assertEqual([r['itemFormat'] for r in wire],[shape for shape,_ in items])
+        self.assertTrue(all(r['stateCode']=='3' and r['marketTime']=='090000' and not r['regAcknowledged'] for r in wire))
+        self.assertNotIn('SECRET_CANARY',json.dumps(o.rows))
+        self.assertEqual(analyze(o)['generations'][0]['stateWireEntries'],7)
+        self.assertEqual(analyze(o)['generations'][0]['stateWireFrames'],7)
+        self.assertEqual(analyze(o)['generations'][0]['stateParsedEntries'],0)
+
+    def test_wire_invalid_values_are_redacted_and_old_generation_not_counted(self):
+        o=Observer(observe_state_wire=True);ack(o)
+        f={'trnm':'REAL','data':[{'type':'0s','item':'','values':{'215':'SECRET_CANARY','20':'SECRET_CANARY'}}]}
+        o.frame(f,T)
+        wire=next(r for r in o.rows if r['kind']=='MARKET_STATE_WIRE')
+        self.assertIsNone(wire['stateCode']);self.assertIsNone(wire['marketTime'])
+        before=len(o.rows);o.frame(f,T,99);self.assertEqual(len(o.rows),before)
+        self.assertNotIn('SECRET_CANARY',json.dumps(o.rows)+json.dumps(analyze(o)))
+
+    def test_wire_and_parsed_rows_share_one_hard_event_limit(self):
+        o=Observer(4,observe_state_wire=True);ack(o)
+        with self.assertRaisesRegex(DiagnosticError,'EVENT_LIMIT'):state(o)
+        self.assertEqual(len(o.rows),4);self.assertTrue(o.truncated)
+
+    def test_wire_fresh_state_alone_is_not_price_or_bootstrap_guarantee(self):
+        o=Observer(observe_state_wire=True);ack(o);state(o)
+        r=analyze(o)['generations'][0]
+        self.assertEqual(r['stateWireEntries'],1);self.assertEqual(r['stateParsedEntries'],1)
+        self.assertEqual(r['productEligibilityEvidence'],'INCONCLUSIVE')
+    def test_registration_matches_official_empty_market_item_array(self):
+        self.assertEqual(subscription()['data'],[
+            {'item':['005930'],'type':['0B']},{'item':[],'type':['0s']}])
+
+    def test_asof_clock_comparison_is_offline_inconclusive_and_does_not_mutate_evidence(self):
+        o=complete_observer();chart(o,requested=30)
+        original=json.dumps(o.rows,sort_keys=True)
+        result=asof_timing_comparison(o.rows)
+        self.assertEqual(len(result),1)
+        self.assertEqual(result[0]['verdict'],'INCONCLUSIVE')
+        self.assertFalse(result[0]['watermarkGuaranteed'])
+        self.assertEqual(result[0]['generation'],o.generation)
+        self.assertEqual(result[0]['alignmentAssumption'],'NATIVE_START')
+        self.assertEqual(result[0]['observedPrefix'],'3')
+        self.assertEqual(result[0]['receivedPrefix'],'1')
+        self.assertEqual(json.dumps(o.rows,sort_keys=True),original)
     def test_nonregular_trade_requires_new_open_state_before_recovery(self):
         o=Observer();ack(o);state(o)
         t={'trnm':'REAL','data':[{'type':'0B','item':'005930','values':{'10':'100','15':'1','13':'1','20':'100000','290':'3'}}]}
@@ -130,6 +187,103 @@ class ParserTest(unittest.TestCase):
 
 
 class GuardTest(unittest.TestCase):
+    def test_state_only_limits_fail_before_credentials_or_factory(self):
+        for override in ({'max_rest_requests':2},{'max_ws_connections':2},{'chart_snapshots':1},{'max_events':5001}):
+            values=dict(allow_external=True,profile='0s-only',max_rest_requests=1,max_ws_connections=1)
+            values.update(override)
+            with patch.object(d,'load_run') as load,self.assertRaisesRegex(DiagnosticError,'STATE_ONLY_LIMITS_REQUIRED'):
+                d.capture(self.args(**values),Mock())
+            load.assert_not_called()
+
+    def test_state_only_prepared_mismatch_blocks_before_secret_and_network(self):
+        with tempfile.TemporaryDirectory() as folder,patch.object(d,'load_run',return_value=Path(folder)),patch.object(d,'private_credentials') as secret:
+            factory=Mock()
+            with self.assertRaisesRegex(DiagnosticError,'PREPARED_MISMATCH'):
+                d.capture(self.args(allow_external=True,profile='0s-only',max_rest_requests=1,max_ws_connections=1),factory)
+            secret.assert_not_called();factory.assert_not_called()
+
+    def test_prepared_state_only_run_cannot_be_downgraded_to_default_or_explicit_mixed(self):
+        for profile in (None,'mixed'):
+            with tempfile.TemporaryDirectory() as folder,patch.object(d,'load_run',return_value=Path(folder)),patch.object(d,'private_credentials') as secret:
+                state_args=self.args(allow_external=True,profile='0s-only',max_rest_requests=1,max_ws_connections=1)
+                d.private_write(Path(folder)/'prepared.json',json.dumps({'status':'AWAITING_EXTERNAL_APPROVAL','profile':'0s-only',
+                    'limits':d.capture_limits(state_args),'registration':subscription('0s-only'),'sourceHashes':d.source_hashes()}))
+                args=self.args(allow_external=True,max_rest_requests=1,max_ws_connections=1)
+                if profile is not None:args.profile=profile
+                factory=Mock()
+                with self.assertRaisesRegex(DiagnosticError,'PREPARED_MISMATCH'):d.capture(args,factory)
+                secret.assert_not_called();factory.assert_not_called()
+
+    def test_manifest_source_limits_payload_status_profile_mutations_fail_closed(self):
+        args=self.args(allow_external=True,profile='0s-only',max_rest_requests=1,max_ws_connections=1)
+        valid={'status':'AWAITING_EXTERNAL_APPROVAL','profile':'0s-only','limits':d.capture_limits(args),
+            'registration':subscription('0s-only'),'sourceHashes':d.source_hashes()}
+        for field,value in [('sourceHashes',{}),('limits',{}),('registration',subscription()),
+                            ('status','CHANGED'),('profile','mixed')]:
+            with tempfile.TemporaryDirectory() as folder,patch.object(d,'load_run',return_value=Path(folder)),patch.object(d,'private_credentials') as secret:
+                prepared={**valid,field:value};d.private_write(Path(folder)/'prepared.json',json.dumps(prepared))
+                factory=Mock()
+                with self.assertRaisesRegex(DiagnosticError,'PREPARED_MISMATCH'):d.capture(args,factory)
+                secret.assert_not_called();factory.assert_not_called()
+                self.assertFalse((Path(folder)/'events.jsonl').exists())
+
+    def test_state_only_transport_failure_never_retries_and_masks_raw_exception(self):
+        for phase in ('auth','connect'):
+            counters={'factory':0,'auth':0,'connect':0}
+            class FakeTransport:
+                def __init__(self,config,budget):self.budget=budget;counters['factory']+=1
+                def token(self):
+                    self.budget.take_rest();counters['auth']+=1
+                    if phase=='auth':raise RuntimeError('SECRET_CANARY')
+                    return 'SECRET_CANARY'
+                def connect(self):
+                    self.budget.take_ws();counters['connect']+=1
+                    raise RuntimeError('SECRET_CANARY')
+            args=self.args(allow_external=True,profile='0s-only',max_rest_requests=1,max_ws_connections=1)
+            with tempfile.TemporaryDirectory() as folder,patch.object(d,'load_run',return_value=Path(folder)),patch.object(d,'private_credentials',return_value={'mode':'real'}):
+                d.private_write(Path(folder)/'prepared.json',json.dumps({'status':'AWAITING_EXTERNAL_APPROVAL','profile':'0s-only',
+                    'limits':d.capture_limits(args),'registration':subscription('0s-only'),'sourceHashes':d.source_hashes()}))
+                report=d.capture(args,FakeTransport)
+                self.assertEqual(report['captureResult'],'TRANSPORT_FAILED')
+                self.assertNotIn('SECRET_CANARY',(Path(folder)/'report.json').read_text())
+            self.assertEqual(counters,{'factory':1,'auth':1,'connect':0 if phase=='auth' else 1})
+
+    def test_state_only_mock_capture_sends_once_no_chart_and_records_wire(self):
+        sent=[]
+        frames=[{'trnm':'LOGIN','return_code':0,'token':'SECRET_CANARY'},
+            {'trnm':'REAL','data':[{'type':'0s','item':'SECRET_CANARY','values':{'215':'3','20':'090000'}}]},
+            {'trnm':'REG','return_code':0},{'trnm':'LOGIN','return_code':0},
+            {'trnm':'REAL','data':[{'type':'0s','item':'','values':{'215':'3','20':'100000'}}]}]
+        class FakeSocket:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def send(self,packet):sent.append(json.loads(packet))
+            def recv(self,timeout):
+                if frames:return json.dumps(frames.pop(0))
+                raise TimeoutError()
+        class FakeTransport:
+            def __init__(self,config,budget):self.budget=budget
+            def token(self):self.budget.take_rest();return 'SECRET_CANARY'
+            def connect(self):self.budget.take_ws();return FakeSocket()
+            def chart(self,*args):raise AssertionError('Chart is forbidden')
+        args=self.args(allow_external=True,profile='0s-only',max_rest_requests=1,max_ws_connections=1,seconds=5)
+        clock=iter(i*.1 for i in range(300))
+        with tempfile.TemporaryDirectory() as folder,patch.object(d,'load_run',return_value=Path(folder)),patch.object(d,'private_credentials',return_value={'mode':'real'}),patch.object(d.time,'monotonic',side_effect=lambda:next(clock)):
+            prepared={'status':'AWAITING_EXTERNAL_APPROVAL','profile':'0s-only','limits':d.capture_limits(args),
+                'registration':subscription('0s-only'),'sourceHashes':d.source_hashes()}
+            d.private_write(Path(folder)/'prepared.json',json.dumps(prepared))
+            report=d.capture(args,FakeTransport)
+            evidence=(Path(folder)/'events.jsonl').read_text()+(Path(folder)/'report.json').read_text()
+        self.assertEqual([r['trnm'] for r in sent],['LOGIN','REG'])
+        self.assertEqual(sent[1],subscription('0s-only'))
+        self.assertEqual(report['externalRequests']['rest'],1);self.assertEqual(report['externalRequests']['wsConnections'],1)
+        self.assertEqual(report['generations'][0]['stateWireEntries'],2)
+        self.assertEqual(report['generations'][0]['stateWireFrames'],2)
+        self.assertEqual(report['priceEligibilityEvaluation'],'NOT_RUN')
+        self.assertEqual(report['generations'][0]['productEligibilityEvidence'],'INCONCLUSIVE')
+        self.assertEqual(report['generations'][0]['unexpectedTradeEntries'],0)
+        self.assertIn('REG_SENT',evidence);self.assertNotIn('SECRET_CANARY',evidence)
+
     @unittest.skipUnless(os.name=='nt','Windows ACL check only')
     def test_acl_failure_prevents_credential_content_read(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -195,6 +349,7 @@ class GuardTest(unittest.TestCase):
             evidence=(Path(folder)/'events.jsonl').read_text()+(Path(folder)/'report.json').read_text()
         self.assertNotIn('SECRET_CANARY',evidence)
         self.assertEqual([p['trnm'] for p in sent],['LOGIN','REG','PING'])
+        self.assertEqual(sent[1],subscription())
         self.assertEqual(sent[-1],{'trnm':'PING'})
         self.assertEqual(report['captureResult'],'COMPLETE')
         self.assertEqual(report['externalRequests']['rest'],1)

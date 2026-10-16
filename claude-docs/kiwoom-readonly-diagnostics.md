@@ -1,5 +1,7 @@
 # 키움 읽기 전용 진단 도구 구현·실행 안내
 
+> 2026-10-14 첫 실제 장중 관찰 후속: 사용자 서비스/IP 확인을 받아 REST4·WS1·180초 capture1회를 실행했다. OAuth/LOGIN/REG·0B1,163건 PASS,0s0건으로OPEN/LIVE거래인수BLOCKED. native1m완료봉1개START_SUPPORTED,asOf진단차이2개는실제웹누락확정이아니다. [실행·집계·한계 보고서](kiwoom-live-readonly-acceptance-2026-10-14.md#5-사용자-확인과-실제-실행). 아래실제API0/빈설정/승인대기는각작성시점의이력이다. 도구·제품코드변경/추가호출없음.
+
 > 2026-10-14. 기능 브랜치feat/kiwoom-readonly-diagnostics, 입력통합860885c. 실제 broker/API/auth정보 사용0. 현재 검증은 Mock이며 실제0s 제공/봉경계는 NOT_RUN이다.
 
 ## 변경 범위

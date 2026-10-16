@@ -56,8 +56,42 @@ def ack_success(frame):
     return type(frame.get('return_code')) in (int, str) and str(frame['return_code']) == '0'
 
 
+def subscription(profile='mixed'):
+    """Official market-wide 0s registration: [] is distinct from ['']."""
+    if profile not in ('mixed','0s-only','nxt-observe'):
+        raise DiagnosticError('INVALID_PROFILE')
+    entries=[{'item':[],'type':['0s']}]
+    if profile=='mixed':entries.insert(0,{'item':['005930'],'type':['0B']})
+    if profile=='nxt-observe':entries.insert(0,{'item':['005930_NX'],'type':['0B']})
+    return {'trnm':'REG','grp_no':'1','refresh':'1','data':entries}
+
+
+def asof_timing_comparison(rows):
+    """Offline aggregate only; local request time is not a vendor watermark.
+
+    Keep the original analyze verdicts separate. Never mutate capture rows or
+    claim either clock's prefix is the vendor's actual snapshot boundary.
+    """
+    results=[]
+    for candle in (r for r in rows if r['kind']=='CANDLE'):
+        start=instant(candle['nativeAt']);cutoff=instant(candle['asOfCandidate'])
+        if not start<=cutoff<start+timedelta(minutes=1):
+            continue
+        trades,gap=unique_trades(rows,candle['generation'])
+        own=[t for t in trades if start<=instant(t['observedAt'])<start+timedelta(minutes=1)]
+        observed=sum((Decimal(t['volume']) for t in own if instant(t['observedAt'])<=cutoff),Decimal(0))
+        received=sum((Decimal(t['volume']) for t in own if instant(t['receivedAt'])<=cutoff),Decimal(0))
+        actual=Decimal(candle['volume'])
+        results.append({'generation':candle['generation'],'alignmentAssumption':'NATIVE_START',
+            'nativeAt':candle['nativeAt'],'requestedAt':candle['asOfCandidate'],
+            'restVolume':str(actual),'observedPrefix':str(observed),'receivedPrefix':str(received),
+            'restMinusObserved':str(actual-observed),'restMinusReceived':str(actual-received),
+            'captureGap':gap,'watermarkGuaranteed':False,'verdict':'INCONCLUSIVE'})
+    return results
+
+
 class Observer:
-    def __init__(self, max_events=5000):
+    def __init__(self, max_events=5000, observe_state_wire=False, nxt_observe=False):
         if not 1 <= max_events <= 20000:
             raise DiagnosticError('INVALID_EVENT_LIMIT')
         self.rows = []
@@ -65,6 +99,73 @@ class Observer:
         self.generation = 0
         self.login = self.reg = False
         self.truncated = False
+        self.observe_state_wire = observe_state_wire
+        self.nxt_observe = nxt_observe
+
+    def nxt_wire(self, frame, common):
+        """Observe bounded fields, not exchange/session semantics. Never call KRX eligibility analysis."""
+        entries=frame.get('data')
+        if not isinstance(entries,list) or len(entries)>500:
+            return [self.add(dict(common,kind='REJECTED',reason='INVALID_DATA'))]
+        rows=[]
+        for entry in entries:
+            if not isinstance(entry,dict) or entry.get('type') not in ('0B','0s'):continue
+            typ=entry['type'];item=entry.get('item');v=entry.get('values')
+            v=v if isinstance(v,dict) else {}
+            shape='MISSING' if 'item' not in entry else 'NULL' if item is None else \
+                'EMPTY_STRING' if item=='' else 'STRING' if isinstance(item,str) else \
+                'EMPTY_ARRAY' if item==[] else 'ARRAY' if isinstance(item,list) else 'OTHER'
+            row=dict(common,kind='NXT_TRADE_WIRE' if typ=='0B' else 'NXT_STATE_WIRE',eventType=typ,
+                item=item if isinstance(item,str) and item in ('','005930','005930_NX','005930_AL') else None,
+                itemFormat=shape,loginAcknowledged=self.login,regAcknowledged=self.reg)
+            def code(value):return value if isinstance(value,str) and re.fullmatch(r'[0-9]{1,3}',value) else None
+            if typ=='0B':
+                row.update(sessionCode=code(v.get('290')),exchangeCode=code(v.get('9081')))
+                exchange=v.get('9081')
+                exchange_type='MISSING' if '9081' not in v else 'NULL' if exchange is None else \
+                    'BOOLEAN' if isinstance(exchange,bool) else 'NUMBER' if isinstance(exchange,(int,float)) else \
+                    'STRING' if isinstance(exchange,str) else 'ARRAY' if isinstance(exchange,list) else 'OBJECT'
+                row.update(exchangeFieldPresent='9081' in v,exchangeJsonType=exchange_type,
+                    exchangeFormatAllowed=code(exchange) is not None)
+                for name,fid,quantity in (('price','10',False),('volume','15',True),('cumulativeVolume','13',True)):
+                    try:
+                        n=number(v.get(fid),magnitude=True,quantity=quantity)
+                        row[name]=n if Decimal(n)>0 else None
+                    except DiagnosticError:row[name]=None
+            else:
+                value=v.get('215')
+                row['stateCode']=value if isinstance(value,str) and value in set('0123456789abcdefosPQRSTUV') else None
+            value=v.get('20')
+            row['wireTime']=value if isinstance(value,str) and re.fullmatch(r'[0-9]{6}',value) else None
+            try:
+                observed=trade_time(value,instant(common['receivedAt']))
+                age=(instant(common['receivedAt'])-observed).total_seconds()
+                row.update(observedAt=stamp(observed),ageSeconds=age,timeWithinExistingWindow=-2<=age<=5)
+            except DiagnosticError:row.update(observedAt=None,ageSeconds=None,timeWithinExistingWindow=None)
+            row['dateBasis']='RECEIVE_DATE_KST_NOT_VENDOR_DATE'
+            rows.append(self.add(row))
+        return rows
+
+    def state_wire(self, frame, common):
+        """Count 0s entries before item/time/ACK parsing. Never persist arbitrary vendor strings."""
+        if not self.observe_state_wire or not isinstance(frame.get('data'),list) or len(frame['data'])>500:
+            return []
+        rows=[]
+        entries=[entry for entry in frame['data'] if isinstance(entry,dict) and entry.get('type')=='0s']
+        if entries:
+            rows.append(self.add(dict(common,kind='MARKET_STATE_WIRE_FRAME',entryCount=len(entries))))
+        for entry in entries:
+            item=entry.get('item')
+            shape='MISSING' if 'item' not in entry else 'NULL' if item is None else \
+                'EMPTY_STRING' if item=='' else 'STRING' if isinstance(item,str) else \
+                'EMPTY_ARRAY' if item==[] else 'ARRAY' if isinstance(item,list) else 'OTHER'
+            values=entry.get('values');values=values if isinstance(values,dict) else {}
+            code=values.get('215');time=values.get('20')
+            rows.append(self.add(dict(common,kind='MARKET_STATE_WIRE',eventType='0s',itemFormat=shape,
+                stateCode=code if isinstance(code,str) and code in set('0123456789abcdefosPQRSTUV') else None,
+                marketTime=time if isinstance(time,str) and re.fullmatch(r'[0-9]{6}',time) else None,
+                loginAcknowledged=self.login,regAcknowledged=self.reg)))
+        return rows
 
     def add(self, row):
         if len(self.rows) >= self.max_events:
@@ -96,12 +197,14 @@ class Observer:
             return [self.add(dict(common,kind=kind,result='OK' if ok else 'REJECTED'))]
         if kind != 'REAL':
             return []  # PING and unknown messages have no persisted raw body
+        if self.nxt_observe:return self.nxt_wire(frame,common)
+        wire=self.state_wire(frame,common)
         if not self.reg:
-            return [self.add(dict(common,kind='REJECTED',reason='BEFORE_REG'))]
+            return wire+[self.add(dict(common,kind='REJECTED',reason='BEFORE_REG'))]
         entries = frame.get('data')
         if not isinstance(entries,list) or len(entries)>500:
             return [self.add(dict(common,kind='REJECTED',reason='INVALID_DATA'))]
-        result=[]
+        result=list(wire)
         for entry in entries:
             try:
                 if not isinstance(entry,dict) or not isinstance(entry.get('values'),dict):
@@ -191,6 +294,8 @@ def window(trades,start,end):
 
 
 def analyze(observer):
+    if observer.nxt_observe:
+        return analyze_nxt(observer)
     rows=observer.rows; generations=[]; boundaries=[]; asof=[]
     for gen in range(1,observer.generation+1):
         own=[r for r in rows if r['generation']==gen]
@@ -211,6 +316,9 @@ def analyze(observer):
             -2<=(instant(own[-1]['receivedAt'])-instant(last_trade['observedAt'])).total_seconds()<=5)
         first=state_frames[0] if state_frames else None
         generations.append({'generation':gen,'regAccepted':accepted,'stateReceived':bool(state_frames),
+            'stateWireEntries':sum(r['kind']=='MARKET_STATE_WIRE' for r in own),
+            'stateWireFrames':sum(r['kind']=='MARKET_STATE_WIRE_FRAME' for r in own),
+            'stateParsedEntries':len(states),
             'firstStateDelaySeconds':(instant(first['receivedAt'])-connected).total_seconds() if first and connected else None,
             'productEligibilityEvidence':'SUPPORTED' if accepted and opened and live else 'INCONCLUSIVE',
             'initialStateWithin60Seconds':bool(first and connected and (instant(first['receivedAt'])-connected).total_seconds()<=60)})
@@ -247,3 +355,27 @@ def analyze(observer):
     return {'formatVersion':1,'mode':'READ_ONLY_DIAGNOSTIC','events':len(rows),'captureTruncated':observer.truncated,
         'generations':generations,'boundaryChecks':boundaries,'asOfChecks':asof,
         'realApiAcceptance':'NOT_ASSERTED','transactionExecution':'NOT_RUN'}
+
+
+def analyze_nxt(observer):
+    def counts(rows,key):
+        result={}
+        for row in rows:
+            value=row.get(key);value='MISSING_OR_REDACTED' if value is None else value
+            result[value]=result.get(value,0)+1
+        return result
+    generations=[]
+    for gen in range(1,observer.generation+1):
+        own=[r for r in observer.rows if r['generation']==gen]
+        trades=[r for r in own if r['kind']=='NXT_TRADE_WIRE']
+        states=[r for r in own if r['kind']=='NXT_STATE_WIRE']
+        generations.append({'generation':gen,
+            'loginAccepted':any(r['kind']=='LOGIN' and r['result']=='OK' for r in own),
+            'regAccepted':any(r['kind']=='REG' and r['result']=='OK' for r in own),
+            'tradeEntries':len(trades),'stateEntries':len(states),
+            'tradeItems':counts(trades,'item'),'sessionCodes':counts(trades,'sessionCode'),
+            'exchangeCodes':counts(trades,'exchangeCode'),'stateCodes':counts(states,'stateCode'),
+            'exchangeInterpretation':'UNVERIFIED','sessionInterpretation':'UNVERIFIED'})
+    return {'formatVersion':2,'mode':'READ_ONLY_NXT_OBSERVATION','events':len(observer.rows),
+        'captureTruncated':observer.truncated,'generations':generations,
+        'priceEligibilityEvaluation':'NOT_RUN','realApiAcceptance':'NOT_ASSERTED','transactionExecution':'NOT_RUN'}
