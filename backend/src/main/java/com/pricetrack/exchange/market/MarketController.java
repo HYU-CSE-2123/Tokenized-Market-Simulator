@@ -36,7 +36,7 @@ public class MarketController {
                                  BigDecimal previousClose, BigDecimal change,
                                  BigDecimal changeRate, MarketStatus marketStatus,
                                  PriceStatus priceStatus, String provider, Instant observedAt,
-                                 Instant updatedAt) {}
+                                 Instant updatedAt, Boolean mockQuoteAllowed, String mockQuoteReason) {}
 
     @GetMapping
     public List<MarketResponse> markets() {
@@ -56,13 +56,15 @@ public class MarketController {
     }
 
     private MarketResponse current() {
-        MarketPriceSnapshot snapshot = marketPriceService.current();
+        TradingPriceContext context = marketPriceService.currentForTrading();
+        MarketPriceSnapshot snapshot = context.snapshot();
         return new MarketResponse(
                 snapshot.symbol(),
                 "Samsung Electronics Price-Tracking Token",
                 snapshot.price(), snapshot.previousClose(), snapshot.change(),
                 snapshot.changeRate(), snapshot.marketStatus(), snapshot.priceStatus(),
-                snapshot.provider(), snapshot.observedAt(), snapshot.observedAt());
+                snapshot.provider(), snapshot.observedAt(), snapshot.observedAt(),
+                context.allowed() && context.freshAt(Instant.now()), context.reason());
     }
 
     @GetMapping("/{symbol}/candles")

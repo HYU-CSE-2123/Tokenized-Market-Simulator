@@ -7,6 +7,7 @@ const PUBLIC_SUBSCRIPTIONS = [
   ['/topic/markets/mSEC/trades', 'trade'],
 ];
 const PRIVATE_SUBSCRIPTIONS = [
+  ['/user/queue/conditional-orders', 'conditional'],
   ['/user/queue/orders', 'order'],
   ['/user/queue/portfolio', 'portfolio'],
 ];

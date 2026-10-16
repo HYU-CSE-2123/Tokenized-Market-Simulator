@@ -2,15 +2,15 @@
 title: "시세·장 상태·차트 데이터의 의미"
 domain: market
 type: policy
-version: 2
+version: 3
 status: active
 minimum_role: USER
-updated_at: 2026-10-06
+updated_at: 2026-10-13
 ---
 
 # 시세·장 상태·차트 데이터의 의미
 
-> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
+> 2026-10-13 통합 추가 기능 및 키움 기능 소스 기준 갱신. 기존9문서 역할·active 승인 경계를 유지하며 manifest의 버전/내용 해시와 일치할 때만 ingest한다. 기존 AI DB 재색인이나 최신 실환경 인수 완료를 의미하지 않는다.
 
 ## 정의와 공급자 역할
 
@@ -40,7 +40,7 @@ Toss는 저장된 시장 일정과 현재 시각으로 OPEN/CLOSED를 판단한�
 
 ## 거래 차단 조건
 
-MarketPriceService.requireTradableSnapshot은 CLOSED와 STALE를 거부한다. 온체인 서명 견적 발급뿐 아니라 OrderService의 신규 매수·매도에도 적용된다. DEGRADED라는 값만으로 이 함수가 차단하지는 않지만, 서명 발급기의 관측 후 5초/미래 2초 검증은 별도로 통과해야 한다.
+MarketPriceService.requireTradableSnapshot은 CLOSED와 STALE를 거부한다. DB-only의 기존 계약은 유지한다. 실제 공급자의 **신규 온체인 서명 발급**과 조건부 실행은 별도로 OPEN + LIVE와 관측 후5초/미래2초를 모두 요구한다. DEGRADED/UNKNOWN은 신규 실제 서명에 사용할 수 없다. 이미 발급된 견적의 소비·전송된 거래 복구·receipt 정산을 시장 상태 변화만으로 취소하지 않는다.
 
 오류는 MARKET_CLOSED, PRICE_STALE 등이다. 모의 견적 계산 경로와 서명 견적 발급 경로는 같지 않으므로, 견적 화면에 수량이 표시됐다고 주문 가능 상태를 확정하지 않는다. 시장 상태 변경은 과거 체결을 취소하는 정책이 아니다.
 
@@ -51,6 +51,17 @@ MarketPriceService.requireTradableSnapshot은 CLOSED와 STALE를 거부한다. �
 과거 페이지는 nextBefore로 조회한다. 휴장·무거래 구간은 연속적인 실시간 tick이 있는 것처럼 해석하지 않는다. 현재 캔들 종가, 발급된 견적 가격, 확정 체결가는 서로 다른 시점의 값일 수 있다. 미래 가격이나 투자 수익을 보장하지 않는다.
 
 ## 근거
+
+## 키움 읽기 전용 공급자
+
+PRICE_PROVIDER=kiwoom은 KRX 삼성전자005930 현재가·실시간 체결·분봉/일봉을 조회한다. Toss/Synthetic는 유지한다. 키움 가격 부호와 체결량 부호는 크기로 정규화하며 등락금액은 부호를 유지한다. 수량은 주식 체결량이지 서비스 사용자 mSEC 체결량이 아니다.
+
+REST 현재가에는 체결 시각이 없어 초기 상태는 INITIALIZING/UNKNOWN이다. 실시간 체결과 같은 연결 세대의 명시적인0s 시장 상태를 확인해야 OPEN/LIVE로 사용할 수 있다. 재연결 또는 KST 날짜 변경 후 이전 OPEN을 재사용하지 않는다. 실제 키움 계정 연결·시장 상태 초기 수신·native 분봉 시간 labeling은 아직 미검증이며 Mock 성공을 실환경 인수로 설명하지 않는다. 공식 timestamp를 임의 보정하지 않으며 차트 경계 일치는 실제 연결 후 확인해야 한다.
+
+## 갱신 근거
+
+- [신규 서명 시장 경계](../../claude-docs/signed-market-eligibility-implementation.md)
+- [키움 시세 구현·검증 한계](../../claude-docs/kiwoom-market-provider-implementation.md)
 
 - [market/MarketPriceService.java](../../backend/src/main/java/com/pricetrack/exchange/market/MarketPriceService.java)
 - [market/provider/toss/TossPriceProvider.java](../../backend/src/main/java/com/pricetrack/exchange/market/provider/toss/TossPriceProvider.java)

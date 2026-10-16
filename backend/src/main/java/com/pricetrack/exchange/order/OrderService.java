@@ -99,6 +99,7 @@ public class OrderService {
         order.setUserId(userId);
         order.setSymbol(WalletService.TOKEN_SYMBOL);
         order.setSide(side);
+        order.setExecutionMode(ExecutionMode.DB_ONLY);
         order.setInputAmount(input);
         order.setExpectedOutputAmount(output);
         return orderRepository.save(order);
@@ -113,6 +114,7 @@ public class OrderService {
         trade.setUserId(order.getUserId());
         trade.setSymbol(order.getSymbol());
         trade.setSide(order.getSide());
+        trade.setExecutionMode(order.getExecutionMode());
         trade.setPrice(price);
         trade.setBaseAmount(baseAmount);
         trade.setQuoteAmount(quoteAmount);

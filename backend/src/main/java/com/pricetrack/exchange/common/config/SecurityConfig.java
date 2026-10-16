@@ -55,6 +55,11 @@ public class SecurityConfig {
                             "접근 권한이 없습니다.", request.getRequestURI()));
                 }))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/admin/transaction-observations/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/conditional-orders/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/faucet/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/trade-audits/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/reserve-reconciliations/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/ai/agent/answers").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/ai/tools/*").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/ai/**").hasRole("ADMIN")

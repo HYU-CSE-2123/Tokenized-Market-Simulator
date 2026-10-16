@@ -1,8 +1,26 @@
 # Backend — Spring Boot (Java 21)
 
+ADMIN 거래 정체 관측: GET `/api/admin/transaction-observations` 및 `/{id}`. 기본300초 LONG_WAIT는 실패 상태가 아니며 기존 복구가 계속됩니다. 최신 완료 시도 metadata는 별도 bounded writer로 기록하고 미기록 과거 거래는 UNRECORDED로 표시합니다. 설정 `app.blockchain.observation.warning-seconds`, 조회 필터·보안·best-effort 한계·실제 검증 상태는 [관측 기록](../claude-docs/transaction-stall-observability-implementation.md)을 따릅니다. 신규 RPC나 거래 종료 기능은 없습니다.
+
+Oracle 가격 조건부 BUY/SELL은 통합 브랜치에 반영하고 격리 검증을 완료했습니다. `CONDITIONAL_ORDERS_ENABLED=false` 기본이며 실제 공급자의 최신 OPEN/LIVE 가격에서만 새 서명 견적으로 실행합니다. Synthetic는 격리 fixture에서만 허용합니다. 등록 중 자산 미예약/실행 시 확보·복구 경계와 실제 실행 결과·미검증은 [조건부 주문 기록](../claude-docs/oracle-conditional-orders-implementation.md)을 참고하세요. 기존 즉시 거래/Faucet 계약은 유지합니다.
+
+## 키움 읽기 전용 시세
+
+`PRICE_PROVIDER=kiwoom`, `KIWOOM_APP_KEY`, `KIWOOM_SECRET_KEY`와 공식 REST/WS endpoint 조합으로 별도 선택합니다. 기존 Toss/Synthetic 선택과 REST/STOMP 계약은 유지합니다. 실제 키가 제공되지 않아 현재 검증은 Mock이며 실제 키움 연결 완료를 뜻하지 않습니다. [구현·미검증 범위](../claude-docs/kiwoom-market-provider-implementation.md)를 먼저 확인하세요.
+
+KRX 삼성전자005930의 현재가·실시간 체결·시장 상태·분봉/일봉만 조회합니다. 초기 REST 현재가는 체결 시각이 없으므로 LIVE가 아닙니다. 각 연결 세대에서 명시적인 시장 OPEN을 확인하기 전에는 UNKNOWN으로 신규 서명/조건부 실행을 차단합니다. 주문·계좌 API, 시세 장애를 가리는 모의 fallback은 없습니다. 실제 분봉 labeling과 장 상태 초기 전달은 App Key 연결 후 별도 확인해야 합니다. public profile은 기존 SIMULATED 전용입니다.
+
+Faucet 정책 고도화를 integration/additional-features에 반영했습니다. POST `/api/wallet/faucet`는 `Idempotency-Key` 필수이며 신규 빈 PostgreSQL 원장에서만 초기 활성화합니다. 1회100만/KST일1회/계정누적5회/전체누적5천만 mKRW이고 DB 지급만 수행합니다. [구현 기록](../claude-docs/faucet-policy-implementation.md)에 실제 실행·미완료 범위를 구분합니다. 기존 DB migration은 별도 승인 없이 하지 않습니다.
+
+ADMIN 거래 전수 대사는 기본 비활성 `TRADE_AUDIT_ENABLED=false`입니다. 고정 DB snapshot과 chain block에서 Order/Trade/견적/transaction·Vault/Oracle 이벤트를 양방향 비교하며 거래·잔고를 수정하지 않습니다. API·한도·불변 이력·격리 E2E와 미검증 항목은 [거래 전수 대사 구현 기록](../claude-docs/trade-full-audit-implementation.md)을 참고하세요. 전체 verdict와 coverage를 함께 확인해야 합니다.
+
 공개 배포 준비(2026-10-07)는 개발 Compose와 분리된 [deployment/RUNBOOK.md](../deployment/RUNBOOK.md)를 따른다. 비root/read-only 이미지, private DB·Anvil, 파일 기반 SSM secret, 승인 지식 artifact와 HTTPS proxy를 사용한다. 실제 AWS 생성·공개 게시와 유료 AI 재색인은 아직 하지 않았다. 검증 상태는 [배포 준비 기록](../claude-docs/deployment-preparation.md)에 구분한다.
 
 삼성전자 가격 추종 토큰 거래소의 REST API 및 WebSocket 서버입니다.
+
+### 잔고·주문 API의 자산 의미
+
+공식 모델은 운영자 통합 지갑 + PostgreSQL 사용자별 모의자산 장부입니다. Portfolio/UserBalance의 mKRW/mSEC 잔고와 `amount`, `lockedAmount`는 사용자별 DB 할당량이며 사용자가 ERC-20을 직접 소유하거나 서명한다는 의미가 아닙니다. 실제 온체인 거래 및 EIP-712 보고서의 executor는 operator입니다. DB Faucet 지급은 온체인 mint와 별개이며 대사 MATCH는 사용자별 온체인 소유권·준비금 보증·실제 원화/주식 상환권을 증명하지 않습니다. API 경로·필드·거래 계약은 변경하지 않았습니다. [최종 점검](../claude-docs/asset-custody-final-check.md)을 참고하세요.
 
 AI Phase 2 Basic RAG는 기본 비활성인 ADMIN 전용 모듈입니다. 거래 DB/JPA와 별도의 pgvector 연결을 사용합니다. 설정·실행·색인·평가 및 미검증 범위는 [AI 실행 보고서](../docs/ai/phase-2-basic-rag.md)를 참고하세요.
 
@@ -402,3 +420,13 @@ docker compose -p exchange ps
 ```
 
 데이터는 외부 Docker 볼륨 `exchange_postgres-data`에 유지됩니다. Compose 외부 볼륨이므로 `docker compose down -v`도 이 볼륨을 삭제하지 않습니다. 단, Docker Desktop이나 `docker volume rm exchange_postgres-data`로 직접 삭제하면 복구할 수 없으므로 주의합니다.
+
+## 장부·체인 자산 대사 (별도 feature branch)
+
+기본 비활성(`RESERVE_RECONCILIATION_ENABLED=false`). 신규 격리 환경에서만 true와 고유 `RESERVE_EXECUTION_ID`를 지정하고, faucet/거래 전에 ADMIN이 `POST /api/admin/reserve-reconciliations/baseline`으로 불변 기준점을 한 번 생성합니다. 기존 장부를 소급 정상화하지 않습니다. 실행/최근20건/UUID상세는 동일 경로 POST/GET/GET `{id}`. USER403/미인증401입니다.
+
+새 orders/trades에 executionMode가 추가되고 legacy는 UNKNOWN입니다. faucet journal은 잔고 지급과 원자적으로 저장됩니다. 대사는 사용자 잔고·정산 상태·체인을 수정하지 않습니다. PostgreSQL evidence trigger 설치에 DDL 권한이 필요합니다.
+
+계산식·상태·전용 fixture 재현·검증 경계는 [구현 보고서](../claude-docs/reserve-reconciliation-implementation.md)를 참고하세요. 기존 개발/acceptance `.env`와 체인에는 적용하지 않습니다.
+
+operator ETH 잔고도 지정 블록에서 읽어 ADMIN에 보여 주지만 Gas 비용 미추정이며 충분/부족·미래 거래 가능성을 보증하지 않습니다. ETH 관측 실패는 토큰 장부 판정을 대신하지 않습니다. 최신 실제PG 경합·CRLF 보완·전체 회귀는 [최종 검증](../claude-docs/reserve-reconciliation-final-validation.md)에 기록합니다. CRLF 수정은 테스트 fixture만 대상으로 하며 일반 Gradle 테스트에서 별도 resource 정규화가 필요하지 않습니다.

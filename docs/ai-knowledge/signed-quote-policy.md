@@ -2,15 +2,15 @@
 title: "서명 견적의 소유권과 유효성"
 domain: trading
 type: policy
-version: 1
+version: 2
 status: active
 minimum_role: USER
-updated_at: 2026-09-27
+updated_at: 2026-10-13
 ---
 
 # 서명 견적의 소유권과 유효성
 
-> 거래 코드 기준: 30105a4. Phase 1 사용자 승인 완료. manifest에 등록된 내용 해시와 일치할 때만 ingest한다.
+> 2026-10-13 통합 추가 기능 및 키움 기능 소스 기준 갱신. 기존9문서 역할·active 승인 경계를 유지하며 manifest의 버전/내용 해시와 일치할 때만 ingest한다. 기존 AI DB 재색인이나 최신 실환경 인수 완료를 의미하지 않는다.
 
 ## 정의와 이유
 
@@ -18,7 +18,7 @@ updated_at: 2026-09-27
 
 ## 정상 발급 조건
 
-온체인 견적은 선택된 공급자의 시장 스냅샷에서 발급한다. Toss 모드에서는 실제 시세를 사용한다. CLOSED 또는 STALE는 거부한다. 발급기는 별도로 관측 후 5초 이내, 미래 오차 2초 이내를 RPC 조회 전후에 검사한다.
+온체인 견적은 선택된 공급자의 시장 스냅샷에서 발급한다. 실제 공급자는 OPEN + LIVE이며 관측 후5초 이내/미래2초 이내여야 한다. RPC 전후 원본 가격의 신선도와 최신 실제 시장 상태·공급자 동일성을 확인하되 보고서 가격·최소수령량·관측시각을 최신 스냅샷 가격으로 교체하지 않는다. Synthetic 및 DB-only 계약은 별도이며 이 경계를 실환경 인수 완료로 해석하지 않는다.
 
 | PriceReport 필드 | 의미 |
 |---|---|
@@ -56,6 +56,13 @@ Oracle은 승인된 소비자, 비어 있지 않은 quoteId, 종목·양수 가�
 특히 준비 완료 후 서명 거래 저장 전 실패하면 주문 실패·자산 잠금 해제는 가능하지만 소비된 견적을 ISSUED로 되돌리지 않는다. 잔고 부족으로 준비에 실패한 경우는 견적을 소비하지 않는다. CONSUMED는 체결 완료를 뜻하지 않는다.
 
 ## 근거
+
+## 조건부 주문과 견적
+
+조건부 등록 시 장기 주문 의도만 저장한다. BUY는 목표 가격 이하, SELL은 목표 가격 이상에서 실행을 시도하고 새 단기 견적을 발급한다. 가격은 E8 정수로 트리거와 실제 새 견적에서 재검증한다. 등록 시 오래된 서명/견적을 미리 저장하지 않는다. 조건 충족은 성공 보장이 아니며 실행 중 시장 변동에도 이미 발급된 보고서 가격은 TTL 동안 고정되어 최신가와 차이가 날 수 있다.
+
+- [조건부 주문 구현](../../claude-docs/oracle-conditional-orders-implementation.md)
+- [신규 시장 경계](../../claude-docs/signed-market-eligibility-implementation.md)
 
 - [quote/PriceQuoteService.java](../../backend/src/main/java/com/pricetrack/exchange/quote/PriceQuoteService.java)
 - [blockchain/oracle/PriceReportIssuer.java](../../backend/src/main/java/com/pricetrack/exchange/blockchain/oracle/PriceReportIssuer.java)

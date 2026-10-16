@@ -28,6 +28,9 @@
 - [`validation-2026-10-07.md`](validation-2026-10-07.md) — 기존 기능 재검증·최초 복원 실패와 후속 stderr/실제SQL readiness 보강. 새DB3/3·종단간16/16·독립 검토 및 남은 검증 경계
 - [`development-chain-state-audit.md`](development-chain-state-audit.md) — 개발 DB와 보존 state/checkpoint의 읽기 전용 대조. 기존 DB와 일치하는 복원 후보 없음·신규 격리 인수 환경 제안, 복원/배포 미실행
 - [`isolated-acceptance-baseline.md`](isolated-acceptance-baseline.md) — 신규 격리 DB·persistent Anvil·독립 키·Toss/실제 웹 준비 결과. 장중 BUY/SELL·유료 AI/성공 MATCH 인수는 대기
+- [`reserve-reconciliation-design.md`](reserve-reconciliation-design.md) — 장부·체인 대사 최초 설계 기록. 후속 구현 승인됨
+- [`reserve-reconciliation-implementation.md`](reserve-reconciliation-implementation.md) — 별도 feature worktree 구현, Order 실행 정본·불변 기준점·consistent cut·계산식·ADMIN API/UI·격리 검증 및 한계
+- [`reserve-reconciliation-final-validation.md`](reserve-reconciliation-final-validation.md) — 실제 PostgreSQL/Anvil 경합, operator ETH/Gas 한계, 테스트-only CRLF 보완과 최종 브랜치 검증
 - [`backend-blockchain-learning-guide.md`](backend-blockchain-learning-guide.md) — 현재 코드 기준 구조·운영자 통합 지갑·서명 견적·BUY/SELL·receipt 정산·WS·용어·DB/chain 정본과 유실 영향 학습 문서
 - [`public-market-data-research.md`](public-market-data-research.md) — 배포 보류 후 국내 실시간/지연/historical 공급자·공개 이용권 조사와 provider/replay 설계 후보
 - [`synthetic-market-design.md`](synthetic-market-design.md) — 공개 simulated 선택과 축소 승인 범위의 합성 tick/거래량·영속 상태·서명 견적·UI 구현, 통합 검증·독립 검토 및 남은 한계(외부 배포는 대기)
@@ -46,6 +49,42 @@
 - [AI 최종 아키텍처](../docs/ai/AI_ARCHITECTURE.md), [평가](../docs/ai/EVALUATION_REPORT.md), [RUNBOOK](../docs/ai/RUNBOOK.md) — 지식/Tool 보안/Skill 안내를 포함한 설명·실행·한계
 
 ## 단일 출처(Source of Truth)
+
+2026-10-16 **NXT 실제 단독 구독 관측 완료**: [실제 응답·호출 수·미검증 범위](kiwoom-nxt-live-observation-2026-10-16.md). OAuth1/시세REST0/WS1, LOGIN·REG 승인, 동일 generation의005930_NX 체결742건/290=2 수신. 9081은정제null로누락/타입/필터사유미구분,0s0건. worker정상종료,파일시각기준전체약181.54초. 메인마켓관측이며프리/애프터·제품NXT지원·Quote/거래인수는미검증이다. 추가호출/제품/기존환경변경과Git명령없음.
+
+2026-10-15 **NXT 관측 프로필 오프라인 준비 완료 / 외부 실행 승인 대기**: [구현·검증·실행 명령](kiwoom-nxt-observe-diagnostics.md). 기존 진단 도구에 `nxt-observe` 추가, E2E secret 명시적 읽기 전용 참조, OAuth1/시세REST0/WS1/180초 관찰/전체210초/5000이벤트 제한. 진단65/65·기존guard/clock15/15 PASS, 최종 독립 재검토 필수 수정 없음. 새 private 진단 run만 준비했으며 제품·기존KRX E2E환경 변경 및 실제 키움 호출은 없다.
+
+2026-10-14 **키움 읽기 전용 진단 도구 준비**: [구현·실행 안내](kiwoom-readonly-diagnostics.md). 제품과분리된Python도구,외부기본OFF/명시적한도·private설정·whitelist기록·generation/0s·봉경계/asOf검증. `python -S` Mock26/26 및Phase A guard15/15PASS,실제키/API/AI사용0. 독립검토후기능통합결과는구현문서에기록한다. [사전인수계획](kiwoom-live-acceptance-preparation.md)은도구안내와새최소호출profile로연결한다.
+
+2026-10-14 **최신 통합 Phase A 필수 실제E2E5/5 PASS**: Docker Server version/info 정상확인후a317f67의새session phase-a-20261013173219-bb0717fd에서Faucet/reserve/audit/conditional·observation/별도JVM 모두PASS(FAIL·SKIP0). actual subnet overlap3회회복·clock4/4PASS·새컨테이너8개정지/증거보존,제품변경0. [실행보고](phase-a-subnet-retry-validation.md), [키움인수착수조건](kiwoom-live-acceptance-preparation.md). 아래BLOCKED는이전이력이다. 실키움/Toss·유료AI·최종실환경인수는NOT_RUN이다.
+
+2026-10-14 **Phase A subnet 충돌 harness 보완 통합, 새 E2E 환경BLOCKED**:72915fd→6ed6d5a,Python15/15PASS·독립검토필수수정없음. 신규session에서DockerLinuxEngine 이미지/version API500으로중단,필수E2E5종NOT_RUN이며제품/기존환경은변경하지않았다. [변경·이번결과](phase-a-subnet-retry-validation.md), [키움실제인수사전준비](kiwoom-live-acceptance-preparation.md). 실제키움/AI호출없음.
+
+2026-10-13 **키움 Mock 구현·통합 완료, 최종 E2E 부분 BLOCKED**: 기능5e39dbf→병합cffe471. 새 통합 회귀 backend451 PASS/35 SKIP·웹84/Foundry36/Chrome PASS, Faucet 실제E2E1 PASS 후 신규 reserve 네트워크 subnet overlap으로중단. reserve BLOCKED, audit/조건부/별도JVM NOT_RUN이며 앞선 feature 조건부1+1 PASS와 구분한다. [전체 변경 파일·실행 증거·후속 항목](kiwoom-transition-final-report.md). 승인 지식9문서/manifest 갱신·독립 재검토 필수 수정 없음. 실제 키움/Toss·유료AI/재색인·AWS/Sepolia는 NOT_RUN이며 전체 인수PASS가 아니다. 아래 진행 중 문구는 이전 시점 기록이다.
+
+2026-10-13 추가 기능 후속: Phase A harness 병합 `cfbd625`의 새 전체 회귀와 필수 실제 E2E5/5 PASS는 [병합 회귀](phase-a-merged-regression.md)에 기록했다. 실제 공급자의 신규 서명 견적 OPEN+LIVE 경계는 기능 `966fa76` → 병합 `a626d7a`, 병합 소스 backend431 PASS/35 SKIP·웹/Foundry·신규 조건부/별도JVM PASS로 검증했다. [시장 품질 구현](signed-market-eligibility-implementation.md). [키움 읽기 전용 공급자](kiwoom-market-provider-implementation.md)는 별도 기능 브랜치에서 구현·검증 중이며 실제 App Key/장중 연결 및 AI 유료 호출은 NOT_RUN이다.
+
+2026-10-13 **Windows 동기화 후 Phase A 재검증 PASS**: [보고서 §10](phase-a-integration-acceptance-report.md#10-사용자-windows-동기화-이후-재진단필수-e2e--2026-10-13). Windows 시간 서비스 동기화 상태 확인, 신규 clock-only5회·업무fixture4회 preflight 모두 PASS. 새 Faucet/reserve/audit/conditional·관측/별도JVM restart 총5개 실제E2E PASS, Python12PASS. 아래 BLOCKED는 이전 이력으로 보존하며 전체 회귀427/35·웹84/Foundry36은 이전 실행으로 구분한다. 제품 변경·통합 병합·외부 호출 없음, B/C/D 및 전체 최종 인수는 미실행이다.
+
+2026-10-13 **Phase A 시각 후속 진단 — BLOCKED 유지**: [보고서 §9](phase-a-integration-acceptance-report.md#9-시각-원인-조사-후속--2026-10-13-여전히-blocked). 새 진단 fixture 세 개에서 Windows/JVM과 Docker/WSL/SQL을 비교해 기존 preflight 15/15 차단을 실제 확인했다. 실제 E2E JDK21.0.9에서도 재현됐으며 Linux 측 벽시계 역행도 관측했다. 필수 E2E 재실행은 NOT_RUN이며 사용자 시각 동기화 확인 또는 전용 Linux JVM harness 확장 승인이 필요하다. 전역 재시작·제품 시각 허용 변경·통합 병합 없음.
+
+2026-10-13 **최종 통합 인수 Phase A 실행 — 미완료/BLOCKED**: [보고서](phase-a-integration-acceptance-report.md). 신규 격리 회귀는 backend427 PASS/35 SKIP·웹84/Foundry36/Chrome fixture PASS, 실제 reserve1 PASS. Faucet·audit·conditional 실제 E2E 실패와 신규 Docker DB-호스트3~4초 시각차를 보존했다. 제품2초 허용을 우회하지 않으며 별도 JVM 검증/통합 병합은 대기. [계획](final-integration-acceptance-plan.md)의 B/C/D는 미승인이다. 이 기록은 현재 feat/phase-a-acceptance의 부분 실행 상태이며 전체 인수 PASS가 아니다.
+
+2026-10-12 **SIGNED/SUBMITTED 관측 ①+② 통합 완료**: 기능e489b3c → 병합7bf459c. [구현/API·실행별 검증 기록](transaction-stall-observability-implementation.md): 병합 소스 backend427 PASS/35 SKIP, 웹84/Foundry36 PASS, 브라우저·신규 PG/Anvil1·별도 JVM PG1 PASS. ADMIN 읽기 전용 LONG_WAIT와 최신 완료 시도 snapshot이며 기존 복구/정산·AI WAITING_LONG 계약은 유지한다. 아래 승인 대기 문구는 이전 설계 시점 이력이다. 외부 모니터링은 제외. [Sepolia 정책](sepolia-mockkrw-issuance-design.md)은 별도 최초 고정 공급 A안으로 확정했지만 S0/O0/V0·계약 구현·배포/ETH/RPC는 미승인이다.
+
+2026-10-12 후속 점검 확정: A 모델 안내·문서·표시 테스트13개를 `c7bf4e8`로 커밋했다. 새 [SIGNED/SUBMITTED 정체 관측 설계](transaction-stall-observability-design.md)와 [Sepolia mKRW 발행 정책 설계](sepolia-mockkrw-issuance-design.md)는 **제안/구현 승인 대기**다. 기존 REVIEW_REQUIRED·거래 복구·계약·DB 및 acceptance는 변경하지 않았다.
+
+2026-10-12 **자산 보관 모델 A 확정**: 운영자 통합 지갑 + PostgreSQL 사용자별 모의자산 장부를 유지한다. 사용자별 온체인 지갑·CustodyVault·사용자 직접 서명·사용자 간 호가 거래소는 제외한다. [기술 비교](user-wallet-custody-architecture-review.md), [표현·거래 가능성·Sepolia Faucet 최종 점검](asset-custody-final-check.md)을 따른다. 사용자 장부 할당량과 온체인 소유권, 대사 MATCH와 지급 능력/준비금 보증은 구분한다.
+
+2026-10-12 **Oracle 가격 조건부 BUY/SELL 통합 완료**: 기능c413079 → integration/additional-features 병합d8dea3e. 병합 소스 backend418PASS/34SKIP, 웹77/Foundry36PASS 및 신규 격리 PG/Anvil 실제E2E1PASS를 확인했다. [설계](oracle-conditional-orders-design.md), [구현 기록](oracle-conditional-orders-implementation.md), [Android 계약](conditional-orders-android-integration.md)을 따른다. 사용자 간 호가/시간 지정 예약은 제외하고 실제 Toss/유료 AI 인수는 여전히 연기한다. Google 인증 등 나머지 기능은 별도 설계/승인 사항이다.
+
+추가 기능 통합 개발의 최신 순서와 보존 경계는 [통합 개발 계획](additional-features-integration-plan.md)을 따른다. 실제 Toss 장중 인수는 추가 기능·최종 통합 검증 이후 신규 acceptance에서 진행하며 기존 acceptance는 보존한다. 2026-10-09의 [거래 전수 대사 ADMIN 설계](trade-full-audit-design.md)는 다음 날 승인·구현·통합되었고, 현재 다음 작업은 Faucet 정책 설계다.
+
+2026-10-10 거래 전수 대사 구현을 승인받았다. 현재 상태·실행별 검증과 통합 결과는 [구현 기록](trade-full-audit-implementation.md)을 따른다. 추가 기능 개발의 중심은 integration/additional-features이며 모든 추가 기능 이후 최종 기준 브랜치와 신규 Toss/AI acceptance를 확정한다. 실제 외부 호출·유료 사용은 별도 승인이다.
+
+최종 통합 소스의 신규 PostgreSQL/Anvil·전체 회귀를 완료했다. 다음 [Faucet 정책 설계](faucet-policy-design.md)는 설계만 제출된 상태이며 숫자·기간·멱등키 계약 승인 전 구현하지 않는다. DB 모의자금 지급과 온체인 자산 공급은 별개다.
+
+2026-10-11 Faucet 최종 승인 정책의 기능·격리 PostgreSQL/Anvil 검증·첫 독립 재검토·통합 회귀를 완료했다(a1d87c9 →7b46833). [구현·검증 기록](faucet-policy-implementation.md)과 [Android 계약](faucet-android-integration.md)을 따른다. 앞선 설계 승인 대기 문구는10-10 당시 이력이며 현재 판단을 대체하지 않는다. 다음 Google 로그인·이메일 인증은 설계부터 진행한다.
 
 문서와 코드가 충돌할 때는 다음 우선순위를 따른다.
 

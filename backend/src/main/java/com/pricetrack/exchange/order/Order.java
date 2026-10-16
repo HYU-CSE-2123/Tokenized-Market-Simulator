@@ -37,6 +37,8 @@ public class Order {
     private BigDecimal expectedOutputAmount;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 30)
     private OrderStatus status = OrderStatus.REQUESTED;
+    @Enumerated(EnumType.STRING) @Column(name = "execution_mode", nullable = false, length = 20)
+    private ExecutionMode executionMode = ExecutionMode.UNKNOWN;
     @Column(name = "tx_hash")
     private String txHash;
     @Column(name = "created_at", nullable = false)

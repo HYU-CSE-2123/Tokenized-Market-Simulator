@@ -52,6 +52,12 @@ public class OnchainOrderPreparationService {
             InsufficientBalanceException.class, PriceQuoteUnavailableException.class
     })
     public PreparedOrder prepare(Long userId, OrderSide side, BigDecimal input, String quoteId) {
+        return prepareWithinTransaction(userId, side, input, quoteId);
+    }
+
+    /** Conditional intent linkage shares this transaction; the existing immediate entry remains REQUIRES_NEW. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public PreparedOrder prepareWithinTransaction(Long userId, OrderSide side, BigDecimal input, String quoteId) {
         PriceReport.Side reportSide = side == OrderSide.BUY ? PriceReport.Side.BUY : PriceReport.Side.SELL;
         // 견적 검증을 어떤 주문·잔고 변경보다 먼저 수행해야 만료 상태만 안전하게 커밋할 수 있다.
         PriceQuote quote = priceQuoteService.lockAndValidate(userId, quoteId, reportSide, input);
@@ -62,6 +68,7 @@ public class OnchainOrderPreparationService {
         order.setUserId(userId);
         order.setSymbol(WalletService.TOKEN_SYMBOL);
         order.setSide(side);
+        order.setExecutionMode(ExecutionMode.ONCHAIN);
         order.setInputAmount(input);
         order.setExpectedOutputAmount(TokenUnits.fromWei(quote.getMinimumOutput()));
         order = orderRepository.save(order);

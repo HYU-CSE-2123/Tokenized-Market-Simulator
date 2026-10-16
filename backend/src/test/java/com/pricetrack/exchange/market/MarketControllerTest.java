@@ -18,9 +18,23 @@ import com.pricetrack.exchange.market.model.MarketStatus;
 import com.pricetrack.exchange.market.model.PriceStatus;
 
 class MarketControllerTest {
+    @Test void exposesUnknownAndReadinessSeparatelyWithoutGeneration() throws Exception {
+        var prices=mock(MarketPriceService.class);
+        var snapshot=new MarketPriceSnapshot("mSEC",new BigDecimal("75000"),new BigDecimal("74000"),
+            new BigDecimal("1000"),BigDecimal.ONE,MarketStatus.UNKNOWN,PriceStatus.LIVE,"KIWOOM",Instant.now());
+        when(prices.currentForTrading()).thenReturn(new TradingPriceContext(snapshot,true,"REGULAR_TICK",7L));
+        var controller=new MarketController(prices,mock(PriceTickRepository.class),mock(MarketCandleService.class));
+        var response=controller.market("mSEC");
+        assertThat(response.marketStatus()).isEqualTo(MarketStatus.UNKNOWN);
+        assertThat(response.mockQuoteAllowed()).isTrue();
+        assertThat(response.mockQuoteReason()).isEqualTo("REGULAR_TICK");
+        var json=new ObjectMapper().registerModule(new JavaTimeModule()).writeValueAsString(response);
+        assertThat(json).doesNotContain("generation");
+    }
     @Test
     void exposesTheCompleteProviderSnapshot() throws Exception {
         MarketPriceService prices = mock(MarketPriceService.class);
+        when(prices.currentForTrading()).thenAnswer(i -> TradingPriceContext.standard(prices.current()));
         Instant observedAt = Instant.parse("2026-09-15T00:30:00Z");
         when(prices.current()).thenReturn(new MarketPriceSnapshot(
                 "mSEC", new BigDecimal("72000"), new BigDecimal("70000"),

@@ -1,5 +1,11 @@
 # Tokenized Market — 제품형 모의 거래 웹
 
+ADMIN 운영 화면에 온체인 거래 정체 관측 목록/상세/필터/keyset 다음 페이지를 추가했습니다. LONG_WAIT는 실패 확정이 아니며 기존 자동 복구가 계속됩니다. 시스템/손상된 Order 연결, 조건부 실행 Order, 마지막 기록된 완료 시도의 지연과 UNRECORDED를 구분합니다. txHash/nonce는 ADMIN 상세에만 있고 강제 종료/자산 해제 버튼은 없습니다. [API·검증 기록](../../claude-docs/transaction-stall-observability-implementation.md) 참고. 기존 Android 코드를 수정/빌드하지 않았으며 신규 계약은 ADMIN 웹 전용입니다.
+
+Oracle 가격 조건부 주문 UI는 통합 브랜치에 반영하고 웹77개 및 Chrome desktop/mobile fixture 검증을 완료했습니다. 시장 화면의 조건부 BUY/SELL 입력·목표 가격·만료·본인 이력·취소·실행 Order 연결과 ADMIN 읽기 이력을 제공합니다. 대기 중 자산은 예약되지 않으며 조건 충족은 체결 보장이 아닙니다. public Synthetic에서는 등록 비활성입니다. [구현/검증 기록](../../claude-docs/oracle-conditional-orders-implementation.md)과 [클라이언트 계약](../../claude-docs/conditional-orders-android-integration.md)을 따릅니다. 실제 Toss 장중 웹 인수는 아직 하지 않았습니다.
+
+Faucet 정책 UI를 integration/additional-features에 반영했습니다. 사용자별 pending key를 보존하고 응답 유실 시 같은 요청 결과를 확인하며, ADMIN은 지급 정책·예산·계정별 이력을 읽기만 합니다. [구현·실제 검증 상태](../../claude-docs/faucet-policy-implementation.md)와 [Android 전달 계약](../../claude-docs/faucet-android-integration.md)을 참고하세요. Android 코드를 수정하거나 실제 Toss/AI 인수를 실행한 것은 아닙니다.
+
 공개용 Docker build는 `--build-arg PUBLIC_DEMO=true`로 생성하며 최초 API/WS/JS 실패에도 정적 `SIMULATED · 합성 시장` 안내가 보인다. 개발/Toss용 빌드는 이 옵션을 켜지 않는다. 공개 TLS/WSS·rate/IP 제한은 별도 [deployment/RUNBOOK.md](../../deployment/RUNBOOK.md)를 따르고 실제 외부 공개 상태는 [배포 준비 기록](../../claude-docs/deployment-preparation.md)과 구분한다.
 
 기존 Vite + JavaScript 검증 클라이언트를 서비스형 UI로 전환했습니다. 디렉터리 이름은 호환성을 위해 유지합니다. 실제 삼성전자 주식·원화 거래가 아닌 모의 자산 서비스이며 Android의 실행 가능한 REST/STOMP 기준 클라이언트 역할도 유지합니다.
@@ -149,3 +155,11 @@ npm run build
 로그인 후 `/api/me`가 ADMIN인 경우에만 패널을 표시합니다. 주문 ID를 지정해 기존 settlement-debugging 수동 Skill을 실행하거나, 자동 진단 이력·이전 페이지·진단 ID별 상세를 조회할 수 있습니다. 결과 JSON에는 실행 시점의 관측·정책 해석·출처·trace와 자동 수정 안 함 표시가 있습니다. 현재 거래 상태와 동일하다고 가정하지 마세요.
 
 백엔드의 AI/Agent/Tool/Skill 설정, AI 진단 schema 명시적 초기화와 자동 진단 actor/namespace 설정이 필요합니다. [백엔드 안내](../../backend/README.md)를 따르세요. 웹은 자동 진단을 시작하거나 재거래·복구를 요청하지 않습니다. USER는 이력 API에서도 거부됩니다. 출력은 HTML이 아니라 안전한 텍스트로 표시하며 로그아웃/계정 교체 시 이전 응답을 폐기합니다.
+
+## ADMIN 장부·체인 자산 대사
+
+별도 feature branch의 ADMIN 화면에서 최초 불변 기준점 생성, 수동 대사, 최근20건과 상세를 조회합니다. 정합성 판정과 거래 가능 유동성은 별도 영역이며 보증/Proof of Reserves가 아닙니다. 기준점 reset·자산 자동 보정·실패 POST 자동 재시도는 없습니다. 백엔드 기능이 disabled이면404 안내를 표시합니다. 기존 acceptance 서버에는 새 기능을 적용하지 않습니다.
+
+`npm test`: 기존48+대사6=54개. `npm run test:browser`: desktop/360px 모바일 fixture, 신규 ADMIN 대사/이력/INCONCLUSIVE 상세 포함. 실제 DB/Anvil 검증은 backend의 별도 E2E입니다.
+
+2026-10-09 보완: 대사 ETH UI 테스트1개 추가로 웹55개. ADMIN 유동성 영역에 지정 블록의 operator ETH를 표시하고 Gas 비용 미추정·미래 거래 보증 아님·자동 충전 없음 안내를 제공합니다. browser smoke에서도 해당 표시를 검증합니다.

@@ -168,6 +168,35 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_blockchain_transactions_sender_nonce
     ON blockchain_transactions (sender_address, nonce);
 
 -- 초기 자산 데이터 (기획서 §11.2)
+-- Existing rows remain UNKNOWN, never guessed from current mode or absent hashes.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS execution_mode VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+ALTER TABLE trades ADD COLUMN IF NOT EXISTS execution_mode VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN';
+CREATE TABLE IF NOT EXISTS faucet_grants (
+    id VARCHAR(36) PRIMARY KEY, user_id BIGINT NOT NULL,
+    amount DECIMAL(30,18) NOT NULL, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reserve_baselines (
+    id BIGINT PRIMARY KEY CHECK (id=1), payload TEXT NOT NULL,
+    actor_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reserve_runs (
+    id VARCHAR(36) PRIMARY KEY, payload TEXT NOT NULL,
+    actor_id BIGINT NOT NULL, created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS trade_audit_runs (
+    id VARCHAR(36) PRIMARY KEY, payload TEXT NOT NULL, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS trade_audit_results (
+    run_id VARCHAR(36) PRIMARY KEY REFERENCES trade_audit_runs(id), payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS trade_audit_items (
+    run_id VARCHAR(36) NOT NULL REFERENCES trade_audit_runs(id), seq INT NOT NULL,
+    order_id BIGINT, mode VARCHAR(20) NOT NULL, side VARCHAR(10), verdict VARCHAR(20) NOT NULL,
+    payload TEXT NOT NULL, PRIMARY KEY(run_id,seq)
+);
+CREATE INDEX IF NOT EXISTS idx_trade_audit_created ON trade_audit_runs(created_at,id);
+
 CREATE TABLE IF NOT EXISTS synthetic_market_state (
     symbol VARCHAR(255) PRIMARY KEY,
     engine_version VARCHAR(255) NOT NULL,
@@ -183,6 +212,18 @@ CREATE TABLE IF NOT EXISTS synthetic_market_state (
 INSERT INTO assets (symbol, name, contract_address, decimals)
 VALUES ('mKRW', 'Mock Korean Won', NULL, 18)
 ON CONFLICT (symbol) DO NOTHING;
+
+-- Independent observation metadata; never modifies the transaction/asset journal.
+CREATE TABLE IF NOT EXISTS blockchain_transaction_observations (
+    transaction_id BIGINT PRIMARY KEY,
+    attempt_id VARCHAR(36) NOT NULL,
+    started_at TIMESTAMP NOT NULL,
+    finished_at TIMESTAMP NOT NULL,
+    phase VARCHAR(32) NOT NULL,
+    result_code VARCHAR(48) NOT NULL,
+    attempt_count BIGINT NOT NULL,
+    recorded_at TIMESTAMP NOT NULL
+);
 
 INSERT INTO assets (symbol, name, contract_address, decimals)
 VALUES ('mSEC', 'Samsung Electronics Price-Tracking Token', NULL, 18)

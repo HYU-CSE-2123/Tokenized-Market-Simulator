@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?required}
+    environment:
+      POSTGRES_DB: playground_exchange
+      POSTGRES_USER: playground_exchange
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    volumes:
+      - ${PLAYGROUND_ROOT}/data/trade:/var/lib/postgresql/data
+      - ${PLAYGROUND_ROOT}/secrets/db-password:/run/secrets/db-password:ro
+      - ./postgres-readiness.sh:/postgres-readiness.sh:ro
+    healthcheck:
+      test: [CMD, sh, /postgres-readiness.sh]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  anvil:
+    image: ${ANVIL_IMAGE:?required}
+    user: '10001:10001'
+    entrypoint: [/bin/sh, /anvil-entrypoint.sh]
+    command: [--host, '0.0.0.0', --accounts, '0', --chain-id, '31337', --state, /data/state.json, --state-interval, '5', --preserve-historical-states, --quiet]
+    volumes:
+      - ${PLAYGROUND_ROOT}/data/chain:/data
+      - ./anvil-entrypoint.sh:/anvil-entrypoint.sh:ro
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD-SHELL, 'test -f /tmp/anvil-ready && cast rpc eth_chainId --rpc-url http://127.0.0.1:8545 >/dev/null']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  backend:
+    image: ${BACKEND_IMAGE:?required}
+    environment:
+      SPRING_PROFILES_ACTIVE: local-playground
+      SPRING_CONFIG_IMPORT: file:/run/secrets/application.properties,file:/run/secrets/chain.properties
+      DB_URL: jdbc:postgresql://postgres:5432/playground_exchange
+      DB_USERNAME: playground_exchange
+      RPC_URL: http://anvil:8545
+      PRICE_PROVIDER: simulated
+      BLOCKCHAIN_ENABLED: 'true'
+      PRICE_REPORT_SIGNING_ENABLED: 'true'
+      RESERVE_RECONCILIATION_ENABLED: 'true'
+      RESERVE_EXECUTION_ID: ${PLAYGROUND_ID}
+      TRADE_AUDIT_ENABLED: 'true'
+      CONDITIONAL_ORDERS_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      AI_AGENT_ENABLED: 'false'
+      AI_TOOLS_ENABLED: 'false'
+      AI_SKILLS_ENABLED: 'false'
+      AI_AUTO_DIAGNOSIS_ENABLED: 'false'
+      WEBSOCKET_ALLOWED_ORIGINS: http://127.0.0.1:25173,http://localhost:25173
+      SERVER_PORT: '8082'
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx640m -XX:MaxMetaspaceSize=192m
+      SERVER_SHUTDOWN: graceful
+    ports: ['127.0.0.1:28082:8082']
+    volumes:
+      - ${PLAYGROUND_ROOT}/secrets/application.properties:/run/secrets/application.properties:ro
+      - ${PLAYGROUND_ROOT}/data/release/chain.properties:/run/secrets/chain.properties:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+      anvil: {condition: service_healthy}
+    user: '10001:10001'
+    read_only: true
+    tmpfs: ['/tmp:size=128m,mode=1777']
+    stop_grace_period: 60s
+  web:
+    image: ${WEB_IMAGE:?required}
+    environment:
+      BACKEND_UPSTREAM: backend:8082
+    ports: ['127.0.0.1:25173:80']
+    depends_on: [backend]
+networks:
+  default:
+    ipam:
+      config: [{subnet: '${PLAYGROUND_SUBNET:?required}'}]

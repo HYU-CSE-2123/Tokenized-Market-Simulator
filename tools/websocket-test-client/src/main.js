@@ -3,11 +3,21 @@ import { ApiClient } from './api.js';
 import { MarketSocket } from './websocket.js';
 import { ChartController } from './chart-controller.js';
 import { normalizeQuote, quoteUsability, remainingSeconds, shouldRenderOrder, friendlyTradeError } from './trade-quote.js';
-import { RequestState, number, time, label, positiveAmount, uncertainWrite, marketNotice } from './state.js';
+import { RequestState, number, time, label, positiveAmount, uncertainWrite, marketNotice, mergeMarketRead } from './state.js';
 import { node, button, fields, empty, orderCard, tradeCard, renderDiagnosis } from './ui.js';
+import { createReservePanel } from './reserve-panel.js';
+import { createTradeAuditPanel } from './trade-audit-panel.js';
+import { createFaucetPanel } from './faucet-panel.js';
+import { createConditionalPanel } from './conditional-panel.js';
+import { createTransactionObservationPanel } from './transaction-observation-panel.js';
 
 const $ = (id) => document.getElementById(id);
 const api = new ApiClient(); const requests = new RequestState();
+const reservePanel = createReservePanel(api);
+const tradeAuditPanel = createTradeAuditPanel(api);
+const faucetPanel = createFaucetPanel(api, () => void loadPortfolio(), expireSession);
+const conditionalPanel = createConditionalPanel(api, id => void showOrder(id),expireSession);
+const transactionObservationPanel = createTransactionObservationPanel(api,expireSession);
 const state = { user: null, market: null, portfolio: null, orders: [], trades: [], side: 'BUY', quote: null,
   historyTab: 'orders', authMode: 'login', destination: 'market', latestId: null, detailId: null, uncertain: null, history: [], nextBefore: null };
 const chart = new ChartController(api, $('market-chart'), $('chart-message'));
@@ -58,6 +68,11 @@ function route() {
   if (name === 'portfolio') void loadPortfolio();
   if (name === 'history') { renderHistory(); void loadActivity(); }
   if (name === 'admin') { void loadDiagnosisHistory(); void loadObservation(); }
+  reservePanel.setContext(state.user, name);
+  tradeAuditPanel.setContext(state.user, name);
+  faucetPanel.setContext(state.user, name);
+  conditionalPanel.setContext(state.user, name);
+  transactionObservationPanel.setContext(state.user,name);
 }
 function connect() { socket.connect({ transport: $('transport').value, token: api.token, debug: false }); }
 function renderIdentity() {
@@ -66,6 +81,11 @@ function renderIdentity() {
   $('admin-nav').hidden = state.user?.role !== 'ADMIN'; updateTradeControls();
 }
 function resetPrivate() {
+  reservePanel.setContext(null, 'market');
+  tradeAuditPanel.setContext(null, 'market');
+  faucetPanel.setContext(null, 'market');
+  conditionalPanel.setContext(null, 'market');
+  transactionObservationPanel.setContext(null,'market');
   $('quote-dialog').close();
   requests.reset(); clearTimeout(sessionExpiry); state.user = null; state.quote = null; state.orders = []; state.trades = []; state.portfolio = null;
   state.latestId = null; state.detailId = null; state.uncertain = null; state.history = []; state.nextBefore = null; portfolioRevision++;
@@ -102,16 +122,16 @@ function marketRender(market) {
   const synthetic = market.provider === 'SIMULATED';
   $('price-change').textContent = `${synthetic ? '합성 전일 대비' : '전일 대비'} ${number(market.change, 'mKRW', 2)} (${number(market.changeRate, '%', 2)})`;
   $('price-change').className = Number(market.changeRate) > 0 ? 'up' : Number(market.changeRate) < 0 ? 'down' : 'muted';
-  $('provider').textContent = market.provider === 'TOSS' ? 'Toss 기준 시세' : synthetic ? 'SIMULATED · 합성 시장' : '공급자 확인 불가';
+  $('provider').textContent = market.provider === 'KIWOOM' ? '키움 기준 시세' : market.provider === 'TOSS' ? 'Toss 기준 시세' : synthetic ? 'SIMULATED · 합성 시장' : '공급자 확인 불가';
   $('market-mode').textContent = $('provider').textContent;
-  $('market-description').textContent = synthetic ? '자체 생성한 합성 가격·거래량으로 거래하는 mSEC 모의 시장입니다. 실제 삼성전자 시세가 아닙니다.' : market.provider === 'TOSS' ? 'Toss 삼성전자 기준 시세로 모의 자산을 거래합니다. 실제 주식 거래가 아닙니다.' : '시세 출처를 확인할 수 없습니다.';
+  $('market-description').textContent = synthetic ? '자체 생성한 합성 가격·거래량으로 거래하는 mSEC 모의 시장입니다. 실제 삼성전자 시세가 아닙니다.' : market.provider === 'KIWOOM' ? '키움 삼성전자 기준 시세로 모의 자산을 거래합니다. 실제 주식 거래가 아닙니다.' : market.provider === 'TOSS' ? 'Toss 삼성전자 기준 시세로 모의 자산을 거래합니다. 실제 주식 거래가 아닙니다.' : '시세 출처를 확인할 수 없습니다.';
   $('volume-description').textContent = synthetic ? '한국 시간 기준 · 24시간 합성 시장 · 합성 거래량은 사용자 체결량이 아닙니다. 초기 과거 봉도 자체 생성한 합성 이력입니다.' : '한국 시간 기준 · 왼쪽으로 이동해 과거 봉 조회 · 거래량은 공급자 체결량입니다.';
   $('market-state').textContent = `${label(market.marketStatus)} · ${label(market.priceStatus)}`;
   $('price-time').textContent = time(market.observedAt); message('market-message', marketNotice(market));
 }
 async function loadMarket() {
   const revision = marketRevision;
-  const body = await read('market', () => api.market(), (body) => { if (revision === marketRevision) marketRender(body); }, 'market-message');
+  const body = await read('market', () => api.market(), (body) => { const merged = mergeMarketRead(state.market, body, revision === marketRevision); if (merged) marketRender(merged); }, 'market-message');
   if (body && state.market) message('market-message', marketNotice(state.market));
 }
 function renderPortfolio() {
@@ -228,7 +248,7 @@ async function executeQuote() {
 }
 function socketStatus(status) {
   $('connection').textContent = ({ CONNECTED: '실시간 연결됨', CONNECTING: '연결 중', RECONNECTING: '연결 복구 중', DISCONNECTED: '연결 안 됨', ERROR: '연결 확인 필요', AUTH_EXPIRED: '인증 만료' })[status] || '연결 확인 중';
-  if (status === 'CONNECTED') { void loadMarket(); void chart.load(); if (state.user) { void loadActivity(); void loadPortfolio(); } }
+  if (status === 'CONNECTED') { void loadMarket(); void chart.load(); if (state.user) { void loadActivity(); void loadPortfolio(); void conditionalPanel.refresh(); } }
   if (status === 'RECONNECTING' || status === 'DISCONNECTED') message('market-message', '실시간 연결이 끊겼습니다. 자동 복구 중이며 표시 정보가 최신이 아닐 수 있습니다.', 'warning');
   if (status === 'AUTH_EXPIRED') expireSession();
 }
@@ -237,6 +257,7 @@ function socketEvent(channel, event) {
   if (event.type === 'INVALID_JSON' || !event.data) return;
   if (event.eventId && seenEvents.has(event.eventId)) return;
   if (event.eventId) { seenEvents.add(event.eventId); if (seenEvents.size > 300) seenEvents.delete(seenEvents.values().next().value); }
+  if(channel==='conditional'&&state.user){void conditionalPanel.refresh();void loadActivity();void loadPortfolio();return;}
   if (channel === 'price') {
     if (state.market?.observedAt && Date.parse(event.data.observedAt) < Date.parse(state.market.observedAt)) return;
     marketRevision++; marketRender({ ...state.market, ...event.data }); chart.tick(event.data);
@@ -299,13 +320,6 @@ async function loadObservation() {
   }, null, true);
   if (requests.resources.get('observation')?.status === 'error') empty($('observation'), '관측 정보를 불러오지 못했습니다.');
 }
-async function faucet() {
-  if (!requireUser('portfolio') || requests.busy('faucet')) return;
-  const ticket = requests.begin('faucet'); $('faucet').disabled = true; message('faucet-message', '모의 자금을 지급받는 중입니다.');
-  try { await api.faucet(); if (!ticket.current()) return; ticket.finish('ready'); message('faucet-message', '모의 자금을 받았습니다.'); void loadPortfolio(); }
-  catch (error) { if (!ticket.current()) return; ticket.finish('error'); message('faucet-message', uncertainWrite(error) ? '지급 결과를 확인하지 못했습니다. 자동 재요청하지 않으며 자산을 다시 조회해 주세요.' : errorText(error), 'warning'); if (error.status === 401) expireSession(); }
-  finally { if (ticket.current()) $('faucet').disabled = false; }
-}
 
 window.addEventListener('hashchange', route);
 $('auth-open').onclick = () => showAuth();
@@ -326,7 +340,7 @@ $('acknowledge-order').onclick = () => {
   }
 };
 $('history-refresh').onclick = loadActivity; for (const tab of ['orders', 'trades']) $(`history-${tab}`).onclick = () => { state.historyTab = tab; renderHistory(); };
-$('portfolio-refresh').onclick = loadPortfolio; $('faucet').onclick = faucet;
+$('portfolio-refresh').onclick = () => {void loadPortfolio();faucetPanel.setContext(state.user,'portfolio');};
 $('ai-kind').onchange = syncAiTarget; $('ai-form').onsubmit = runAi;
 $('ask-policy').onclick = () => selectAi('general', null, 'mSEC와 모의 원화, 견적과 체결 방식을 설명해주세요.');
 $('ask-market').onclick = () => selectAi('market', null, '지금 시장에서 신규 거래가 가능한지 진단해주세요.');
@@ -335,5 +349,7 @@ $('admin-filter-order').oninput = () => { requests.invalidate('diagnoses'); stat
 $('admin-older').onclick = () => { if (state.nextBefore) void loadDiagnosisHistory(state.nextBefore); }; $('observation-refresh').onclick = loadObservation;
 $('reconnect').onclick = connect; $('transport').onchange = connect; $('chart-reload').onclick = () => chart.load();
 document.querySelectorAll('[data-interval]').forEach((element) => element.onclick = () => { document.querySelectorAll('[data-interval]').forEach((other) => other.setAttribute('aria-pressed', other === element)); void chart.select(element.dataset.interval); });
-setInterval(() => { if (state.quote) renderQuote(); }, 1000);
+setInterval(() => { if (state.quote) renderQuote(); if (state.market?.provider === 'KIWOOM') message('market-message', marketNotice(state.market)); }, 1000);
+// Read only the local server's in-memory readiness. No additional broker request or WS contract.
+setInterval(() => { if (state.market?.provider === 'KIWOOM' && !requests.busy('market')) void loadMarket(); }, 2000);
 renderIdentity(); route(); void loadMarket(); void chart.load(); connect();

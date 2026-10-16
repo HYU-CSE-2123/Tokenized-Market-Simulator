@@ -1,8 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { RequestState, label, positiveAmount, time, number, uncertainWrite, marketNotice } from '../src/state.js';
 import { ApiClient } from '../src/api.js';
 import { renderDiagnosis, orderCard } from '../src/ui.js';
+
+test('custody notice is static, outside route panels and does not imply token ownership or redemption', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const notice = html.match(/<p id="custody-notice" class="disclaimer">([^<]+)<\/p>/);
+  assert.ok(notice, 'notice must exist without JavaScript or an API response, with no hidden attribute');
+  assert.ok(html.indexOf(notice[0]) < html.indexOf('<section id="view-market"'));
+  for (const text of ['PostgreSQL 사용자별 모의자산 장부', '운영자(operator) 통합 지갑', 'ERC-20을 직접 보유하는 방식이 아닙니다', '상환권을 제공하지 않습니다', 'MATCH는 사용자별 온체인 소유권이나 준비금 보증이 아닙니다']) {
+    assert.ok(notice[1].includes(text));
+  }
+});
 
 test('requests isolate resources, same-resource races and session replacements', () => {
   const state = new RequestState(); const first = state.begin('orders'), quote = state.begin('quote');

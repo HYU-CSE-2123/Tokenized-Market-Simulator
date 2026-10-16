@@ -1,0 +1,2 @@
+# Live mode only. Offline Mock/tests need only Python stdlib. No auto-install by tool.
+websockets==16.0

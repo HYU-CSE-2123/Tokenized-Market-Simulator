@@ -28,6 +28,15 @@ public class MarketPriceService {
         return current().price();
     }
 
+    /** Separate evidence for signed quotes/conditional intents; DB-only and settlement are unchanged. */
+    public TradingPriceContext currentForTrading() { return provider.currentForTrading(); }
+    public TradingPriceContext requireTradingContext() {
+        TradingPriceContext context=currentForTrading();
+        if(context.snapshot().marketStatus()==MarketStatus.CLOSED) throw new MarketClosedException();
+        if(context.snapshot().priceStatus()==PriceStatus.STALE) throw new StalePriceException();
+        return context;
+    }
+
     /** Returns one checked snapshot so validation and calculation use the same observed price. */
     public MarketPriceSnapshot requireTradableSnapshot() {
         MarketPriceSnapshot snapshot = current();

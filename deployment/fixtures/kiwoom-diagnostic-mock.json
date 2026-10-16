@@ -1,0 +1,12 @@
+[
+  {"kind":"CONNECT","receivedAt":"2026-10-14T01:00:00Z"},
+  {"kind":"FRAME","receivedAt":"2026-10-14T01:00:00Z","frame":{"trnm":"LOGIN","return_code":0,"token":"FAKE_SECRET_CANARY","return_msg":"FAKE_SECRET_CANARY"}},
+  {"kind":"FRAME","receivedAt":"2026-10-14T01:00:00Z","frame":{"trnm":"REG","return_code":0}},
+  {"kind":"FRAME","receivedAt":"2026-10-14T01:00:00Z","frame":{"trnm":"REAL","data":[{"type":"0s","item":"","values":{"215":"3","20":"100000"}}]}},
+  {"kind":"FRAME","receivedAt":"2026-10-14T01:00:00Z","frame":{"trnm":"REAL","data":[{"type":"0B","item":"005930","values":{"10":"-75000","15":"-2","13":"100","20":"100000","290":"2","secretKey":"FAKE_SECRET_CANARY"}}]}},
+  {"kind":"CONNECT","receivedAt":"2026-10-14T01:00:01Z"},
+  {"kind":"FRAME","receivedAt":"2026-10-14T01:00:01Z","frame":{"trnm":"LOGIN","return_code":0}},
+  {"kind":"FRAME","receivedAt":"2026-10-14T01:00:01Z","frame":{"trnm":"REG","return_code":0}},
+  {"kind":"FRAME","receivedAt":"2026-10-14T01:00:01Z","generation":1,"frame":{"trnm":"REAL","data":[{"type":"0s","item":"","values":{"215":"3","20":"100001"}}]}},
+  {"kind":"FRAME","receivedAt":"2026-10-14T01:00:01Z","frame":{"trnm":"REAL","data":[{"type":"0B","item":"005930","values":{"10":"75000","15":"1","13":"101","20":"100001","290":"2"}}]}}
+]

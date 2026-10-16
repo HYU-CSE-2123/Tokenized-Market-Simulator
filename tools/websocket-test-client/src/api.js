@@ -41,6 +41,26 @@ export class ApiClient {
   }
 
   observation() { return this.#request('/api/ai/observability'); }
+  transactionObservations(filters = {}) {
+    const query = new URLSearchParams();
+    for (const key of ['status','attention','cursor']) if (filters[key]) query.set(key,String(filters[key]));
+    return this.#request('/api/admin/transaction-observations'+(query.size?'?'+query:''));
+  }
+  transactionObservation(id) { return this.#request('/api/admin/transaction-observations/'+encodeURIComponent(id)); }
+  startAudit() { return this.#request('/api/admin/trade-audits', { method: 'POST' }); }
+  auditHistory(before = null) { return this.#request('/api/admin/trade-audits'+(before?'?before='+encodeURIComponent(before):'')); }
+  auditDetail(id) { return this.#request('/api/admin/trade-audits/'+encodeURIComponent(id)); }
+  auditItems(id, before = null, filters = {}) {
+    const query = new URLSearchParams();
+    if (before) query.set('before', String(before));
+    for (const key of ['verdict', 'mode', 'side', 'orderId']) if (filters[key]) query.set(key, String(filters[key]));
+    return this.#request('/api/admin/trade-audits/'+encodeURIComponent(id)+'/items'+(query.size?'?'+query:''));
+  }
+  reserveBaseline() { return this.#request('/api/admin/reserve-reconciliations/baseline'); }
+  createReserveBaseline() { return this.#request('/api/admin/reserve-reconciliations/baseline', { method: 'POST' }); }
+  reconcileAssets() { return this.#request('/api/admin/reserve-reconciliations', { method: 'POST' }); }
+  reserveHistory() { return this.#request('/api/admin/reserve-reconciliations'); }
+  reserveDetail(id) { return this.#request('/api/admin/reserve-reconciliations/'+encodeURIComponent(id)); }
 
   order(id) { return this.#request(`/api/orders/${encodeURIComponent(id)}`); }
 
@@ -70,13 +90,29 @@ export class ApiClient {
     return this.#request(`/api/markets/mSEC/candles?${query}`);
   }
 
-  faucet() {
-    return this.#request('/api/wallet/faucet', { method: 'POST' });
+  faucet(key) {
+    return this.#request('/api/wallet/faucet', { method: 'POST', headers: { 'Idempotency-Key': key } });
+  }
+  faucetStatus() { return this.#request('/api/wallet/faucet/status'); }
+  faucetClaim(key) { return this.#request('/api/wallet/faucet/claims', { headers: { 'Idempotency-Key': key } }); }
+  faucetGrants(before=null) { return this.#request('/api/wallet/faucet/grants'+(before?'?before='+encodeURIComponent(before):'')); }
+  faucetAdmin() { return this.#request('/api/admin/faucet'); }
+  faucetAdminAccount(userId) { return this.#request('/api/admin/faucet/accounts/'+encodeURIComponent(userId)); }
+  faucetAdminGrants(userId=null,before=null) {
+    const query=new URLSearchParams();if(userId)query.set('userId',userId);if(before)query.set('before',before);
+    return this.#request('/api/admin/faucet/grants'+(query.size?'?'+query:''));
   }
 
   portfolio() {
     return this.#request('/api/portfolio');
   }
+
+  conditionalCapabilities() { return this.#request('/api/conditional-orders/capabilities'); }
+  conditionalOrders(before=null) { return this.#request('/api/conditional-orders'+(before?'?before='+encodeURIComponent(before):'')); }
+  conditionalAdmin(before=null) { return this.#request('/api/admin/conditional-orders'+(before?'?before='+encodeURIComponent(before):'')); }
+  createConditional(request,key) { return this.#request('/api/conditional-orders',{method:'POST',headers:{'Idempotency-Key':key},body:JSON.stringify(request)}); }
+  conditionalRequest(key) { return this.#request('/api/conditional-orders/requests',{headers:{'Idempotency-Key':key}}); }
+  cancelConditional(id) { return this.#request('/api/conditional-orders/'+encodeURIComponent(id)+'/cancel',{method:'POST'}); }
 
   orders() {
     return this.#request('/api/orders');

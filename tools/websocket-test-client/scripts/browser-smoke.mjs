@@ -11,6 +11,8 @@ import { writeFile } from 'node:fs/promises';
 const root = resolve('dist'); const artifacts = join(root, '.smoke'); await mkdir(artifacts, { recursive: true });
 const profile = await mkdtemp(join(artifacts, 'profile-'));
 let role = 'USER', orders = [], failWrite = false, failAi = false, delayedAi = false;
+const faucetClaims=new Map();let loseFaucetResponse=false;
+const conditionalClaims=new Map();
 const quoteId = '0x' + '1'.repeat(64); let expiry = 30;
 const agent = { status: 'PARTIAL', answer: '<img src=x onerror=alert(1)> 관측 가능한 범위에서 설명합니다.', uncertainties: ['receipt를 확인할 수 없습니다.'],
   toolEvidence: [{ tool: 'getOrder', status: 'OK', data: { status: 'PENDING_ONCHAIN' } }],
@@ -28,7 +30,21 @@ const server = createServer(async (req, res) => {
   requests.push({ path: url.pathname, method: req.method, input });
   const now = new Date().toISOString(); let body = {}, status = 200;
   if (url.pathname.startsWith('/api/auth/')) { role = input.loginId === 'admin' ? 'ADMIN' : 'USER'; body = { accessToken: 'fixture-token', expiresIn: 3600 }; }
-  else if (url.pathname === '/api/me') body = { nickname: role === 'ADMIN' ? '관리자' : '모의 사용자', role };
+  else if (url.pathname === '/api/me') body = { id:role==='ADMIN'?2:1,nickname: role === 'ADMIN' ? '관리자' : '모의 사용자', role };
+  else if(url.pathname==='/api/conditional-orders/capabilities')body={registrationEnabled:true};
+  else if(url.pathname==='/api/conditional-orders/requests'){body=conditionalClaims.get(req.headers['idempotency-key']);if(!body){status=404;body={code:'CONDITIONAL_NOT_FOUND'};}}
+  else if(url.pathname==='/api/conditional-orders'&&req.method==='POST'){const key=req.headers['idempotency-key'];body=conditionalClaims.get(key)||{...input,id:'condition-'+(conditionalClaims.size+1),state:'WAITING',createdAt:now,updatedAt:now};conditionalClaims.set(key,body);}
+  else if(url.pathname==='/api/conditional-orders'||url.pathname==='/api/admin/conditional-orders')body={items:[...conditionalClaims.values()],nextBefore:null};
+  else if(url.pathname.startsWith('/api/conditional-orders/')&&url.pathname.endsWith('/cancel')){const id=url.pathname.split('/')[3];body=[...conditionalClaims.values()].find(c=>c.id===id);if(body)body.state='CANCELLED';else{status=404;body={code:'CONDITIONAL_NOT_FOUND'};}}
+  else if(url.pathname==='/api/wallet/faucet/status')body={eligible:true,remainingCount:5,decisionDate:'2026-10-11',policyVersion:'kst-v1'};
+  else if(url.pathname==='/api/wallet/faucet/grants'||url.pathname==='/api/admin/faucet/grants')body={items:[...faucetClaims.values()],nextBefore:null};
+  else if(url.pathname==='/api/admin/faucet')body={activeVersion:'kst-v1',configured:true,spent:'1000000',remainingBudget:'49000000',grantCount:1,journalConsistent:true,rejections:{FAUCET_DAILY_LIMIT:1},rejectionMetricsStartedAt:now};
+  else if(url.pathname==='/api/wallet/faucet'||url.pathname==='/api/wallet/faucet/claims'){
+    const key=req.headers['idempotency-key'];if(!key){status=400;body={code:'FAUCET_INVALID_KEY'};}else if(req.method==='POST'){
+      body=faucetClaims.get(key)||{grantId:'fixture-grant',userId:1,amount:'1000000',receivedAmount:'1000000',balance:'1000000',grantedAt:now,policyVersion:'kst-v1'};faucetClaims.set(key,body);
+      if(loseFaucetResponse){res.destroy();return;}
+    }else{body=faucetClaims.get(key);if(!body){status=404;body={code:'FAUCET_CLAIM_NOT_FOUND'};}}
+  }
   else if (url.pathname.includes('/candles')) {
     const interval = url.searchParams.get('interval'); const max = { '1m': 100, '5m': 100, '15m': 50, '30m': 30, '1h': 20, '1d': 100 }[interval];
     if (+url.searchParams.get('count') > max) { status = 400; body = { code: 'INVALID_CANDLE_QUERY' }; }
@@ -44,6 +60,24 @@ const server = createServer(async (req, res) => {
   }
   else if (url.pathname.startsWith('/api/orders/')) body = orders.find((order) => order.orderId === Number(url.pathname.split('/').at(-1)));
   else if (url.pathname === '/api/trades') body = [];
+  else if (url.pathname === '/api/admin/transaction-observations') body = {observedAt:now,warningSeconds:300,nextCursor:null,recorder:{storageFailures:0,dropped:0},items:[{id:1,type:'BUY',status:'SIGNED',kind:'USER_TRANSACTION',linkStatus:'ORDER_MISSING',attention:'LONG_WAIT',totalAgeSeconds:301,waitingAgeSeconds:301,warningSeconds:300,observedAt:now,lastAttempt:null}]};
+  else if (url.pathname === '/api/admin/transaction-observations/1') body = {id:1,type:'BUY',status:'SIGNED',kind:'USER_TRANSACTION',linkStatus:'ORDER_MISSING',attention:'LONG_WAIT',totalAgeSeconds:301,waitingAgeSeconds:301,warningSeconds:300,observedAt:now,lastAttempt:null,txHash:'0x'+'a'.repeat(64),nonce:'7'};
+  else if (url.pathname === '/api/admin/trade-audits') body = req.method === 'POST'
+    ? { id: 'audit-fixture', lifecycle: 'RUNNING', verdict: 'INCONCLUSIVE' }
+    : { items: [{ id: 'audit-fixture', lifecycle: 'COMPLETED', verdict: 'INCONCLUSIVE', startedAt: now }], nextBefore: null };
+  else if (url.pathname === '/api/admin/trade-audits/audit-fixture') body = {
+    id: 'audit-fixture', lifecycle: 'COMPLETED', verdict: 'INCONCLUSIVE', reason: 'ITEM_EVIDENCE_INCOMPLETE',
+    startedAt: now, coverage: { dbComplete: true, chainComplete: false, cutStable: true, environmentVerified: true }, match: 1, inconclusive: 1 };
+  else if (url.pathname === '/api/admin/trade-audits/audit-fixture/items') body = {
+    items: [{ key: 'order:1', orderId: 1, mode: 'ONCHAIN', side: 'BUY', verdict: 'INCONCLUSIVE', reason: 'HISTORICAL_CONFIG_UNAVAILABLE', checks: [] }], nextBefore: null };
+  else if (url.pathname === '/api/admin/reserve-reconciliations') body = req.method === 'POST'
+    ? { id: 'reserve-fixture', status: 'MATCH', reason: 'EXACT_QUANTITY_MATCH', createdAt: now, dbAt: now,
+        chain: { block: { number: 123, hash: '0x' + 'a'.repeat(64) } }, checks: [],
+        liquidity: { operatorBuyFunds: '1000000000000000000000000', buyAllowance: '1000000000000000000000000',
+          operatorSellTokens: '0', vaultSellFunds: '5000000000000000000000000', userKrw: '1000000000000000000000000', userSec: '0', operatorAllocationReference: '1.0000', operatorEthWei: '1000000000000000000', gasAssessment: 'READ_ONLY_NOT_ESTIMATED' } }
+    : [{ id: 'reserve-fixture', status: 'MATCH', createdAt: now }];
+  else if (url.pathname === '/api/admin/reserve-reconciliations/reserve-fixture') body = {
+    id: 'reserve-fixture', status: 'INCONCLUSIVE', reason: 'CUT_CHANGED', createdAt: now, checks: [], liquidity: null };
   else if (url.pathname === '/api/ai/agent/answers') { if (delayedAi) await new Promise((done) => setTimeout(done, 400)); if (failAi) { status = 503; body = { error: 'AGENT_DISABLED' }; } else body = agent; }
   else if (url.pathname === '/api/ai/diagnoses') body = { items: [{ id: 1, orderId: 1, jobStatus: 'COMPLETED', detectedAt: now }], nextBefore: null };
   else if (url.pathname === '/api/ai/diagnoses/1') body = { completedAt: now, targetStale: true, result: { ...agent, responseStatus: 'PARTIAL' } };
@@ -73,12 +107,21 @@ try {
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await command('Page.navigate', { url: `http://127.0.0.1:${port}/` });
   await waitText('price', '75,000'); await waitText('connection', '연결됨');
+  await waitText('custody-notice', 'PostgreSQL 사용자별 모의자산 장부');
+  assert.equal(await evaluate("document.getElementById('custody-notice').getBoundingClientRect().height > 0"), true);
   await waitText('market-mode', 'SIMULATED'); await waitText('market-description', '실제 삼성전자 시세가 아닙니다');
   await waitText('volume-description', '합성 거래량'); await screenshot('desktop-market');
   assert.equal(await evaluate(`document.getElementById('admin-nav').hidden`), true);
   assert.equal(requests.some((request) => request.path === '/api/portfolio'), false);
   await click('auth-open'); await click('auth-switch'); await fill('login-id', 'fixtureuser'); await fill('password', 'password123'); await fill('nickname', '모의 사용자'); await submit('auth-form'); await waitText('identity', '모의 사용자');
   assert.ok(requests.some((request) => request.path === '/api/auth/signup'));
+  await waitText('conditional-availability','등록 가능');await fill('conditional-input','100000');await fill('conditional-target','74000');await fill('conditional-expiry','2099-01-01T00:00');await submit('conditional-form');await waitText('conditional-history','가격 조건 대기');
+  assert.equal(conditionalClaims.size,1);await evaluate(`document.getElementById('conditional-history').querySelector('button').click()`);
+  await poll(async()=>[...conditionalClaims.values()][0].state==='CANCELLED');await waitText('conditional-history','취소');
+  await fill('conditional-side','SELL');await fill('conditional-input','1.5');await fill('conditional-target','80000');await submit('conditional-form');await waitText('conditional-history','조건부 매도');assert.equal(conditionalClaims.size,2);
+  await command('Emulation.setDeviceMetricsOverride',{width:360,height:800,deviceScaleFactor:1,mobile:true});
+  assert.equal(await evaluate(`document.documentElement.scrollWidth<=window.innerWidth`),true,'conditional mobile overflow');
+  await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   await fill('trade-amount', '100000'); await submit('trade-form'); await waitText('quote-summary', '75,000');
   await fill('trade-amount', '110000'); assert.equal(await evaluate(`document.getElementById('quote-confirm').disabled`), true);
   await submit('trade-form'); await waitText('quote-summary', '75,000'); await click('quote-confirm'); await click('quote-submit'); await waitText('latest-order', '블록체인 확인 중');
@@ -88,7 +131,9 @@ try {
   await waitText('latest-order', '체결 완료');
   // An older REST snapshot must not roll back a terminal event.
   await poll(() => evaluate(`document.getElementById('latest-order').textContent.includes('체결 완료')`));
-  await evaluate(`location.hash='portfolio'`); await waitText('portfolio-summary', '평균 매수가'); await screenshot('desktop-portfolio');
+    await evaluate(`location.hash='portfolio'`); await waitText('portfolio-summary', '평균 매수가');await waitText('faucet-policy','KST');
+    loseFaucetResponse=true;await click('faucet');await waitText('faucet-message','응답이 유실');loseFaucetResponse=false;assert.equal(faucetClaims.size,1);
+    await click('faucet-resolve');await waitText('faucet-message','이전 성공');assert.equal(faucetClaims.size,1);await screenshot('desktop-portfolio');
   await evaluate(`location.hash='ai'`); await click('ask-policy'); await submit('ai-form'); await waitText('ai-result', '정책 출처');
   assert.equal(await evaluate(`document.getElementById('ai-result').querySelector('img')===null`), true); await screenshot('desktop-ai');
   failAi = true; await submit('ai-form'); await waitText('ai-message', '준비되지'); failAi = false;
@@ -98,11 +143,27 @@ try {
   assert.equal(await evaluate(`document.getElementById('ai-result').textContent`), ''); delayedAi = false;
   await click('auth-open'); await click('auth-switch'); await fill('login-id', 'admin'); await fill('password', 'password123'); await submit('auth-form'); await waitText('identity', '관리자');
   await evaluate(`location.hash='admin'`); await waitText('admin-history', '진단 #1'); await waitText('observation', 'LLM:call');
+  await waitText('conditional-admin-history','조건부 매도');
+  await waitText('tx-observation-list','LONG_WAIT');await waitText('tx-observation-list','UNRECORDED');
+  assert.equal(await evaluate("document.getElementById('tx-observation-list').textContent.includes('txHash')"),false);
+  await evaluate("document.getElementById('tx-observation-list').querySelector('button').click()");await waitText('tx-observation-detail','txHash');
+  await fill('tx-observation-status','SUBMITTED');await evaluate("document.getElementById('tx-observation-status').dispatchEvent(new Event('change'))");await waitText('tx-observation-list','LONG_WAIT');
   await evaluate(`document.getElementById('admin-history').querySelector('button').click()`); await waitText('admin-result', '과거 관측'); await screenshot('desktop-admin');
+  await click('reserve-run'); await waitText('reserve-result', '장부·체인 수량 일치');
+  await waitText('reserve-result', '1 ETH'); await waitText('reserve-result', '비용 미추정');
+  await waitText('reserve-result', '준비금 보증 비율이나 Proof of Reserves가 아니며');
+  await click('reserve-refresh'); await waitText('reserve-history', '최근 대사 20건');
+  await evaluate(`document.getElementById('reserve-history').querySelector('button').click()`);
+  await waitText('reserve-result', '동일 시점·근거 확인 불가');
+  await evaluate(`window.confirm=()=>true`); await click('audit-run');
+  await waitText('audit-result', '전수 MATCH를 뜻하지 않습니다');
+  await waitText('audit-items', 'HISTORICAL_CONFIG_UNAVAILABLE');
+  await click('audit-refresh'); await waitText('audit-history', 'INCONCLUSIVE');
   await command('Emulation.setDeviceMetricsOverride', { width: 360, height: 800, deviceScaleFactor: 1, mobile: true });
   for (const route of ['market', 'history', 'portfolio', 'ai', 'admin']) {
     await evaluate(`location.hash=${JSON.stringify(route)}`); await new Promise((done) => setTimeout(done, 120));
     assert.equal(await evaluate(`document.documentElement.scrollWidth<=window.innerWidth`), true, 'horizontal overflow: ' + route);
+    assert.equal(await evaluate("document.getElementById('custody-notice').getBoundingClientRect().height > 0"), true, 'custody notice hidden: ' + route);
     await screenshot('mobile-' + route);
   }
   for (const interval of ['1m', '5m', '15m', '30m', '1h', '1d']) await evaluate(`document.querySelector('[data-interval="${interval}"]').click()`);

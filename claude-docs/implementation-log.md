@@ -1,5 +1,53 @@
 # 구현 로그 — Phase 0: 모노레포 뼈대
 
+## 2026-10-14: 키움 첫 실제 장중 읽기 진단 — 연결 성공 / 거래 가용성 BLOCKED
+
+- 사용자 서비스/IP 완료 확인을 반영하고 동일 조건을 다시 요구하지 않은 뒤, 통합240cb39의 기존 capture만 1회 실행했다. OAuth1+native1m3=REST4,WS1/180초,COMPLETE/exit0/이벤트1,226. LOGIN/REG승인,0B1,163건(regular·시각호환),0s0건. 재시도/추가연결/주문/AI/배포0,제품코드·기존환경변경0.
+- 완전09:42봉437tick/OHLCV·volume67,795가Hstart와일치하여1표본START_SUPPORTED. asOf진단PRE_ASOF_MISSING2건(-308/-98)을보존했지만체결시각/수신시각/snapshot경계를구분하며웹누락원인을확정하지않는다. 현재웹은외부KIWOOM/Toss에asOf폐기cutoff를사용하지않는다.
+- 현재제품은같은generation0s가없으면UNKNOWN으로거래차단. 실SpringBoot/Oracle/Anvil/BUY·SELL/개인WS/재연결인수는NOT_RUN. 장중0s초기확인과외부봉/tick결합의후속설계·관찰은별도승인이다. [판정·수치·증거·한계](kiwoom-live-readonly-acceptance-2026-10-14.md). 이전사전BLOCKED와첫실관찰을구분하고기존학습문서/인수증거를보존했다.
+
+## 2026-10-14: 키움 읽기 전용 진단 도구 — 구현/Mock 검증
+
+- 입력860885c,feat/kiwoom-readonly-diagnostics에서deployment단독CLI/순수파서·판정/fixture/테스트·의존성pin을추가했다. 외부기본OFF,token+ka10080만고정호출,REST/WS/시간/프레임한도·ACL/exclusiveartifact·정제로그. 제품/Oracle/시장정책·DB/Anvil·기존환경변경없음.
+- 최종`python -S` 진단26/26+기존Phase A guard15/15PASS(SKIP/FAIL0),CLI MockPASS. 최초독립검토의stdlib-test모듈의존1건을수정하고OTHER체결후새0s요구회귀를추가했다. 독립 첫 재검토 **발견된 필수 수정 없음**, 검토자도 같은 테스트를 직접 통과했다. 기능 `a772d37` → 통합 병합 `3ca4945` 후 최종 소스에서 진단26/26·guard15/15·Mock replay를 새로 실행해 통과했다. 상세 범위와 미검증은 [진단구현문서](kiwoom-readonly-diagnostics.md)에 기록한다.
+- 신규빈credential scaffold만private runtime에준비했다. 실제키/API/AI사용0,HTTPS/WSS실환경·장중0s/native봉/웹watermark검증은NOT_RUN. [실행·입력위치·범위](kiwoom-readonly-diagnostics.md),[기존실인수계획](kiwoom-live-acceptance-preparation.md)을갱신한다. 초기실행제안은REST최대4/WS1·180초이며실키/시세권한/IP·호출승인후에만가능하다.
+
+## 2026-10-14: Docker 정상 이후 최신 통합 Phase A 필수 E2E — 5/5 PASS
+
+- source a317f67 clean에서Docker version/info Server28.4/API1.51 Linux정상확인,새session phase-a-20261013173219-bb0717fd 생성. 기존실패session/환경재사용·서비스재시작없음.
+- 신규Faucet/reserve/audit/conditional·observation 실제PG/Anvil 각각1PASS,성공conditional원장의별도JVMrestart1PASS:5/5,FAIL·ERROR·SKIP0. backend/web/Foundry전체회귀는이번NOT_RUN이며이전451/35·84·36과구분한다.
+- Faucet1회/conditional2회의실제subnet충돌을2/3번째후보에서회복했고E2E도PASS. clock4/4PASS(불확실성포함최대0.581249초<2초),소유권·loopback·source/imageguard유지. 새컨테이너8개만정지확인하고모든신규state/로그/기존증거보존.
+- 제품/harness코드변경0,실제Toss/키움/AI호출없음. [실행·검토보고](phase-a-subnet-retry-validation.md),[키움실제시세인수준비/착수판정](kiwoom-live-acceptance-preparation.md)·최종보고/공통README를갱신한다. 독립증거검토결과는보고서에추가한다. 실제키/접근/IP·capture도구·호출승인후읽기전용키움0s/분봉경계부터검증가능하며전체실환경인수PASS는선언하지않는다.
+
+## 2026-10-14: Phase A subnet 후보 제한 재시도 — 구현 통합/실제E2E BLOCKED
+
+- 새fixture network create의 확인된overlap stderr에만8개서로다른후보/명령당15초로재시도한다. 일반실패·timeout즉시중단,시도별private증거보존. 기존network조회·변경·삭제/제품코드/시각·격리guard변경없음.
+- 기능72915fd→통합6ed6d5a。Python15/15PASS(SKIP0),별도검토자도독립15/15PASS·필수수정없음. 실제Docker overlap재현은미실행이다.
+- 새session phase-a-20261013163039-aa3060c7에서postgres이미지조회가DockerLinuxEngineAPI500으로중단. 추가읽기version도500/Windows서비스Stopped,정확한내부원인미확정. 신규업무fixture/clock/E2E5종NOT_RUN,환경BLOCKED. 이전테스트수치를재실행으로표시하지않는다.
+- [harness후속보고](phase-a-subnet-retry-validation.md)와[키움장중0s·분봉경계인수준비](kiwoom-live-acceptance-preparation.md)를추가했다. 정상DockerServer확인후새fixture검증필요. 기존acceptance/devDB/Anvil/melon-init/실패state보존,외부시세·유료AI호출없음.
+
+## 2026-10-13: Phase A 통합·신규 서명 시장 정책·키움 시세
+
+최종 추가 기록: 키움 기능5e39dbf→병합cffe471. 병합 소스 신규486 total/451 PASS/35 SKIP/0 FAIL·ERROR, 웹84/Foundry36/Chrome PASS. 새 실제 Faucet1 PASS 이후 reserve fixture 네트워크 생성의 subnet overlap으로 중단하여 reserve BLOCKED, audit/조건부/별도JVM NOT_RUN이다. 기능 수정 source의 실제 조건부/재시작1+1 PASS를 통합 source 재실행으로 표현하지 않는다. reviewer 필수 지적1개(재연결 OPEN 재사용)를 generation 경계로 해결·재검토 필수 수정 없음. 승인 지식9개/manifest 갱신 뒤별도 전체 backend451/35 PASS. [최종 기록](kiwoom-transition-final-report.md). 제품·기존 환경 수정으로 우회하지 않았으며 안전한 harness 충돌 처리 후보와 남은 통합4종 검증은 후속 과제다.
+
+- Phase A harness/doc 병합cfbd625: 신규 실제 필수E2E5/5 PASS, backend427 PASS/35 SKIP·웹84/Foundry36/Chrome PASS. [실행 기록](phase-a-merged-regression.md). 사용자 경험 문서와 원본 인수 계획은 별도 문서 커밋으로 보존했다.
+- 신규 실제 공급자 서명 발급 OPEN+LIVE+fresh: 기능966fa76 → 병합a626d7a. 병합 source431 PASS/35 SKIP·웹/Foundry·신규 실제PG/Anvil 조건부/별도JVM1+1 PASS. 독립 검토 필수 수정 없음. DB-only/Synthetic와 소비·복구·정산 계약 변경 없음. [기록](signed-market-eligibility-implementation.md).
+- 키움 읽기 전용 시세는 `feat/kiwoom-market-provider`에서 진행한다. 최초 source450 PASS/35 SKIP·Mock18·KIWOOM 조건부H2/Mock1·새Synthetic PG/Anvil1+재시작1 PASS. 독립 검토에서 재연결 후 OPEN 재사용 결함을 발견하여 연결 세대 경계를 수정했고 최종 재검증/통합 결과는 [기록](kiwoom-market-provider-implementation.md)에 추가한다. 실제 키움/Toss·유료AI·AWS/Sepolia는 NOT_RUN이다.
+
+## 2026-10-13: 최종 통합 인수 Phase A — 미완료/BLOCKED
+
+- 입력efb3a69, feat/phase-a-acceptance에서 새session/fixture·가변포트·전용키·identity/source/image/clock guard를 추가했다. 제품코드/거래·보안정책/계약/승인지식은변경없음.
+- 이번새실행 backend427 PASS/35 SKIP, 웹84/Chrome/Foundry36 PASS, guard unit9 PASS, 실제reserve1 PASS. Faucet신규2시도·audit·conditional은각FAIL, 별도JVMrestart는전제미충족NOT_RUN.
+- 실패후신규fixture의읽기진단에서DB시각이호스트보다약3.05/3.87초늦음을확인했다. 기존2초허용을늘리거나정상데이터를수정해성공처리하지않는다. 전체최종PASS와B/C실행은금지.
+- 실제runId/ports/XML/state/미검증·시장정책과9지식갱신안·별도검토·커밋경계는 [보고서](phase-a-integration-acceptance-report.md)에기록한다. clock전제해결전integration병합은대기한다.
+
+## 2026-10-12: SIGNED/SUBMITTED 거래 정체 관측 — 통합 검증 완료
+
+- 승인 범위①+②: ADMIN DB 조회, 기본300초 LONG_WAIT, 마지막 완료 복구 시도 best-effort snapshot. 상태/잠금/nonce/raw/재전송/Receipt 정책과 기존 AI Tool은 유지.
+- 구현 위치·API·resource budget·실패 증거·실제 검증·한계는 [관측 구현 기록](transaction-stall-observability-implementation.md)에 기록한다. 기능e489b3c → integration 병합7bf459c. 병합 후 새 실행 backend427 PASS/35 SKIP/0 FAIL, 웹84/Foundry36 PASS, 브라우저 PASS, 새 격리 PG/Anvil E2E1 PASS 및 별도 JVM PG restart1 PASS.
+- Sepolia는 별도 최초 고정 공급 A안 방향 확정, S0/O0/V0/실제 구현·배포는 승인 대기. 컨트랙트나 기존 acceptance/개발 환경 변경 없음.
+- 독립 검토1차와 첫 재검토: 발견된 필수 수정 없음. 검토자 직접 신규 웹6/6 재실행·diff-check·최종 backend XML427/35/0 확인. 실제 PG/Anvil·별도 JVM·브라우저/Foundry는 구현자 실행 결과로 구분한다. 실제 ETH 부족·지속 RPC/Toss/유료 AI·운영·Sepolia 미검증 경계는 유지한다.
+
 > 단일 출처: 리포 루트 `구현 계획.md`. 본 문서는 **실제로 구축된 코드 상태**를 기록한다.
 > 작성: 2026-06-22 (Phase 0 모노레포 뼈대 완료 시점)
 
@@ -2381,3 +2429,361 @@ ONCHAIN EXECUTION COMPLETE & SUCCESSFUL
 
 - 코드/테스트/문서 초안 동결 후 `review_acceptance_baseline` 별도 검토: 발견된 필수 수정 없음(Windows/Docker Desktop 범위). 직접helper31개29PASS/2POSIXskip. namespace/mount/secretallowlist/키분리/영속설정/AI비활성/재시도경계·문서를 확인했다. runtime ACL로 실제증거 대조는 불가하여 환경·브라우저결과는 구현자실행으로 구분한다. Linux host권한/UID10001소유권 보완은 별도이식 대상이며 문서에 한계를 추가했다.
 - 현재휴장으로 실제Toss BUY/SELL 미완료. 실제AI 비용/횟수 및 성공MATCH 최소재현 절차는 실행전 별도보고/승인 대상이다. 둘 모두 인수 후 baseline동결하고 추가기능으로 넘어간다.
+
+# 준비금 대사 조사·설계 문서 — 작성 완료 / 기능 구현 승인 대기 (2026-10-08)
+
+- 사용자 요청으로 긴 설계 답변을 [준비금 대사 설계](reserve-reconciliation-design.md)에 저장했다. `b7cb0f0`에서 별도 `feat/reserve-reconciliation` worktree를 만들고 이 worktree의 문서·목록·로그만 수정했다. 원래 acceptance worktree 제품/문서/설정은 그대로다.
+- DB faucet/온체인 faucet 분리, amount와 lockedAmount, operator/Vault BUY/SELL·수수료·mint/burn, 실제 Trade 수량·DB-only 경로와 receipt 비동기성을 코드로 확인했다. DB 자산 합=operator 잔고를 전제하지 않고 정합성과 유동성을 분리한다.
+- 지급 이력·Trade 실행 유형·기준점/대사 결과 저장과 ADMIN 수동 API/UI·별도 환경 회귀를 제안했다. 모두 미구현이며 앞선 설계를 기록한 것이지 구현 승인으로 간주하지 않는다.
+- 기존/acceptance DB·chain·Toss·AI 조회/변경·환경 재생성·기동·유료 호출·merge·commit 없음. 문서 Git 범위/link 확인만 수행하며 제품 테스트/독립 구현 검토는 실행하지 않는다. 기능 구현 승인 후 별도 테스트·검토 예정이다.
+
+# 장부·체인 자산 대사 — 구현·격리 검증·독립 재검토 완료 (2026-10-08)
+
+## 구현·결정
+
+- 사용자 후속 승인에 따라 Order 실행 유형 정본/Trade 복사/legacy UNKNOWN, faucet journal 원자 저장, 신규0원 장부의 불변 기준점, ADMIN 수동 대사·이력·제품 UI를 별도 feature worktree에 구현했다.
+- read-only REPEATABLE_READ snapshot + 명시적 blockNumber/hash + 후속 DB/head 안정성 확인을 사용한다. 미정산/UNKNOWN/경합은 INCONCLUSIVE, 충분한 근거 뒤에만 MISMATCH. 유동성과 보증을 구분하며 불확실한 cut에서는 유동성 비율도 산정하지 않는다.
+- 계산식·파일·API·사용법·보존 경계는 [구현 보고서](reserve-reconciliation-implementation.md). 기존 acceptance/runtime/개발DB/chain/.env/Toss/AI는 그대로이며 merge·commit 없음.
+
+## 검증·검토
+
+- 대사 단위/H2 현재28개 PASS. 신규PG+Anvil 서명BUY/SELL E2E는 최초·검토 수정후 각각 신규fixture에서1/1 PASS, forge36/36, 웹54/54/Chrome fixture desktop·모바일 PASS.
+- 최초 전체backend370개 338PASS/1FAIL/31SKIP: 기존 AI Skill CRLF fixture 이중 변환. AI 소스 무변경, build fixture LF 조건 전체 회귀는339PASS/31SKIP, 검토수정·6개추가 후376개345PASS/0FAIL/31SKIP. 일반 checkout 실패와 조건부 재검증을 구분한다.
+- 최초 독립 검토의 tx 방향/DB_ONLY 연결 falseMATCH2건을 신규test로 재현 후 수정했고 전체 회귀·신규E2E를 재실행했다. `review_reserve` 재검토: **발견된 필수 수정 없음**. 코드·신규6tests·문서·현재E2E XML을 확인했고 전체실행은 구현자 결과로 구분한다. 최초검토에서 웹 신규6tests 직접PASS. 실제PG 동시writer와 일반CRLF checkout 기존실패는 독립미검증, 전체deadline/canonicalcache는선택보류.
+- 실제Toss/유료AI/운영부하/원래acceptance 적용은 미실행. 신규fixture2개 각각컨테이너만정지하고 DB/chain/증거는보존했다. 원본Git clean, feature변경미커밋이며 merge없음.
+
+# 장부·체인 대사 최종 보완·브랜치 검증 — 구현/회귀·독립 검토 완료 (2026-10-09)
+
+## 구현·결정
+
+- 지정블록 operator ETH wei 문자열 관측 및 ADMIN 표시, Gas 비용 미추정/보증 아님 안내를 추가했다. ETH0/조회불가도 토큰 장부 판정을 변경하지 않고 전송·자동충전 경로는 그대로다.
+- CRLF Skill 실패를 일반build로 재현(3PASS/1FAIL)했다. 테스트 helper만 canonical LF로 읽고 LF/CRLF 입력을 명시적 구성해 AI 운영 코드/문서hash 무변경으로 보완했다. 이전 수동LF 조건부 전체회귀 이력은 유지한다.
+- 신규PG/Anvil E2E의 실제 DB read-onlyRR 설정 확인과 latch로 제어한 실제DB writer/새블록 경쟁을 추가했다. 제품코드에 테스트hook/sleep 없음. 상세 파일·범위·한계는 [최종검증 보고서](reserve-reconciliation-final-validation.md).
+
+## 검증
+
+- 대사29개/H2·Skill4개 targeted33/33 PASS. 신규PG/Anvil E2E1/1 PASS 안에 balance/journal commit·Trade생성시각 변경·evm_mine 3경합이 모두INCONCLUSIVE CUT_CHANGED, 안정후MATCH였다. 실제RR/read_only와 DBtransaction 없이 RPC수행도 확인했다.
+- 일반전체backend `gradlew test --no-daemon --rerun-tasks`:377개346PASS/0FAIL/31SKIP, buildresource3개CRLF 그대로. 수동정규화/task제외 없음. 외부/유료optin은모두false. 신규E2E는별도실행.
+- 웹55/55·Vite/Chrome desktop360pxmobile PASS(ETH/Gas문구assert), forge36/36 PASS(fuzz포함).
+
+## 검토·커밋 경계
+
+- 최종독립검토 `review_reserve_final`: **발견된 필수 수정 없음**. 웹대사7개 직접PASS, XML377/0FAIL/31SKIP·실제buildCRLF·빈index/diffcheck 확인. PG/Anvil·전체Gradle·Foundry·Chrome은구현자실행으로구분한다. 선택지적의변조Skill newline문서표현만정확히좁혔다.
+- allowlist stage/생성secret값 stagedblob대조/금지산출물배제 후 feat/reserve-reconciliation에만commit한다. 원본merge·배포·acceptance반영 없음. 생성runtime자료는Git에서제외하며최종해시는완료답변과Gitlog에서확인한다.
+- 최종stage40개 소스·문서, fixture실제secret9개 대조일치0/금지경로0/cached diffcheckPASS. 비밀값출력없음. 이번새fixture2컨테이너만정지·데이터보존. 원본worktree b7cb0f0 clean확인.
+- 실제Toss/유료AI/EC2·운영부하·다중서버경쟁·ETH Gas지급정확판정은미실행/범위밖. Trade경합은금액변경이아닌metadata변경이다. 과거유잔고acceptance에는기준점즉시생성불가, 별도migration설계승인이필요하다.
+
+# 추가 기능 통합 브랜치 / 거래 전수 대사 설계 (2026-10-09)
+
+## 변경·결정
+
+- `feat/reserve-reconciliation`의 완료 커밋 `00046d7da28579eaccbff6a31cfda6ce46c398a4`와 clean 상태를 확인했다. 이 commit에서 별도 `integration/additional-features` worktree를 생성하고, 그 HEAD에서 독립 `feat/trade-audit` worktree를 생성했다. 원본 `melon-init`은 `b7cb0f0ed8fd936e73733a6d2f167efe4a951a63` 그대로이며 원본/acceptance merge·배포는 없다.
+- 최신 사용자 결정: 추가 기능·통합 검증 후 최신 버전으로 **새 acceptance**를 만들어 실제 Toss 장중 최종 인수. 기존 `acceptance-20261007153304-9bc0b3`의 모든 runtime/DB/chain/설정/제품 버전을 보존한다. 과거 “장중 인수 후 추가 개발” 순서는 최신 결정으로 대체한다.
+- [통합 개발 계획](additional-features-integration-plan.md)에 8개 추가 기능의 상태/의존관계·구조 변경/외부 승인 경계와 독립 feature→검증→통합 운영을 기록했다.
+- [거래 전수 대사 설계](trade-full-audit-design.md)에 DB/chain 정본·Order/Trade/tx/quote 대응·Vault/Oracle 이벤트·정수 계산·legacy/실패 분류·양방향 coverage·stable cut·ADMIN API/UI·새 audit table·테스트 계획을 제안했다. 제품 구현은 승인 대기다.
+
+## 검증·보존
+
+- 실제 소스·모델·계약·이력과 Git branch/worktree를 읽기 전용으로 조사했다. DB/RPC 조회·서비스 기동·fixture 생성·Toss/유료AI/AWS 호출·secret 복사·제품 테스트 재실행 없음.
+- 새 feature worktree에서 문서만 작성한다. 기존 준비금 대사 결과 backend346PASS/31SKIP, 별도PG/Anvil E2E, forge36PASS, 웹55PASS 및 실제 운영 미검증 항목은 과거 검증 기록으로 유지하며 이번 실행 결과와 혼동하지 않는다.
+
+## 검토·다음 승인
+
+- 별도 `review_integration_audit_design` 읽기 전용 검토 및 명료화 후 재확인: **발견된 필수 수정 없음**. 실제 코드/새 문서 전체/Git 상태·diffcheck를 대조했다. quoteId는 최초 manifest·Order 연결 기준, run 결과는 종료 시 1회 확정 후 불변임을 명료화했다. 직접 제품 테스트/DB/RPC/외부 호출은 없으며 보존 runtime 내용은 검토 범위 밖이다.
+- 새 두 문서의 Markdown 링크 존재와 private-key 형태 검색0을 자체 확인했다. 원본/통합/완료 reserve worktree clean, 새 trade-audit worktree의 문서4개만 변경을 확인했다. 신규 문서는 미커밋이며 통합에 아직 병합하지 않았다.
+- 거래 전수 대사 설계 승인 후에만 구현한다. 다른 추가 기능은 전체 범위 확인/순서 제안이며 구현 승인이나 완료 처리가 아니다.
+
+# 거래 전수 대사 ADMIN — 구현·검증 진행 중 (2026-10-10)
+
+- 승인된 feat/trade-audit에서 read-only snapshot·별도 RPC budget/worker·Order/Trade/PriceQuote/tx/receipt/Vault/Oracle 양방향 비교·과거 signer/fee·coverage 분리·append-only 감사 테이블·ADMIN API/웹 패널을 구현했다. 기존 sender/settlement/잔고 쓰기 경로는 변경하지 않았다.
+- [구현 기록](trade-full-audit-implementation.md)에 파일/계약/한도/실행별 실패·보완·검증 한계를 기록한다. 신규UTC reader와 감사전용409 JSON 처리 문제를 실제E2E로 찾아 보완했다.
+- 신규 격리PG/Anvil fixture의 당시 감사42개 PASS, 웹61/build92/Chrome fixture PASS, forge36PASS. 전체회귀·최종독립검토·통합branch commit/merge는 후속 기록에서 확정한다. 실제Toss/AI/AWS·전체최종제품인수는 미실행이고 보존acceptance/개발DB/chain/.env는 변경하지 않는다.
+- 최신 사용자 확정 기능 순서와 향후melon-init/새기준branch 선택은 [통합 계획](additional-features-integration-plan.md)에 반영했다. 원본을 영구분리할 필요는 없지만 현재원본적용은 하지 않는다.
+
+# 거래 전수 대사 ADMIN — 기능 검증·독립 재검토 완료 (2026-10-10)
+
+- 최초 검토 지적의 DB 모순 보존/전체 coverage 분리와 raw 포함 실제byte 사전 상한을 보완했고, 소비된 고아quote까지 검증했다. source read-only·과거 설정 비추론·원문 미저장 경계를 유지했다.
+- 최종 새PG/Anvil fixture 감사50/50 PASS(49unit+1E2E), 전체427/395PASS/32SKIP/0FAIL, 웹61/build92/Chrome fixture PASS, forge36PASS. 전체427회귀는 마지막 고아quote 수정 직전이며 통합에서 다시 실행한다. 기존31skip과 실제운영 미검증은 [상세 기록](trade-full-audit-implementation.md)에 남긴다.
+- 최초PG timeout/DockerAPI500 실패 및 빈DB 확인 후 재실행을 기록했다. DB 초기화/engine 재시작/보존 환경 접근으로 우회하지 않았다.
+- review_trade_audit 최종재검토2: **발견된 필수 수정 없음**. 변경된 nullable 고아quote 처리/byte 상한/검증코드/문서를 확인했다. 웹6개 직접PASS는 재검토1, backend/PG/Anvil/Foundry/Chrome 결과는 구현자 실행이다.
+- 소스·문서 allowlist와 secret/산출물 배제 점검 후 feat/trade-audit만 커밋하여 integration/additional-features로 병합한다. 원본melon-init 및 기존acceptance/개발runtime 적용·배포·실제Toss/유료AI/AWS는 없다. 통합검증/해시는 후속 기록으로 확정한다.
+
+# 거래 전수 대사 — 통합 회귀 완료 (2026-10-10)
+
+- 기능 `eed6b2f98e518a6c5d13603158b1aa9d3f8f0e06` → integration/additional-features merge `2a5d8d3a29b3e38822678da613c0da9dfa56ea52`. 충돌0/source tree diff0. 이후 현재 결과를 문서에만 기록한다.
+- 통합 worktree 실제 전체backend427개/395PASS/32SKIP/0FAIL/0ERROR, 웹61/61·Vite92·Chrome desktop/mobile fixture PASS, Foundry36/36 PASS. 새 기능의PG/Anvil 감사50PASS는 동일featuretree의 별도실행이며 통합에서재실행한결과가아니다.
+- 기존31skip·실제Toss/유료AI/AWS/운영부하/최종제품인수 미실행을 유지한다. 독립검토최종결론은 발견된필수수정없음이며 테스트대체가아니다. 상세 [검증 기록](trade-full-audit-implementation.md).
+- featurestage30개/실제fixturesecret18대조0/금지산출물0, 각fixture컨테이너정지·DB/chain/로그보존. 원본melon-init b7cb0f0 및 acceptance/runtime/실제.env에 merge·복사·배포없음. 다음Faucet정책은설계후승인받는다.
+
+# 거래 전수 대사 — 최종 통합 신규 검증 / Faucet 설계 제출 (2026-10-10 후속)
+
+- 최종 고아 Quote 수정 포함 통합 소스에서 실제 새 격리 PostgreSQL/Anvil fixture를 준비했다. 첫80개 실행은78PASS/1FAIL/1SKIP: ADMIN 승격 후 이전 JWT도 DB 현재 role에 따라 ADMIN이라는 정상 동작을 USER 테스트가 잘못 가정했다. 별도 USER로 테스트만 보완했다. 제품 코드 변경 없음.
+- 새 fixture `audit-e2e-20261010123240-66b637`: 감사+reserve **80개/79PASS/1SKIP/0FAIL/0ERROR**, 실제 통합 E2E1 PASS. 두 ADMIN 대사 권한·거래 전후 MATCH·이력/상세와 schema.sql 재적용 source 불변을 추가 확인했다. standalone ReservePostgresAnvilE2ETest1 skip은 완료로 바꾸지 않는다.
+- 그 후 새 전체backend **427개/395PASS/32SKIP/0FAIL/0ERROR**, 웹61/61·Vite92·Chrome desktop/mobile fixture PASS, Foundry36/36 PASS. 기존31 opt-in 미실행 및 별도 실행 PASS 감사1을 구분한다. 테스트 XML은 전용 private runtime에 보존한다.
+- 독립 읽기 전용 검토: 발견된 필수 수정 없음. 검토자 테스트 재실행으로 표현하지 않는다. 실제 Toss/AI/AWS·최종 제품 인수·운영 부하 등 미검증 유지. 보존 acceptance/dev 환경은 변경하지 않았다.
+- [Faucet 정책 설계](faucet-policy-design.md) 제출: 현행1,000,000 DB 지급·무제한 반복과 새 제안을 구분했다. 기간별 정액+계정/전역 한도, 성공 멱등 claim·짧은 DB lock/원자 commit, ADMIN 읽기 전용 관측을 제안한다. 정책 숫자·기간·key 계약은 미승인, 관련 제품 기능 미구현. raw key URL 제외와 기간/timezone 변경 별도 migration 승인 경계를 반영했다.
+
+# Faucet 정책 고도화 — 구현/격리 검증 진행 중 (2026-10-11)
+
+- 사용자 최종 승인:1회100만, KST일1회, 계정누적5회, 전체누적5천만, 기간예산/cooldown 없음, 필수멱등키, 기존인증계정, ADMIN읽기 전용. 최신 통합6720b4a에서 별도 feat/faucet-policy worktree 생성. 기존 거래 전수 대사/고아 Quote 통합·실제 검증은 이전 완료 기록으로 확인했다.
+- wallet/faucet의 고정 정책·JDBC quota/budget/claim·불변 version·전체 journal 비교·after-lock DBclock, 기존 mKRW row lock/AFTER_COMMIT WS를 구현했다. 기존 직접 지급 테스트를 필수 key 계약으로 변경했다. 웹 정책·이력·응답 유실 복구·ADMIN 관측과 Android 전달 문서를 추가했다. Android 코드는 접근했지만 변경하지 않았다.
+- 실행별 성공/실패·정확한 수치와 최종 미완료 범위는 [Faucet 구현 기록](faucet-policy-implementation.md)에 유지한다. 최초 전체436개에서 JSON 숫자 표현 assertion1 실패는 기존 scale 보존으로 수정했고 후속436개403PASS/33SKIP/실패0이었다. 그 뒤 수정이 있어 마지막 source 전체 회귀는 별도로 확정한다.
+- 새 전용 PostgreSQL/Anvil 준비는 Docker Linux engine _pingHTTP500으로 network 생성 전 실패했다. 기존 dev/acceptance로 대체하거나 Docker 전체 재시작/데이터 삭제를 하지 않았다. 실제 PG 동시성/Anvil E2E를 미실행 상태로 유지한다. 검증 완료 featurecommit/통합 merge는 아직 하지 않았고 외부Toss/유료AI/AWS도 사용하지 않았다.
+
+# Faucet 정책 고도화 — 기능 실제 검증·독립 재검토 완료 (2026-10-11 후속)
+
+- 위 미실행/미완료 문구는 최초 실패 시점의 기록이다. 이후 Docker engine 정상 응답 확인 후 새 fixture에서 Faucet9/9PASS(단위3/H2계약5/실제PGAnvil1), 별도 새 fixture 대사80개79PASS/1SKIP/실패0을 실행했다. 데이터는 보존하고 해당 컨테이너만 정지했다. 기존 DB/state 재사용·초기화나 engine 재시작은 없다.
+- 실제 DB 행 잠금·동일/다른 키·자정 대기·마지막 예산 경쟁·rollback·version/replay·계정5회/전역50m·회계/설정 차단, 실제BUY/SELL 경합과 잠금/REVIEW_REQUIRED 불변, 온체인 불변 및 두 대사 MATCH를 확인했다. 자정은 테스트 전용 DB fixture clock이며 실제 장기 대기가 아니다.
+- 웹 최종66/66PASS·Vite93·Chrome desktop/mobile REST/STOMP fixture PASS, Foundry36/36PASS. 최종 E2E assertion 포함 전체 source 회귀와 통합 source 회귀는 이어서 기록한다. standaloneReservePG opt-in skip을 실제 실행으로 표시하지 않는다.
+- 최초 독립 검토는 검토 불충분(실제PG 미실행)이었다. 첫 재검토 결론은 **발견된 필수 수정 없음**. 검토자는 source/assertion/문서·diff check 및 당시 XML80개0실패1skip을 직접 확인했고 실제DB/RPC 실행은 구현자 결과다. Android 코드 수정·실기기·Toss/유료AI/AWS·운영부하·기존원장 migration은 미검증/미실행이다.
+
+# Faucet 정책 — 기능 커밋·통합 신규 회귀 완료 (2026-10-11)
+
+- feat/faucet-policy `a1d87c9b69ad0069f8d48f6116f46b21b47251b9` → integration/additional-features merge `7b468338f72894fb108cd6a58540674ca4fcffc5`, 충돌0/tree diff0. feature42파일/신규fixturesecret9개대조0/금지산출물0을 확인했다. 최종 기능 전체436/403PASS/33SKIP/실패0.
+- **병합 소스 새 실행**: 전체436/403PASS/33SKIP, 웹66·Vite93·Chrome desktop/mobile fixture PASS, Foundry36PASS. 새 통합 Faucet PG/Anvil fixture9/9PASS, 또 다른 새 통합 감사/자산대사 fixture80/79PASS/1SKIP. 중복 단위 테스트를 별도 고유 테스트로 합산하지 않는다. XML/private DB·chain은 보존하고 각 새fixture 컨테이너만 정지했다.
+- 기존31 opt-in 및 standaloneReservePG 미실행·실제Toss/유료AI/장기운영·기존migration·Android실기기 미검증을 유지한다. 세부원인/최초실패/재실행/독립검토는 [최종 구현 기록](faucet-policy-implementation.md)에 보존했다. AFTER_COMMIT·기존locked/REVIEW_REQUIRED·두 대사와 호환되며 온체인 자동공급 기능은 없다.
+- 원본melon-init b7cb0f0 clean 유지, 기존 acceptance/개발DB/chain/.env/runtime 변경·merge·배포없음. 다음은 Google로그인·이메일인증 설계이며 외부credentials/네트워크·계정연결·자산소유권은 승인 후 구현한다.
+
+# Oracle 가격 조건부 주문 — 구현·기능 검증, 통합 대기
+
+> 2026-10-12 갱신. 사용자의 후속 우선순위 지시로 Faucet 통합0a3b67e에서 feat/oracle-conditional-orders를 분리했다.
+
+## 구현·결정
+- 신규 conditional_orders 의도와 실행 Order를 분리한다. 등록 시 quote/서명/자산 잠금 없음, 조건 충족 후 fresh quote의 가격을 재검증하고 기존 EIP-712/Vault 전송·receipt/event 정산을 재사용한다. BUY 총 mKRW/SELL mSEC 단위와 수수료 계약은 유지한다.
+- 실행 준비 시 의도 FK/Order/견적 소비/잔고 잠금을 한 transaction으로 확정하며 RPC는 잔고 lock 밖이다. 취소·만료는 실행 FK 전에만 가능하다. 불확실한 전송은 동일 raw 복구/REVIEW_REQUIRED로 유지한다.
+- 상세 코드·API/UI·새 시각 컬럼·첫 실패 증거와 복구는 [구현 기록](oracle-conditional-orders-implementation.md), Android 미수정·미빌드는 [계약](conditional-orders-android-integration.md)에 명시한다. 사용자 간 매칭/시간 예약/온체인 충전/분산 nonce는 추가하지 않는다.
+
+## 검증
+- 신규 fresh PostgreSQL/Anvil의 H212+실제 E2E1:13/13PASS. 실제 BUY/SELL·중복/취소 경합·RPC 응답 유실 동일 raw 복구·재시작 claim·만료·실패 receipt·Faucet/두 대사 MATCH를 확인했다. 초기 프로필/시간대 실패는 삭제하지 않고 별도 fixture에 보존했다.
+- WS 보강 후 최종 기능 source 전체451개/417PASS/34SKIP/실패0, 웹71PASS·Vite94·Chrome desktop/mobile fixture PASS, Foundry36PASS. 실제 PG 테스트와 H2/Mock/브라우저 fixture 범위는 구분한다. opt-in skip을 실제 실행으로 처리하지 않는다.
+
+## 검토·남은 작업
+- 독립 검토·기능 커밋·통합 병합 및 병합 최종 source 신규 회귀는 아직 대기다. 기존 melon-init/acceptance/devDB·Anvil·실제.env는 변경하지 않는다. 실제 Toss/유료AI/AWS/Sepolia/Android/운영부하는 미실행이다.
+
+# Oracle 조건부 주문 — 검토 보완·최종 기능 회귀 (2026-10-12)
+
+- 최초 독립 검토 필수2건(준비 시 최신 시세 조건 재검사 누락, 웹 확정 거절 이후 pending 고착)을 수정했다. BUY/SELL 초기·lock 이후 네 경계 및 실제 패널 유실/재입력/세션 교체 회귀를 추가했다.
+- 수정 후 새 실제 PostgreSQL/Anvil E2E1PASS, 웹77PASS·Vite94·Chrome desktop/mobile fixture PASS, Foundry36PASS. 당시 H2 준비13실패 및 이어진 전체452 중4실패는 UTC/KST 날짜 경계의 테스트 시간대 문제였다. 실패 XML을 보존했고 제품 Faucet/운영 DB는 수정하지 않았다. 테스트 Hikari UTC 보완 후 전체 **452개/418PASS/34SKIP/실패0**, BUILD SUCCESSFUL.
+- 첫 재검토 **발견된 필수 수정 없음**. 검토자는 패널11개를 직접 실행하고 전체XML106파일/452개 및 실제PG 성공/실패XML·최신diff·문서를 확인했다. 공통 test UTC는 PG opt-in에도 상속되므로 새 격리PG 재검증과 병합 source 회귀는 별도로 진행한다. skip·Toss/AI/Android/운영 미검증은 그대로 유지한다.
+- 공통UTC 적용 후 또 다른 새 PG/Anvil fixture에서 H214+실제E2E1 **15/15PASS/skip0**. 전체452 XML과 실제 실행XML은 구분해 비공개 보존하고 새 컨테이너 두 개만 정지했다. 최종 source 후보37파일/생성secret15개 대조0hit/금지파일0/diff check PASS. 기능 commit·병합 후 새 통합 회귀는 다음 기록에서 확정한다.
+
+# Oracle 조건부 주문 — 통합 및 신규 최종 회귀 완료 (2026-10-12)
+
+후속 자산 보관 모델 확정/문구 점검(2026-10-12): **A: operator 통합 지갑 + PostgreSQL 사용자별 모의자산 장부** 유지. 사용자별 지갑/CustodyVault/직접 서명/사용자 간 호가 거래소 제외. [최종 점검](asset-custody-final-check.md)에 실제 실행 가능성, SIGNED 장기 정체 위험, Sepolia 공개 faucet 대안과 미검증을 구분했다. 정적 웹 안내/API·프로젝트 문구/표시 테스트만 변경, 거래·계약·DB 변경 없음. 새 실행 backend452/418PASS/34SKIP/실패0, 웹78PASS, Vite94·Chromium desktop/mobile fixture PASS, Foundry36PASS. 실제 PG/Anvil E2E·Toss/유료AI·Android·운영 검증은 실행하지 않았다. 원본 melon-init b7cb0f0 clean 및 integration HEAD0b5d35f 유지, 커밋/merge/배포와 기존 acceptance/runtime 변경 없음.
+
+- 기능 `c4130798a6e62c3f16addad726fde0c421793f32` → 통합 merge `d8dea3e4cff38ce214b6365d6071e451e482b7b9`, 충돌0/tree diff0. 원본melon-init b7cb0f0 clean 유지, acceptance/devDB·Anvil·실제.env/runtime 변경/merge/배포 없음.
+- **병합 최종 source 새 실행**: backend452개418PASS/34SKIP/실패0, 웹77PASS/Vite94/Chrome desktop+mobile REST/STOMP fixture PASS, Foundry36PASS. 또 다른 새 격리PG/Anvil에서 H214+실제E2E1=15/15PASS/skip0. 실제 서명BUY/SELL·동시/취소·raw응답유실/재시작·실패receipt/잠금해제 및 Faucet/장부대사/전수대사 MATCH 확인. 실행별 중복 테스트는 고유총수로 합산하지 않는다.
+- 독립 첫 재검토 **발견된 필수 수정 없음**. 검토 이후 제품 소스변경 없음. 초기 실패 및 UTC보완 범위, 개별suite 미실행/34skip/실제Toss·AI·Android·운영 미검증을 [최종 보고서](oracle-conditional-orders-implementation.md)에 유지한다. 전체/E2E XML·새DB/state는 비공개보존, 해당fixture 두 컨테이너만 정지했다.
+- 통합 소스37파일/새 fixture secret3개 대조0hit, 이전기능secret15개 대조0hit, 실제.env/DBdump/chain/runtime/로그/산출물 Git포함0. 마지막 문서 갱신은 검증 결과·완료 상태 기록만 하며 동작을 바꾸지 않는다. 다음 Google인증/이메일 기능은 별도 설계·외부사용 승인 이후 착수한다.
+
+# 자산 보관 점검 커밋·정체 관측/공개 발행 정책 설계 — 제출 (2026-10-12)
+
+- 기존 사용자 승인 안내/문서/표시 테스트13개를 `integration/additional-features` **c7bf4e83ede98fbcfb661f7e5ab7bfe35607ab9b**로 커밋했다. staged path 금지 산출물0, private-key/PEM/OpenAI key/credential 패턴 검출0, diff check 통과. stage는 명시한13개만, 거래/계약/schema/실제.env/runtime 변경 없음. 커밋 직후 clean 확인. 원본 melon-init b7cb0f0은 clean 유지한다.
+- 커밋 파일: 루트README·기획서, backendREADME, claude-docs README/통합계획/career brief/개요/구현로그/자산보관기술검토/최종점검, 웹index·product 표시test·browser-smoke. 이전 실제 실행 결과는 backend418PASS/34SKIP(452), 웹78PASS, Foundry36PASS, Vite94·Chromium desktop/mobile fixture PASS이며 **이번 설계 조사에서 다시 실행한 결과가 아니다**.
+- [정체 관측 설계](transaction-stall-observability-design.md): 기존 WAITING_LONG ADMIN Tool·시각/원문 복구·조건부 EXECUTING 연결을 조사. 마지막 시도 영속 metadata는 없음. ①ADMIN 표시+②파생 LONG_WAIT 경고와 작은 관측 snapshot을 추천. 거래 상태/REVIEW_REQUIRED·자산 잠금·nonce·raw·재시도 의미를 변경하지 않는다. Grafana/Prometheus/Actuator가 설치됐다는 근거 없음; 외부 경고는 별도 승인.
+- [Sepolia 정책 설계](sepolia-mockkrw-issuance-design.md): 로컬 공개 MockKRW 유지, 공개용 최초 고정 공급 variant를 우선 추천. owner/minter capped 공급 대안도 비교. S0/O0/V0 수치·발행 역할·confirmation/환경 사용은 미확정. 현재 totalSupply 불변 대사에 기준점 이후 추가 mint를 정상 반영하려면 별도 설계가 필요하다.
+- 검증은 현재 코드/테스트/read-only Git/문서 링크 점검. 새 설계 기능 테스트·실제 DB/RPC/부족ETH·Toss/유료AI/AWS/Sepolia는 실행하지 않았다. 동작 변경 없는 조사/문서이므로 별도 검토자는 생략했고 독립 검토 통과로 기록하지 않는다. 원본/기존 acceptance·개발DB·Anvil/runtime 보존. 두 설계는 제출 후 사용자 구현 승인 대기이며 커밋 확정13개와 이후 설계 문서 변경을 구분한다.
+
+# Phase A 시각 차단 후속 조사 — BLOCKED 유지 (2026-10-13)
+
+## 구현·결정
+- feat/phase-a-acceptance 2455d66에서 진단-only 옵션, Windows 지속 JVM Instant.now와 Docker/WSL/PG/Anvil 반복 시각 측정을 추가했다. 신규 fixture 생성·조회만 하며 배포·제품 schema·E2E 전에 종료한다. 제품 거래·TTL/2초 허용·컨트랙트 변경 없음.
+- [인수 보고서 §9](phase-a-integration-acceptance-report.md#9-시각-원인-조사-후속--2026-10-13-여전히-blocked)에 실측 범위/불확실성, Windows unsynchronized 상태, 미확정 원인과 사용자 동기화 또는 Linux JVM B안 승인 사항을 기록했다.
+
+## 검증
+- 새 session phase-a-20261013081121-dbc7207f의 독립 진단 fixture3개,5회씩 실제 측정. 기존 preflight15/15 BLOCKED. SQL은 Windows보다1차2.839~3.296초,2차3.071~3.746초 늦으며 Windows/JVM은 거의 일치한다. 실제E2E와같은JDK21.0.9의3차도1.962~4.135초 차이와Linux벽시계역행을 재현했다. 시각 보정 주체·권위 UTC/NTP 또는 과거409의 정확한 원인은 미검증이다.
+- Python harness12/12 PASS, SKIP0. 필수 실제 E2E4종/별도 JVM 재시작 및 backend/web/Foundry 재실행은 NOT_RUN: 전제 미충족이므로 반복하지 않는다. 이전 실패·35 SKIP은 유지한다.
+- 새 전용 컨테이너만 종료·증거 보존. 기존 서비스/실패 fixture·acceptance·개발환경 접근/변경, 전역 clock/NTP/WSL 재시작, 외부 호출 없음.
+
+## 검토·남은 작업
+- 독립 최초/첫 재검토 모두 **발견된 필수 수정 없음(진단harness·문서 한정)**. reviewer 직접Python12/12PASS와세진단JSON의15BLOCKED·Linux역행 확인. 소유컨테이너6exited/후보7파일생성secret노출0/제품diff0 확인. 시각 전제 및 필수 E2E 미완료로 통합 병합 보류. 사용자 조치 또는 B안 명시 승인 후 새session/fixture에서 preflight와 필수 E2E를 진행한다.
+
+# Phase A Windows 동기화 이후 필수 E2E 재검증 — PASS (2026-10-13)
+
+## 실제 실행·결정
+- 입력feat/phase-a-acceptance bebfe11 clean, 제품·테스트·harness 변경 없이 신규session phase-a-20261013095239-ca6b9c6c 생성. Windows 시간 서비스는leap0/stratum5로읽기확인했으며에이전트의시간변경/전역재시작없음.
+- 새clock-only fixture에서JDK21.0.9/Windows/Docker/PG/WSL5회측정,DB-host offset+0.0945..+0.1798초(왕복불확실성포함최대0.3726초),preflight5PASS. 이번측정구간Linux역행없음,장기보증아님.
+- 신규독립Faucet/reserve/audit/conditional fixture의preflight도모두PASS,각실제PG/Anvil E2E1PASS. 성공conditional원장을유지한별도Gradle/test JVM snapshot restart1PASS:총5/5PASS,SKIP0. Python12/12PASS.
+- 기존409이번재발없음이나정확한과거revert원인은여전히미확정. 기존실패증거·35skip보존,제품미래2초/OracleTTL/거래정책변경없음. 이전backend427/35·웹84/Foundry36을이번재실행결과로보고하지않는다.
+
+## 검토·보존 경계
+- [보고서 §10](phase-a-integration-acceptance-report.md#10-사용자-windows-동기화-이후-재진단필수-e2e--2026-10-13)에각새run/포트/실행/증거와기존결과를구분했다. 독립증거검토·최종소유권/안전점검결과는보고서에기록한다.
+- 독립검토 **발견된 필수 수정 없음(시각/E2E증거·문서 한정)**. reviewer직접새clock/preflight9PASS·5 XML/summary·별도JVM gate/metadata를확인했다. 직접재실행과Windows/컨테이너실행확인은하지않았으며구현자결과로구분한다. 실제필수E2E미완료와시각차단은이번증거로닫고전체최종인수PASS는선언하지않는다.
+- 기존acceptance/개발환경·실패fixture변경없음,새전용컨테이너만정지·새성공DB/state/log보존. 통합merge없음. Toss/유료AI/Sepolia/AWS·PhaseD전체PASS는NOT_RUN이며B안구현불필요로대기한다.
+
+# 로컬 수동 체험 환경 — 완료 (2026-10-14)
+
+## 구현·결정
+- 입력 integration/additional-features `240cb398`. [사용법과 실제 검증 기록](local-playground.md): playground.cmd와 전용 Python/Compose/Dockerfile을 추가해 첫 준비·start/stop/status/account를 제공한다. 새 PostgreSQL/persistent Anvil/backend/web, Synthetic+서명 거래만 사용하며 AI/조건부 주문은 이번 체험에서 비활성이다.
+- 기존 .env·키·DB·Anvil·acceptance를 import/초기화하지 않는다. 반복 start에 재배포 없음. 포트 충돌·source/image 변경·미완료 준비는 fail-closed. 신규 runtime은 Git 제외.
+
+## 검증·검토
+- 새 도구8/8·웹84/84 단위 PASS, Chrome desktop/mobile fixture PASS, 실제 빌드/4서비스 기동 성공.
+- 신규 로컬 PG/Anvil에서 가입/Faucet/BUY10만/SELL0.5 FILLED, 자산 대사 MATCH, 거래 감사 MATCH+전체 coverage 확인. stop/start 후 주문/hash/잔고 유지, Nginx STOMP 실제 합성 시세 수신.
+- 독립 필수 지적1개(pointer의 늦은 예약으로 실패 후 중복 준비 위험) 수정, 첫 재검토 필수 수정 없음; reviewer 직접8/8 PASS. 실제 서비스/거래/재시작은 구현자 수행 결과다. 자세한 범위/한계/증거는 local-playground에 기록.
+- 제품 소스 수정 없음. backend/Foundry 전체 회귀·실제 Toss/Kiwoom·유료 AI·조건부/Android 이번 NOT_RUN. 기존 사용자 문서 변경은 보존했으며 임의 커밋·병합하지 않는다.
+
+# 키움 실관찰 P0/P1 후속 — 최소 수정·오프라인 검증 완료 (2026-10-14)
+
+- integration/additional-features240cb398에서 feat/kiwoom-live-fixes 생성. 기존 dirty 사용자 문서/playground 및 환경 보존. [원인·변경·이번 결과·다음 승인](kiwoom-live-p0-p1-fix.md)을 새 보고서로 작성했다. 과거 실관찰 보고서는 수정하지 않았다.
+- 공식 async/pubsub의 0s item=[]와 기존 [""] 차이를 확인해 제품 KiwoomProtocol 및 진단 REG 생성만 정렬했다. 과거 미수신의 원인 확정은 아니며 최초 snapshot/재연결 replay 계약은 미확보. 0B/시각으로OPEN추정·5초/미래2초/TTL완화 없음.
+- 새 순수 asOf 집계에서 체결시각기준-308/-98과 수신시각기준1/0 재현. START_SUPPORTED1/INCONCLUSIVE59·PRE_ASOF_MISSING2 유지. KIWOOM 웹은asOf버림없음 확인, 증명되지 않은 chart/timestamp/tick 수정 없음. 원본capture byte불변 확인.
+- 이번 실제 회귀: Python진단28/28, 키움Java20/20, 웹84/84 PASS. backend전체487 total/452 PASS/35 SKIP/FAIL0/ERROR0. 키움20은전체와중복. 실제PGAnvil/Foundry/외부키움·Toss/유료AI/실서버인수NOT_RUN.
+- 독립 최초·첫재검토 필수수정없음. reviewer직접Python28PASS/공식async확인, 선택제안generation/NATIVE_START가정표시 반영·재검토. 나머지실행은구현자결과. 기능은미커밋, 새키움capture와SpringBoot실인수는별도승인대기.
+
+# 키움 item=[] 실제 장중 재관찰 — OPEN 인수 BLOCKED (2026-10-14)
+
+- 사용자별도승인후새run kiwoom-diagnostic-20261014022735-a84f1564에서capture1회. 준비source일치·기존capture없음확인,서비스/IP재확인요구없음,호스트활성port10000후보0건. [새 실관찰 보고서](kiwoom-live-recapture-2026-10-14.md)에전제/시각/증거/판정/다음조치기록.
+- REST4(OAuth1+ka10080 3)/WS1/180초/870events(TRADE807/CANDLE60/연결ACK3). LOGIN/REG성공,수정REGitem=[]송신확인. 0B807모두동일generation1/REGULAR/시간호환,0s0. absent215/20추론없음,OPEN+LIVE인수BLOCKED.
+- 연결COMPLETE·retry/reconnect0. 구독배열변경만으로초기상태문제가해결됐다고판정하지않음. 공급자초기/전환/복원및혼합구독계약문의 또는별도승인된분리/전환관찰필요. 추가키움/Toss/AI/주문/DBAnvil/배포0,기존증거와환경보존.
+- 제품/진단소스수정없음. 허용REG·0s필드만메모리관측wrapper로sidecar저장,토큰/원문응답미기록. 이번관찰별도구현review없음,이전회귀/검토를새실행결과로재사용하지않음. 미커밋사용자변경보존.
+
+# 키움 0s 단독 구독 검토·기술지원 문의안 — 제출 (2026-10-14)
+
+- [단독 실험안·문의 초안](kiwoom-0s-isolation-plan-and-support.md): 공식 0s-only와 현재 혼합 구조/LOGIN·ACK 경로 대조, 초기 snapshot·전환 시 발행·재연결 복원 계약 미확정 유지. 혼합 capture 반복 없음.
+- 기존0건은빈item시장상태저장규칙기준임을구분. 다음실험은모든0s유형건수/허용필드·ACK전후를관측해필터링과실제부재를분리하도록제안. 제품OPEN/시각정책완화없음.
+- 새private run·OAuth1/REST시세0/WS1/180초/5000events·0s-only REG1,재시도0를승인안으로제출. 현재CLI그대로는혼합구독이므로미실행;승인후진단profile준비/Mock검토선행. 0B/LIVE가격은이실험NOT_RUN,단독양성도혼합오류확정아님.
+- 기술지원에 초기 전달/혼합 등록/응답 item·ACK 순서/20 의미/재연결 복원 TR/검증 구간 6개 질문과 정제 재현 정보를 작성했다. 아직 외부 발송하지 않았다. 이번 테스트·실전 호출·새 run·DB/Anvil·AI·배포·제품 변경 0, 문서 조사만 수행해 별도 구현 검토는 생략했다.
+
+# 키움 0s-only 진단 도구 준비 — 완료 / 실전 실행 승인 대기 (2026-10-14)
+
+- [구현·검증·새 run·실행 명령](kiwoom-0s-only-diagnostics.md): Python 진단에만 명시적 profile 추가. 공식 단독 REG1, OAuth1/WS1/180초/정제5000/chart0 강제, parser 이전 0s frame/entry·item 형식·허용215/20·수신시각·generation·ACK 여부 관측. 원문/임의item·인증정보 저장 없음. 기존 제품 정책/Java/DB/체인 변경 없음.
+- Mock·보안·회귀 최종 진단39/39와 Phase A guard15/15 PASS. source/manifest/profile/한도/payload 불일치의 secret/transport 전 차단, no-retry·민감값 마스킹·공유 이벤트 상한 검증. 테스트 증거는 새 private run에 독립 저장.
+- 최초 검토에서 단독 run의 CLI profile 누락→mixed 우회 문제를 지적받아 수정·회귀 추가. 독립 첫 최종 재검토 필수 수정 없음, reviewer 직접39/39·15/15 PASS. 실제 API/키/DB/Anvil은 reviewer 미접근.
+- 새 run kiwoom-diagnostic-20261014030349-291b6524: real credentials/ACL 및 준비 manifest/source/상한 로컬 확인, 외부 gate 닫힘. 기존 capture/test 보존. 외부 호출·주문·유료AI·배포0, 실전은 별도 사용자 승인 대기. 0s 미수신을 초기snapshot 미지원으로 단정하지 않는다.
+
+# 키움 모의 거래 가용성 분리 설계 — 승인 대기 (2026-10-14)
+
+- 사용자 방향 전환에 따라 0s 수신을 완료 필수 조건에서 제외하고 추가 실전 진단을 중단한다. 준비된 단독 run과 과거 증거는 보존한다. [최소 변경안·조건표·테스트·한계](kiwoom-mock-trading-availability-design.md)를 작성했다.
+- 현재 OPEN+LIVE 차단은 서명 issuer/조건부 gate에 있고, 공급자는 UNKNOWN+LIVE를 이미 제공할 수 있다. 공식290=2의 장중 체결 근거를 사용하되 시장 OPEN으로 표현하지 않는 내부 모의 거래 context를 제안했다. 신규 견적 전후 동일 generation, 명시 CLOSED 우선, 기존5초/미래2초/TTL/서명/정산/Toss/Synthetic 보호.
+- 휴장 독립 데이터 없음, 마감 알림 미수신 시 마지막 tick의 최대5초 신선도 창과 기존 발급 견적30초 사용 창은 보장 한계로 명시했다. 시간표/0B로 실제 OPEN을 추정하는 구현은 하지 않는다.
+- 이번은 소스 조사·설계 문서만 수행. 제품 구현·테스트 실행·실전 API·DB/Anvil·유료AI·배포0, 별도 구현 검토는 승인 후 구현 단계에서 진행한다.
+
+# 키움 모의 거래 가용성 분리 — 구현·격리 검증 완료 / 실환경 인수 미실행 (2026-10-14)
+
+## 구현과 결정
+
+- 사용자 승인에 따라 현재 연결 generation의 정상 0B(290=2), LIVE, 과거 5초/미래 2초를 근거로 신규 모의 서명 견적을 허용한다. 0s가 없으면 UNKNOWN 유지, CLOSED/지원하지 않는 상태 우선, 재연결 이전 tick 및 RPC 중 generation 변경은 거절한다.
+- 내부 TradingPriceContext와 provider/service, PriceReportIssuer, 조건부 checkedMarket, 시장 REST의 선택적 가용성 필드 및 웹 최소 안내를 추가했다. 기존 DB-only/Toss/Synthetic/TTL30/EIP-712/스키마/컨트랙트/정산·복구는 유지한다. 공개 WS 계약 확장과 실제 키움 재호출은 없다.
+- [변경 파일·API/Android 영향·실행별 결과·한계](kiwoom-mock-trading-availability-implementation.md)에 상세 기록했다. 기존 설계 기록은 삭제하지 않고 후속 구현 링크를 추가했다.
+
+## 검증
+
+- 최종 전체 백엔드 498 중 463 PASS/35 SKIP/실패 0, 웹 88/88 PASS, Chrome desktop/mobile fixture PASS, Foundry 36/36 PASS. 최초 선택 테스트의 Mockito 설정 실패 2건은 수정 후 실제 재검증했으며 기록을 유지한다.
+- 신규 phase-a-20261014033111-1c4e6ce8: 독립 PG/Anvil Faucet·reserve·audit·conditional/observation와 별도 JVM snapshot restart 5/5 PASS. Synthetic 시세를 사용한 실제 체인 검증이며 실제 키움 인수로 표시하지 않는다.
+- 2차 회귀의 증거 폴더 충돌은 기존 기록 보호로 발생했다. 최신 백엔드 실행 결과는 별도 새 경로에 보존하고, 웹/브라우저/Foundry는 실제 최종 실행했다. 제품 또는 harness 정책을 우회·수정하지 않았다.
+
+## 검토 및 남은 작업
+
+- 독립 검토에서 REST 가용성 응답이 WS revision 변화에 함께 폐기되는 UI 경합 1건을 지적받았다. 최신 가격을 보존하면서 가용성 근거만 반영하도록 수정·회귀 추가했다. 첫 재검토: 발견된 필수 수정 없음, reviewer 직접 웹 88 PASS. 마지막 추가 테스트·완료 문서 재검토도 발견된 필수 수정 없음이다. 백엔드/Foundry/E2E는 구현자 실제 실행 결과로 구분한다.
+- 기존 melon-init/acceptance/개발 DB·chain/private capture 보존. 비밀 runtime은 ignore 대상이며 커밋/stage/merge/배포하지 않았다. 작업 브랜치 feat/kiwoom-live-fixes에서 기존 미커밋 변경을 함께 보존한다.
+- 실제 키움 Spring Boot → 신규 견적 → Anvil BUY/SELL → DB/개인 WS/포트폴리오는 별도 승인 후 신규 격리 환경에서 인수해야 한다. 로컬 구현 완료를 실환경 최종 PASS로 선언하지 않는다.
+
+# 키움 실환경 E2E 전용 격리 환경 — 준비 완료 / 외부 연결·거래 인수 미실행 (2026-10-15)
+
+## 준비와 경계
+
+- [격리 환경·계약·기준점·정확한 다음 실행 절차](kiwoom-e2e-isolated-environment.md), 새 도구 `deployment/kiwoom-e2e-prepare.py`. 제품/기존 실행 코드를 수정하지 않고 캐시·offline 빌드로 현재 미커밋 소스를 고정했다.
+- 새 run `kiwoom-e2e-20261014171302-662c5ba0`, DB `kiwoom_e2e_662c5ba0`, loopback DB34379/RPC44379, 다음 승인용 backend30832/web35070. 새 키·계약·private bind root 사용, 기존 DeployPublic의 로컬 chainId31337 제한 유지. 숫자가 같더라도 새 namespace/RPC/키/주소/blockHash로 구분한다.
+- 내부 전용 네트워크에서 SIMULATED 초기화 서버만 계정·스키마·불변 대사 기준점 생성 후 종료했다. 반복tick/복구는 지연, AI/조건부 비활성. live Kiwoom profile은 공란 키로 생성만 했고 시작하지 않았다. 기존.env/키/DB/체인/acceptance/playground/private capture import/수정 없음.
+
+## 실제 검증
+
+- 신규 PG/Anvil healthy, 계약 code·Vault 연결·minter/consumer·분리 signer 확인. operator/Vault 각500만 mKRW, mSEC공급0, allowance/ETH 조회. 준비 자금은 새 로컬 체인에서만 생성.
+- ADMIN/USER 각1명·0원 잔고4행. orders/trades/quotes/blockchain_transactions/faucet_grants 각0, reserve_baseline1, immutable trigger3개. baseline block2 hash는 새Anvil 실제stop/start 뒤에도canonical이고operatornonce/mKRW잔고 유지. 재배포 없음.
+- 최신 bootJar/Vite/images offlinebuild와 미실행 live Compose config검증 PASS. 새로그74개 및 initializer Docker로그에서 생성비밀값 노출0, stage비어있음/runtimeignore 확인.
+- 기존 playground4서비스 그대로 가동, root melon-init f069a10/clean 유지. 새PG/Anvil은 가동하고 initializer는종료, live backend/web는생성하지 않음.
+
+## 검토 및 미실행
+
+- 별도 reviewer 실행전 안전 검토 및 최종 소스·문서 재검토 모두 발견된 필수 수정 없음. 직접 AST구문 검사, Docker/DB/재시작/보안검사는 구현자 실제 실행 결과로 구분한다.
+- 실제키움 OAuth/REST/WS·Quote/BUY/SELL/Receipt정산/개인WS/포트폴리오·AI·조건부실행·대사MATCH/coverage·전체회귀는 이번NOT_RUN. baseline준비는실환경E2EPASS가아니다.
+- 다음승인: 전용키움secret준비·실제연결/자동재연결/토큰갱신포함호출상한·새localmockBUY/SELL. 기존 0s필수 문서를 적용하지 않고 승인된 mock-trading-availability정책을 유지한다. commit/merge/push/외부배포 없음.
+
+# 키움 실환경 E2E 인수 — 승인 후 사전 점검 BLOCKED (2026-10-15)
+
+- [이번 실행 판정·차단 원인·재개 조건](kiwoom-live-e2e-acceptance-2026-10-15.md). 기존 신규 run만 read-only 확인: source hash·이미지6개·소유권·baseline DB payload 및 Anvil block2 hash 일치.
+- 전용 kiwoom.properties의 App Key/Secret 모두 부재. 값 출력·복사·기존credential import 없이 중단했다. 호스트KST02:33에 확인했으며 장 상태를 시각만으로 추정하지 않는다.
+- 독립10분 자동 중단/egress실효성은 NOT_RUN. 실제키움외부연결·Faucet·Quote·BUY/SELL·receipt정산·개인WS·두대사는 모두 NOT_RUN, txHash없음. 준비 PASS나 이전fixture 결과를 실제키움PASS로 표시하지 않는다.
+- 기존 DB/Anvil/baseline/playground/증거 보존. 제품/설정/코드수정·재배포·초기화·commit/merge/push 없음. 사용자 전용키입력 후 실행전 모든필수조건을 확인해야 재개한다.
+
+# 키움 인수 재개 사전 점검·종료 안전 검증 — 로컬 PASS / 실환경 NOT_RUN (2026-10-15)
+
+- [후속 판정과 증거](kiwoom-live-e2e-acceptance-2026-10-15.md). 전용 두키존재=true(값출력/복사없음), 현재sourcehash·이미지6개·소유권·기존baseline payload/blockHash 모두일치. 호스트API WS후보0건, 현재등록공인IP/타기기계정WS는도구미확인(이전사용자서비스/IP완료사실유지).
+- 새 `deployment/kiwoom-e2e-safety.py`: 실제키움없이같은신규project의로컬TCP모의서버와별도Dockerwatchdog으로종료/egress차단을검증했다. 첫network준비차단은정확한stderr미보존으로원인미확정,명시적subnet/한정충돌시도/오류보존보강. 기존network삭제/변경없음.
+- 독립검토의필수지적(disconnect성공/분리assertion,재연결flow복원누락)을수정후첫재검토필수수정없음. reviewer직접AST검사/정적검토, 실제Docker결과는구현자실행으로구분.
+- 최종축소실측 `safety-check-08a8945d`: 기존TCP/신규연결차단/재연결복원PASS,10.183초egressdisconnect200,15.471초까지SIGKILL204·두대상종료·internal-only분리PASS. 앞선caf58592도별도보존. probe8개모두정지, 신규PG/Anvilhealthy·0원원장·baseline1유지.
+- 실연결용570초차단/585초강제종료정책은준비안이며실제backend10분arming은NOT_RUN. Dockerdaemon/socket고장까지보증하지않고실행전ARMED/소유권/정상상태가없으면시작하지않는다.
+- 점검시KST03:06~03:09로실제장중연결시점이아니어서키움연결·Faucet·Quote·BUY/SELL·Receipt정산·개인WS·포트폴리오·두대사모두NOT_RUN, 외부키움0회/txHash없음. Synthetic거래로대체하지않았고제품policy/계약/기존환경수정·commit/merge/push없음.
+
+# 키움 실환경 인수 장중 재개 — Docker Engine BLOCKED (2026-10-15 KST13:01)
+
+- [장중 재개 실제 점검 결과](kiwoom-live-e2e-acceptance-2026-10-15.md): sourcehash일치·전용키2개존재PASS, IP등록/타기기WS없음은사용자확인유지.
+- Docker image inspect15초timeout, 신규project psHTTP500, Server version/info각12초timeout. 현재이미지/소유권/DB/Anvil/baseline대조를완료하지못해이전PASS를재사용하지않음.
+- 실제watchdogARMED보장불가로키움연결전BLOCKED중단. 외부키움0회/Faucet·BUY·SELL0/txHash없음,Receipt·정산·WS·두대사NOT_RUN.
+- Docker/WSL재시작·APIversion우회·기존환경정지/삭제·재배포·초기화·baseline재생성·제품코드변경·commit/merge/push없음. 사용자DockerLinuxEngine정상화후같은run에서필수점검부터재개한다.
+
+# 키움 인수 재개 — Docker 사전 대조 PASS / 장중 실행 NOT_RUN (2026-10-15)
+
+- [실제 수행 범위와 최종 상태](kiwoom-live-e2e-acceptance-2026-10-15.md). 명시적desktop-linux 접속으로 version/info28.4.0 확인, 준비sourcehash·image6개·소유권·DB baseline/canonical blockHash 재대조 PASS. 초기 일반CLI timeout의 원인은 확정하지 않음.
+- 기존run의 backend/web만 고정이미지로 create, 시작하지 않음. 실제브라우저1탭/개인WS/두대사 수집용 `deployment/kiwoom-live-browser.mjs`와 고정대상watchdog 제어용 `deployment/kiwoom-live-run.py` 추가. 제품/거래정책 변경 없음.
+- Python AST/Node 구문 검사 PASS. 독립검토 필수지적2건을 수정한 첫재검토에서 발견된 필수수정없음. 실제Docker/장중실행을reviewer가수행한것은아님.
+- 실행직전 Windows/UTC 재확인 시 KST18:22여서 정규장 전제 미충족, 실전ARMED/외부연결 전에 중단.18:37 최종확인 backend/web Created, PG/Anvil healthy, initializer Exited. 키움호출0/Faucet0/BUY0/SELL0, Receipt·정산·개인WS·두대사 NOT_RUN. 전체인수PASS 아님.
+- DB/chain/state/baseline/private증거 보존. 새준비/재배포/초기화/기존서비스정지/Synthetic대체/유료AI/commit/merge/push 없음. 다음 정규장에 동일run에서 안전가드와새실행기한을확인해재개한다.
+- 최종fresh-start-deadline 보완도2차독립재검토 필수수정없음(AST직접검증). root melon-init clean/HEAD f069a108 유지, 기능HEAD240cb398 유지. 실전watchdog arming과외부호출은NOT_RUN이다.
+
+# NXT 관측 진단 프로필 — 구현·오프라인 검증 완료 (2026-10-15)
+
+## 구현
+- 기존 `deployment/kiwoom-diagnostic.py` / `kiwoom_diagnostic_core.py`에 `nxt-observe` 추가. `005930_NX` 0B와 빈item 0s를 등록하며 item/290/9081/215/시각/가격·거래량의 허용 필드만 기록한다. NXT 거래소/세션 의미와 제품 가용성을 추정하지 않는다. 기존 mixed/0s-only 분석은 유지한다.
+- E2E전용 properties를 명시적 읽기 전용 참조하고 키를 복사하지 않는다. OAuth1/시세REST0/WS1/LOGIN·REG각1, 재시도·재연결0, 관찰180초/전체210초/이벤트5000개 제한. 별도 부모 프로세스가 정지된 worker도 종료하며 원본/부분 증거를 보존한다.
+- 신규 `deployment/test_kiwoom_nxt_diagnostic.py`, [상세 구현·실행 보고서](kiwoom-nxt-observe-diagnostics.md). 제품/기존 인수환경 변경 없음.
+
+## 검증 및 검토
+- 진단 최초57/57 PASS → 보완후62개 최초61PASS/1ERROR(부분journal fixture 생성시점 오류) → fixture수정62/62 PASS → 최종 **65/65 PASS(기존39+신규26), FAIL/ERROR/SKIP0**.
+- 기존 Phase A guard/clock **15/15 PASS** 및 기존 CLI Mock replay PASS. 실제 외부 네트워크·DB·Anvil 시험이 아니다. 전체210초 제한은2.4초로축소한실제local Python 대기프로세스종료시험이며실제210초/API시험으로표현하지않는다.
+- 독립 최초/첫재검토의필수지적:부분journal 및 부분report 작성중 worker종료시 supervisor-report 누락가능성. 원본보존/WORKER_FAILED/시도횟수INCONCLUSIVE/종료코드대조와회귀보강후 **최종2차재검토 필수수정없음**. reviewer직접65/65PASS, private키/실서버/DB접근없음.
+
+## 준비 상태 및 경계
+- 새 `kiwoom-diagnostic-20261015112753-02b328b4` private run 생성. manifest/소스해시/구독/한도/참조일치 및 ACL PASS, AWAITING_EXTERNAL_APPROVAL. 파일은run.json/prepared.json뿐이며 실제 인증정보 복사/출력/해시 및 capture실행 없음.
+- 준비후별도Python검증명령은최초module경로누락으로실패했고 경로만명시한재검증은PASS. 외부승인없는CLI의EXTERNAL_DISABLED차단도확인했다.
+- 실제OAuth/REST/WS0회, Spring Boot/웹/DB/Anvil/기존baseline/이미지/capture 변경없음. commit/merge/push 없음. 다음은별도승인한NXT읽기전용관측이며제품NXT구현승인/실환경인수PASS와구분한다.
+
+# NXT 실제 관측 승인 후 — 거래시간 외 BLOCKED (2026-10-15)
+
+- 사용자가 준비된private run의관측1회를기존한도로승인했다.첫실행전확인에서Windows KST20:56:48/UTC11:56:48 및별도clock시각이일치했고NXT애프터종료20:00이후라외부연결전에중단했다.
+- 이번OAuth/시세·차트REST/WS/LOGIN/REG모두0회,실제item/290/9081/215관측은NOT_RUN이다.시간검사만으로provider CLOSED를수신했다거나NXT식별을검증했다고표시하지않는다.
+- 시간전제에서먼저중단하여현재manifest/source/secret재대조는NOT_RUN이며앞선준비PASS를이번새검증으로재사용하지않는다.기존run/증거/제품/DB/Anvil/baseline변경·새run생성·테스트·Git명령없음.다음거래시간에동일run의가드를확인해승인된1회관측을재개한다.자동예약/백그라운드대기는없다.
+- [관측 승인·중단 시각·판정 기록](kiwoom-nxt-observe-diagnostics.md).
+
+# NXT 실제 단독 구독 관측 — 완료 / 제품 연동 미검증 (2026-10-16)
+
+- 사용자 승인으로 기존 `kiwoom-diagnostic-20261015112753-02b328b4`만 사용했다. 외부 호출 직전 manifest/소스해시/secret참조/한도/ACL/키존재/미사용run 확인PASS. 키값·인증fingerprint출력/복사없음.
+- KST11:03:22~11:06:24, OAuth1·시세/차트REST0·WS1·LOGIN/REG각1·재시도/재연결/토큰재발급0. LOGIN/REG승인, REG_SENT보존. 같은generation1에서문자열005930_NX체결742건과290=2를기록했다.
+- 0s0건/215없음,9081은742건모두정제null. 필드누락·JSON타입·미허용문자열필터링을구분할수없으므로실제필드미전송으로단정하지않는다. 이번item일치근거와9081교차검증미완료를구분한다. 메인마켓관측을프리/애프터세션검증으로확대하지않는다.
+- 정제레코드746개/수신프레임650개/송신19개(LOGIN1+REG1+PING17),절단없음. captureCOMPLETE/workerStoppedtrue/exit0. 파일시각기준전체181.542867초이며실측monotonic저장값으로표현하지않는다.
+- 신규private증거5개를추가하고기존prepared/run을보존했다. 사용된run은재사용하지않는다. 산출물금지필드명검사0건/credential복사파일없음. 제품코드·Spring Boot·웹·KRX환경·DB·Anvil·baseline변경없음,테스트/Git명령/주문/유료AI/배포없음.
+- [실제 관측 보고서와 NXT 고정 모드의 남은 근거](kiwoom-nxt-live-observation-2026-10-16.md). 이번실행승인은소모됐으며추가외부호출이나제품구현은별도승인사항이다.
+
+# NXT 9081 형식 보완 및 애프터마켓 관측 준비 — 완료 / 외부 실행 대기 (2026-10-16)
+
+- `kiwoom_diagnostic_core.py`의 `Observer.nxt_wire()` NXT 체결 정제 행에 9081 존재 여부, JSON 타입, 기존 허용 형식 여부만 추가했다. 기존 exchangeCode 필터와 mixed/0s-only, 호출 예산·시간 제한은 유지했다. 미허용 원문이나 거래소 의미 추론은 추가하지 않았다.
+- `test_kiwoom_nxt_diagnostic.py`에 3개 테스트 추가. 오프라인 진단 68/68, Phase A 도구 회귀 15/15 PASS, skip 0. 실제 외부 호출은 모두 0회이며 애프터마켓 검증은 NOT_RUN이다.
+- 별도 검토자 `review_acceptance_baseline`: 발견된 필수 수정 없음. 독립 실행 진단 68/68 PASS. private/실환경 검증은 제외.
+- 신규 `kiwoom-diagnostic-20261016033307-3aee8495`를 offline prepare했다. 기존 전용 secret은 읽기 전용 참조만 하고 복사·출력하지 않았다. 소비된 과거 run 및 제품·DB·Anvil·baseline을 보존했다. commit/merge/push 없음.
+- 필드 정의, 한계와 승인 후 정확한 실행 명령: [NXT 진단 구현 문서의 9081 형식 보완 절](kiwoom-nxt-observe-diagnostics.md#9081-형식-보완-및-애프터마켓-관측-준비--2026-10-16).
+
+# NXT 애프터마켓 관측 승인 후 시간 전제 확인 — BLOCKED (2026-10-16)
+
+- Windows KST12:39:11 및 별도 UTC03:39:11 일치. 애프터마켓 시간이 아니므로 연결 전에 중단했다. OAuth/REST/WS 모두0회, 실제 응답 관측 NOT_RUN. 신규 run은 이번 요청에서 사용하지 않았고 기존 capture를 보존했다.
+- 시간 조건에서 중단하여 이번 요청의 private manifest/secret 재검증은 NOT_RUN이다. 제품·DB·Anvil·baseline·인증정보 변경, 예약 실행, commit/merge/push 없음. 세부 결과는 [NXT 진단 문서](kiwoom-nxt-observe-diagnostics.md)의 승인 후 시각 확인 절에 기록했다.
+
+# Synthetic 실제 Chrome 전체 거래 E2E — PASS / 실환경 인수와 별개 (2026-10-16)
+
+- 기존 playground는 사용자 데이터와 고정 포트 때문에 사용하지 않았다. 현재 sourceHash와 일치하는 기존 KRX 준비 이미지 ID를 읽기 전용 재사용하고 새 `synthetic-browser-20261016040925-6345eba4` DB/키/Anvil/내부망/baseline을 구성했다. 제품 빌드/소스/이미지 태그 변경 없음.
+- 첫 새fixture는 Docker 기본 subnet pool 소진으로 인프라 생성 전 실패. 증거 보존, 기존 network 삭제 없음. runtime adapter에서 기존 CIDR 읽기 및 신규 비중첩 명시 subnet을 사용했다.
+- 첫 실제 Chrome은 로그인 요청 전 WAIT_TIMEOUT. 원본 runner의 DOM 존재 대기 race 가설에 따라 runtime 사본의 JS handler 대기만 보강했다. 같은 새fixture의 주문0 및 baseline/canonical/source/image/mount 보존을 확인 후 재검증, 최초 증거는 보존했다.
+- 실제 Chrome 재실행: 04:14:57Z~04:15:28Z, 로그인/차트/Faucet100만/서명견적BUY10만/전량SELL/개인WS/포트폴리오/두대사 PASS. PostgreSQL/Anvil 추가 읽기 대조: FILLED2/Trade2/FaucetGrant1/CONSUMEDQuote2, 두Receipt0x1, 최종mKRW999792.284050296936483318/mSEC0/locked전부0.
+- 장부-체인 MATCH, 거래 감사 COMPLETED/MATCH, coverage4개true/sourceOrders2/scannedEvents2/inspected2. 개인WS7건. 외부Kiwoom/Toss/AI0, 새로운Syntheticproject만stop, 데이터·증거보존. 기존KRX/NXT/사용자playground보존, commit/merge/push없음.
+- 오프라인 playground8/8 및 adapter AST/JS구문/서브넷경계 검증PASS. 별도 검토 최초1+재검토2: 필수수정없음(runtime안전성/AST), 실제Docker/Chrome재실행은구현자. 제품필수수정문제확인없음. 전체회귀/장애/모바일/실환경PASS로확대하지않는다.
+- 변경·거래별txHash/Receipt/최종DB/검증한계 및 증거위치: [Synthetic 브라우저 E2E 보고서](synthetic-browser-e2e-2026-10-16.md).
